@@ -1,0 +1,425 @@
+{% extends 'portfolio/base.html' %}
+{% load static %}
+
+{% block title %}BunB - Portfolio{% endblock %}
+
+{% block content %}
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>BunB</h1>
+                <p class="subtitle">Розробник • Креативний • Інноватор</p>
+                
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">3+</span>
+                        <span class="stat-label">Проектів</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">4</span>
+                        <span class="stat-label">Категорії</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">2</span>
+                        <span class="stat-label">Роки досвіду</span>
+                    </div>
+                </div>
+                
+                <div class="cta-buttons">
+                    <a href="#projects" class="btn btn-primary">
+                        <i class="fas fa-rocket"></i>
+                        Переглянути проєкти
+                    </a>
+                    <a href="#contact" class="btn btn-secondary">
+                        <i class="fas fa-envelope"></i>
+                        Зв'язатися
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="scroll-indicator">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="projects">
+        <div class="container">
+            <div class="section-title">
+                <h2>Мої Роботи</h2>
+                <p>Колекція проектів, які демонструють мої навички у різних галузях розробки</p>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="category-filter">
+                <button class="filter-btn active" data-category="all">Усі</button>
+                <button class="filter-btn" data-category="mobile">Мобільні додатки</button>
+                <button class="filter-btn" data-category="web">Веб-розробка</button>
+                <button class="filter-btn" data-category="games">Ігри та скрипти</button>
+                <button class="filter-btn" data-category="other">Інше</button>
+            </div>
+
+            <!-- Mobile Apps Category -->
+            <div class="project-category fade-in" data-category="mobile">
+                <div class="category-header">
+                    <div class="category-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="category-info">
+                        <h3>Мобільні додатки</h3>
+                        <p>Android застосунки з фокусом на користувацький досвід та функціональність</p>
+                    </div>
+                </div>
+                
+                <div class="project-grid">
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fas fa-wifi"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>OptiFI</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Java</span>
+                                    <span class="tech-tag">Android SDK</span>
+                                    <span class="tech-tag">GPS</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Android-додаток для створення теплової карти покриття Wi-Fi мереж з можливістю відображення сили сигналу та рекомендацій щодо оптимізації покриття.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/OptiFi" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fas fa-map-marked-alt"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>MapARGuide</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Java</span>
+                                    <span class="tech-tag">AR Core</span>
+                                    <span class="tech-tag">OpenGL</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            AR-навігація з підтримкою офлайн режиму. Додаток надає можливості навігації з доповненою реальністю для зручного орієнтування у просторі.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/MapARGuide" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-barcode"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>Scanora</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Java</span>
+                                    <span class="tech-tag">REST API</span>
+                                    <span class="tech-tag">TCP</span>
+                                </div>
+                                <div class="project-status-idea">Ідея</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Scanora - це комплексне рішення для автоматизації складських процесів, яке включає в себе
+                            мобільний додаток на Android для роботи з товарами безпосередньо на складі та серверну
+                            частину на C# для централізованого управління даними та генерації звітів.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/Scanora" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-file-prescription"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>CypherGuard</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Java</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            CypherGuard — це потужний додаток для Android, який дозволяє користувачам шифрувати
+                                та дешифрувати текст за допомогою різних методів шифрування, таких як метод Цезаря та метод Віженера.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/CypherGuard" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Web Development Category -->
+            <div class="project-category fade-in" data-category="web">
+                <div class="category-header">
+                    <div class="category-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="category-info">
+                        <h3>Веб-розробка</h3>
+                        <p>Сучасні веб-застосунки з фокусом на продуктивність та користувацький інтерфейс</p>
+                    </div>
+                </div>
+                
+                <div class="project-grid">
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>AutopartsPRO</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Python</span>
+                                    <span class="tech-tag">JavaScript</span>
+                                    <span class="tech-tag">HTML/CSS</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Інноваційний веб-застосунок для зручного перегляду та управління автомобільними запчастинами з системою рекомендацій та інтегрованою системою закупівель.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/AutopartsPRO" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Games & Scripts Category -->
+            <div class="project-category fade-in" data-category="games">
+                <div class="category-header">
+                    <div class="category-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <div class="category-info">
+                        <h3>Ігри та скрипти</h3>
+                        <p>Скрипти для GTA SA:MP та інші ігрові модифікації на Lua</p>
+                    </div>
+                </div>
+                
+                <div class="project-grid">
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>GangHelper</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Lua</span>
+                                    <span class="tech-tag">SA:MP</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Скрипт для SA:MP, який допомагає відстежувати членів союзних та ворожих
+                            банд у грі за допомогою візуальних маркерів та зручного інтерфейсу управління.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/GangHelper" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Projects Category -->
+            <div class="project-category fade-in" data-category="other">
+                <div class="category-header">
+                    <div class="category-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <div class="category-info">
+                        <h3>Інші проекти</h3>
+                        <p>Утиліти, бібліотеки та експериментальні проекти</p>
+                    </div>
+                </div>
+                
+                <div class="project-grid">
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-cloud"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>Nextcloud bot Python</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Python</span>
+                                    <span class="tech-tag">Telegram</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Цей проєкт — бот на базі Python, розроблений для взаємодії з Nextcloud, 
+                            популярною платформою хмарного сховища. Бот має на меті спростити взаємодію 
+                            користувачів з Nextcloud, забезпечуючи інтуїтивно зрозумілий інтерфейс 
+                            для керування файлами, обміну даними та співпраці з іншими.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/nextcloud_bot" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-plug"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>VolynEnergyBot</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Python</span>
+                                    <span class="tech-tag">Telegram</span>
+                                    <span class="tech-tag">HTTP</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            Цей бот Telegram надає інформацію про відключення електроенергії 
+                            на основі введених користувачами даних про місцевість і вулицю. 
+                            Бот збирає дані з певного веб-сайту та повертає відповідну інформацію користувачеві.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/VolynEnergyBot" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-solid fa-circle-question"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>HelpGrid</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Python</span>
+                                    <span class="tech-tag">Telegram</span>
+                                    <span class="tech-tag">SQL</span>
+                                </div>
+                                <div class="project-status-completed">Завершено</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            HelpGrid — це Telegram-бот, розроблений для автоматизації обслуговування клієнтів 
+                            інтернет-провайдера. Бот дозволяє користувачам швидко отримувати інформацію про тарифи, 
+                            перевіряти статус послуг, повідомляти про технічні проблеми та взаємодіяти зі службою підтримки.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/HelpGrid" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <div class="project-icon">
+                                <i class="fa-regular fa-file-lines"></i>
+                            </div>
+                            <div class="project-info">
+                                <h4>ГЛИБИНА 4.0</h4>
+                                <div class="project-tech">
+                                    <span class="tech-tag">Python</span>
+                                    <span class="tech-tag">Java</span>
+                                    <span class="tech-tag">Node.js</span>
+                                    <span class="tech-tag">SQL</span>
+                                    <span class="tech-tag">HTML\CSS</span>
+                                </div>
+                                <div class="project-status-idea">Ідея</div>
+                            </div>
+                        </div>
+                        <p class="project-description">
+                            «Глибина 4.0» — це сучасний програмний комплекс, який створює цифрового двійника шахти. 
+                            Це віртуальна копія реальної шахти, що дозволяє в реальному часі бачити все, що відбувається 
+                            під землею: від руху шахтарів до стану обладнання та рівня газів. Система допомагає диспетчерам 
+                            та інженерам швидко реагувати на небезпеки, оптимізувати роботу шахти та підвищувати безпеку.
+                        </p>
+                        <div class="project-links">
+                            <a href="https://github.com/Nazoferon/HelpGrid" class="project-link primary">
+                                <i class="fab fa-github"></i>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-title">
+                <h2>Зв'язатися</h2>
+                <p>Готовий до нових проектів та цікавих викликів</p>
+            </div>
+                <div class="contact-grid">
+                    <div class="contact-card">
+                        <i class="fas fa-envelope"></i>
+                        <h3>Email</h3>
+                        <a href="mailto:nazar.haniuk.dev@gmail.com">nazar.haniuk.dev@gmail.com</a>
+                    </div>
+                    <div class="contact-card">
+                        <i class="fab fa-github"></i>
+                        <h3>GitHub</h3>
+                        <a href="https://github.com/Nazoferon" target="_blank">github.com/Nazoferon</a>
+                    </div>
+                    <div class="contact-card">
+                        <i class="fa-brands fa-telegram"></i>
+                        <h3>Telegram</h3>
+                        <a href="https://t.me/feronazo" target="_blank">Telegram: @feronazo</a>
+                    </div>
+                </div>
+        </div>
+    </section>
+{% endblock %}

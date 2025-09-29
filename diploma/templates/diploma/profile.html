@@ -1,0 +1,49 @@
+{% extends 'diploma/base.html' %}
+{% load static %}
+
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <h2><i class="fas fa-user-circle"></i> Профіль користувача</h2>
+    
+    {% if request.user.userprofile.profile_photo %}
+        <div class="profile-photo-container">
+            <img src="{{ request.user.userprofile.profile_photo.url }}" alt="Фото профілю">
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="form-section">
+            <h3>Особисті дані</h3>
+            {{ user_form.as_p }}
+        </div>
+        <div class="form-section">
+            <h3>Додаткові дані</h3>
+            {{ profile_form.as_p }}
+            <p class="form-hint">Фото профілю: до 5 МБ, лише PNG, JPG, JPEG</p>
+        </div>
+        {% if user_form.errors or profile_form.errors %}
+            <div class="profile-message error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>
+                    {% for error in user_form.errors.values %}
+                        {{ error|join:" " }}
+                    {% endfor %}
+                    {% for error in profile_form.errors.values %}
+                        {{ error|join:" " }}
+                    {% endfor %}
+                </span>
+            </div>
+        {% endif %}
+        <button type="submit"><i class="fas fa-save"></i> Зберегти</button>
+    </form>
+</div>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="{% static 'diploma/js/profile.js' %}"></script>
+{% endblock %}

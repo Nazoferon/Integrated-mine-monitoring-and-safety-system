@@ -1,0 +1,240 @@
+{% extends 'diploma/base.html' %}
+
+{% block title %}Головна панель - Глибина 4.0{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Статусна панель -->
+    <div class="status-overview">
+        <div class="status-card online">
+            <div class="status-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="status-info">
+                <h3>24</h3>
+                <p>Персонал онлайн</p>
+            </div>
+        </div>
+        <div class="status-card warning">
+            <div class="status-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="status-info">
+                <h3>3</h3>
+                <p>Активні попередження</p>
+            </div>
+        </div>
+        <div class="status-card normal">
+            <div class="status-icon">
+                <i class="fas fa-thermometer-half"></i>
+            </div>
+            <div class="status-info">
+                <h3>25.5°C</h3>
+                <p>Температура</p>
+            </div>
+        </div>
+        <div class="status-card normal">
+            <div class="status-icon">
+                <i class="fas fa-tint"></i>
+            </div>
+            <div class="status-info">
+                <h3>60%</h3>
+                <p>Вологість</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основні картки -->
+    <div class="main-content">
+        <!-- Сповіщення -->
+        <div class="card alert-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-bell"></i>
+                    Активні Сповіщення
+                </h2>
+                <span class="badge badge-critical">2 критичних</span>
+            </div>
+            <div class="card-body">
+                <div class="alert-item critical">
+                    <div class="alert-icon">
+                        <i class="fas fa-skull-crossbones"></i>
+                    </div>
+                    <div class="alert-content">
+                        <h4>Критичний рівень метану</h4>
+                        <p>Сектор 4 - Рівень: 2.8%</p>
+                        <span class="alert-time">2 хвилини тому</span>
+                    </div>
+                    <button class="alert-action">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="alert-item warning">
+                    <div class="alert-icon">
+                        <i class="fas fa-battery-quarter"></i>
+                    </div>
+                    <div class="alert-content">
+                        <h4>Низький заряд батареї</h4>
+                        <p>Працівник ID 33 - Заряд: 15%</p>
+                        <span class="alert-time">15 хвилин тому</span>
+                    </div>
+                    <button class="alert-action">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="alert-item info">
+                    <div class="alert-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="alert-content">
+                        <h4>Планове техобслуговування</h4>
+                        <p>Сектор 2 - Заплановано на 14:00</p>
+                        <span class="alert-time">1 годину тому</span>
+                    </div>
+                    <button class="alert-action">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карта шахти -->
+        <div class="card map-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Інтерактивна Карта Шахти
+                </h2>
+                <div class="map-controls">
+                    <button class="btn-control active">3D</button>
+                    <button class="btn-control">2D</button>
+                    <button class="btn-control">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="map-container">
+                    <div class="map-placeholder">
+                        <i class="fas fa-mountain"></i>
+                        <h3>3D Карта шахти</h3>
+                        <p>Інтерактивне відображення структури шахти</p>
+                        <div class="map-legend">
+                            <div class="legend-item">
+                                <span class="legend-color safe"></span>
+                                <span>Безпечна зона</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color warning"></span>
+                                <span>Попередження</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color critical"></span>
+                                <span>Небезпечна зона</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Бічна панель -->
+    <div class="sidebar-content">
+        <!-- Персонал -->
+        <div class="card staff-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-users"></i>
+                    Персонал у Шахті
+                </h2>
+                <span class="online-indicator">24 онлайн</span>
+            </div>
+            <div class="card-body">
+                <div class="staff-list">
+                    <div class="staff-item">
+                        <div class="staff-avatar">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                        <div class="staff-info">
+                            <h4>Іван Петров</h4>
+                            <p>Шахтар - Сектор 3</p>
+                            <span class="staff-status online">Онлайн</span>
+                        </div>
+                    </div>
+                    <div class="staff-item">
+                        <div class="staff-avatar">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <div class="staff-info">
+                            <h4>Марія Іванова</h4>
+                            <p>Інженер - Центр управління</p>
+                            <span class="staff-status online">Онлайн</span>
+                        </div>
+                    </div>
+                    <div class="staff-item">
+                        <div class="staff-avatar">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="staff-info">
+                            <h4>Петро Сидоренко</h4>
+                            <p>Технік - Сектор 1</p>
+                            <span class="staff-status offline">Офлайн</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-view-all">
+                    <span>Переглянути всіх</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Показники середовища -->
+        <div class="card environment-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Показники Середовища
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <div class="metric-value">25.5°C</div>
+                        <div class="metric-label">Температура</div>
+                        <div class="metric-trend up">
+                            <i class="fas fa-arrow-up"></i>
+                            0.5°C
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">60%</div>
+                        <div class="metric-label">Вологість</div>
+                        <div class="metric-trend down">
+                            <i class="fas fa-arrow-down"></i>
+                            2%
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">0.8%</div>
+                        <div class="metric-label">Метан</div>
+                        <div class="metric-trend stable">
+                            <i class="fas fa-minus"></i>
+                            0%
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">98.2%</div>
+                        <div class="metric-label">Кисень</div>
+                        <div class="metric-trend stable">
+                            <i class="fas fa-minus"></i>
+                            0%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

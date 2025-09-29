@@ -1,0 +1,141 @@
+{% extends 'diploma/base.html' %}
+{% load static %}
+
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="{% static 'diploma/css/mine_map.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="mine-map-page">
+    <h2><i class="fas fa-map"></i> Інтерактивна карта шахти</h2>
+    <p class="last-edited">Останній редагував: {{ last_edited_by }}</p>
+
+    <div class="map-controls">
+        <label class="switch">
+            <input type="checkbox" id="edit-mode-switch">
+            <span class="slider">Режим редагування</span>
+        </label>
+        <button id="toggle-2d-3d" class="btn"><i class="fas fa-cube"></i> Переключити на 3D</button>
+        <div class="add-menu" style="display: none;">
+            <button id="add-menu-btn" class="btn"><i class="fas fa-plus"></i> Додати елемент</button>
+            <div class="add-dropdown">
+                <button id="add-tunnel" class="btn"><i class="fas fa-road"></i> Додати тунель</button>
+                <button id="add-wifi" class="btn"><i class="fas fa-wifi"></i> Додати Wi-Fi точку</button>
+                <div class="add-equipment-submenu">
+                    <button class="btn"><i class="fas fa-tools"></i> Додати техніку <i class="fas fa-caret-down"></i></button>
+                    <div class="submenu-items">
+                        <button id="add-combine" class="btn">Комбайн</button>
+                        <button id="add-lift" class="btn">Ліфт</button>
+                        <button id="add-conveyor" class="btn">Конвеєр</button>
+                        <button id="add-drill" class="btn">Бурова установка</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button id="save-map" class="btn" style="display: none;"><i class="fas fa-save"></i> Зберегти карту</button>
+        <button id="download-map" class="btn"><i class="fas fa-download"></i> Завантажити карту</button>
+        <button id="export-json" class="btn"><i class="fas fa-file-export"></i> Експорт JSON</button>
+    </div>
+
+    <div class="map-container">
+        <canvas id="map-canvas" style="display: block;"></canvas>
+        <div id="map-3d" style="display: none;"></div>
+    </div>
+
+    <div class="map-sidebar">
+        <div class="properties-panel">
+            <h3>Властивості об'єкта</h3>
+            <div class="property">
+                <label>Тип:</label>
+                <span id="prop-type">Невідомий</span>
+            </div>
+            <div class="property">
+                <label>Позиція X:</label>
+                <input type="number" id="prop-left" disabled>
+            </div>
+            <div class="property">
+                <label>Позиція Y:</label>
+                <input type="number" id="prop-top" disabled>
+            </div>
+            <div class="property">
+                <label>Ширина:</label>
+                <input type="number" id="prop-width" disabled>
+            </div>
+            <div class="property">
+                <label>Висота:</label>
+                <input type="number" id="prop-height" disabled>
+            </div>
+            <div class="property">
+                <label>Радіус:</label>
+                <input type="number" id="prop-radius" disabled>
+            </div>
+            <button id="apply-properties" class="btn"><i class="fas fa-check"></i> Застосувати</button>
+            <button id="delete-object" class="btn"><i class="fas fa-trash"></i> Видалити</button>
+        </div>
+
+        <div class="objects-list">
+            <div class="list-group">
+                <h4><i class="fas fa-road"></i> Тунелі</h4>
+                <ul id="tunnels-list"></ul>
+            </div>
+            <div class="list-group">
+                <h4><i class="fas fa-wifi"></i> Wi-Fi точки</h4>
+                <ul id="wifi-list"></ul>
+            </div>
+            <div class="list-group">
+                <h4><i class="fas fa-tools"></i> Комбайни</h4>
+                <ul id="combine-list"></ul>
+            </div>
+            <div class="list-group">
+                <h4><i class="fas fa-elevator"></i> Ліфти</h4>
+                <ul id="lift-list"></ul>
+            </div>
+            <div class="list-group">
+                <h4><i class="fas fa-industry"></i> Конвеєри</h4>
+                <ul id="conveyor-list"></ul>
+            </div>
+            <div class="list-group">
+                <h4><i class="fas fa-drill"></i> Бурові установки</h4>
+                <ul id="drill-list"></ul>
+            </div>
+        </div>
+
+        <div class="map-stats">
+            <h3>Статистика карти</h3>
+            <div class="stat-item">
+                <i class="fas fa-road"></i>
+                <span>Тунелі</span>
+                <span id="stats-tunnels">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-wifi"></i>
+                <span>Wi-Fi точки</span>
+                <span id="stats-wifi">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-tools"></i>
+                <span>Техніка</span>
+                <span id="stats-equipment">0</span>
+            </div>
+        </div>
+
+        <button id="help-btn" class="btn"><i class="fas fa-question-circle"></i> Допомога</button>
+    </div>
+
+    <div id="success-message" class="notification" style="display: none;">
+        <i class="fas fa-check-circle"></i> Успішно виконано!
+    </div>
+    <div id="loading-message" class="notification" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i> Завантаження...
+    </div>
+</div>
+
+<script src="{% static 'diploma/js/mine_map.js' %}" defer></script>
+<script>
+    const initialMapData = JSON.parse('{{ map_data | safe | default:"{}" }}');  
+</script>
+{% endblock %}
