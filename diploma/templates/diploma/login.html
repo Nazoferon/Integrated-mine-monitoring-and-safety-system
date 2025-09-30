@@ -110,12 +110,12 @@
                 </div>
 
                 <div class="form-options">
-                    <label class="checkbox-container">
+                    <!-- <label class="checkbox-container">
                         <input type="checkbox" name="remember">
                         <span class="checkmark"></span>
                         Запам'ятати мене
-                    </label>
-                    <a href="#" class="forgot-password">Забули пароль?</a>
+                    </label> -->
+                    <a href="{% url 'password_reset' %}" class="forgot-password">Забули пароль?</a>
                 </div>
 
                 <button type="submit" class="btn-login-submit">

@@ -5,6 +5,9 @@ from django.contrib import messages
 from .models import MineMap
 import json
 
+from django.contrib.auth.views import PasswordResetView
+from django.contrib.messages.views import SuccessMessageMixin
+
 @login_required
 def diploma_home(request):
     return render(request, 'diploma/diploma_home.html')
@@ -68,3 +71,9 @@ def download_map(request):
     )
     response['Content-Disposition'] = 'attachment; filename="mine_map.json"'
     return response
+
+class CustomPasswordResetView(SuccessMessageMixin, PasswordResetView):
+    template_name = 'registration/password_reset_form.html'
+    email_template_name = 'registration/password_reset_email.html'
+    subject_template_name = 'registration/password_reset_subject.txt'
+    success_message = "Ми надіслали вам інструкції для скидання пароля на вказану електронну адресу."
