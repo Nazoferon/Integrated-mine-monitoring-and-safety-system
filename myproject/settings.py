@@ -59,7 +59,7 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -137,3 +137,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Каталог для збере�
 # Налаштування сесій
 SESSION_COOKIE_AGE = 3600  # 1 година
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Сесія закривається при закритті браузера
+
+# Налаштування електронної пошти через Gmail SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nazar.haniuk.dev@gmail.com'  # Ваш Gmail
+EMAIL_HOST_PASSWORD = 'zpjp sdhh nvgk spgl'  # Пароль додатка з кроку 1
+DEFAULT_FROM_EMAIL = 'Глибина 4.0 <nazar.haniuk.dev@gmail.com>' # Від кого надсилати листи за замовчуванням
