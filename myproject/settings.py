@@ -133,3 +133,7 @@ LOGIN_URL = '/login/'  # URL для логіну
 
 MEDIA_URL = '/media/' # URL для завантажених файлів
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Каталог для збереження завантажених файлів
+
+# Налаштування сесій
+SESSION_COOKIE_AGE = 3600  # 1 година
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Сесія закривається при закритті браузера
