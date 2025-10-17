@@ -30,7 +30,7 @@
                 <ul class="nav-links">
                     <li><a href="#projects">Проєкти</a></li>
                     <li><a href="#contact">Контакти</a></li>
-                    {% if user.is_authenticated %}
+                    <!-- {% if user.is_authenticated %}
                         <li><a href="{% url 'diploma_home' %}" class="nav-diploma-btn">Диплом</a></li>
                         <li>
                             <form method="post" action="{% url 'logout' %}" class="nav-form">
@@ -40,7 +40,7 @@
                         </li>
                     {% else %}
                         <li><a href="{% url 'login' %}" class="nav-login-btn">Авторизація</a></li>
-                    {% endif %}
+                    {% endif %} -->
                 </ul>      
             </nav>
         </div>
