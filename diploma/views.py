@@ -15,6 +15,11 @@ def diploma_home(request):
 
 @login_required
 def profile(request):
+    # Автоматично створюємо профіль, якщо його немає
+    if not hasattr(request.user, 'userprofile'):
+        from .models import UserProfile
+        UserProfile.objects.create(user=request.user)
+    
     if request.method == 'POST':
         user_form = UserForm(request.POST, instance=request.user)
         profile_form = ProfileForm(request.POST, request.FILES, instance=request.user.userprofile)

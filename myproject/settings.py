@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-5y%&m1nc^te9#vk3n45#5tw%dro_2)b8+hl-pn6)^cl9d(f8jx'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['bunb.pp.ua', 'www.bunb.pp.ua', '91.98.171.31']
 CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']

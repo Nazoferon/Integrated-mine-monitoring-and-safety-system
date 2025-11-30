@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 import os, json
 from uuid import uuid4
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 def user_profile_photo_path(instance, filename):
     """Шлях для збереження фото: media/users/user_<id>/profile_photos/<random_name>.<ext>"""
@@ -30,6 +32,18 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Профіль {self.user.username}"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Автоматично створює профіль при створенні нового користувача"""
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Автоматично створює профіль, якщо його немає"""
+    if not hasattr(instance, 'userprofile'):
+        UserProfile.objects.create(user=instance)
 
 class MineMap(models.Model):
     name = models.CharField(max_length=100, default="Mine Map")
