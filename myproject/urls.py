@@ -9,7 +9,7 @@ from django.urls import path
 from portfolio.views import home  
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin_admin/', admin.site.urls),
     path('', include('portfolio.urls')),  # Домашня сторінка — portfolio
     path('diploma/', include('diploma.urls')),
 
