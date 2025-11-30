@@ -16,8 +16,8 @@ def diploma_home(request):
 @login_required
 def profile(request):
     if request.method == 'POST':
-        user_form = UserForm(request.POST, instance=request.user)  # ЗМІНИТЬ ЦЕ
-        profile_form = ProfileForm(request.POST, request.FILES, instance=request.user.userprofile)  # ЗМІНИТЬ ЦЕ
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = ProfileForm(request.POST, request.FILES, instance=request.user.userprofile)
         
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
@@ -25,8 +25,8 @@ def profile(request):
             messages.success(request, '✅ Профіль успішно оновлено!')
             return redirect('profile')
     else:
-        user_form = UserForm(instance=request.user)  # ЗМІНИТЬ ЦЕ
-        profile_form = ProfileForm(instance=request.user.userprofile)  # ЗМІНИТЬ ЦЕ
+        user_form = UserForm(instance=request.user)
+        profile_form = ProfileForm(instance=request.user.userprofile)
     
     return render(request, 'diploma/profile.html', {
         'user_form': user_form,
