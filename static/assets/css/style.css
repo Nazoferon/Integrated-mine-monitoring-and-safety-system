@@ -1,3 +1,29 @@
+:root {
+    /* Темна тема (стандартна) */
+    --bg-main: #0f0f23;
+    --bg-secondary: #1a1a2e;
+    --bg-card: rgba(255, 255, 255, 0.05);
+    --text-primary: #e0e0e0;
+    --text-secondary: #9ca3af;
+    --accent-color: #8a63d2;
+    --accent-hover: #6b46c1;
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --nav-bg: rgba(15, 15, 35, 0.95);
+}
+
+[data-theme="light"] {
+    /* Світла тема */
+    --bg-main: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-card: rgba(0, 0, 0, 0.03);
+    --text-primary: #2d3748;
+    --text-secondary: #4a5568;
+    --accent-color: #6b46c1; /* Трохи темніший для контрасту */
+    --accent-hover: #553c9a;
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --nav-bg: rgba(255, 255, 255, 0.95);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,11 +31,22 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    /* Було: font-family: 'Inter', sans-serif; */
+    font-family: 'Outfit', sans-serif; 
+    
     background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
     color: #e0e0e0;
     line-height: 1.6;
     overflow-x: hidden;
+    /* Додаємо трохи кращу читабельність для шрифтів */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Додатково: Зробимо заголовки трохи "щільнішими" */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em; /* Трошки стискаємо букви в заголовках */
 }
 
 .container {
@@ -468,20 +505,22 @@ nav {
 
 .project-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    /* Адаптивна сітка: мінімум 300px ширина картки */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
 }
 
 .project-card {
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    padding: 2rem;
-    transition: all 0.4s ease;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
+    overflow: hidden; /* Щоб картинка не вилазила за краї */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    /* Важливо для анімації приховання */
+    opacity: 1;
+    transform: scale(1);
 }
 
 .project-card::before {
@@ -501,9 +540,106 @@ nav {
 }
 
 .project-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(138, 99, 210, 0.2);
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(138, 99, 210, 0.15);
     border-color: rgba(138, 99, 210, 0.3);
+}
+
+/* Контейнер для зображення */
+.project-image-container {
+    width: 100%;
+    height: 220px; /* Фіксована висота! Зміни на менше (напр. 180px), якщо хочеш компактніше */
+    position: relative;
+    background-color: #000; /* Фон, поки вантажиться фото */
+    overflow: hidden;
+}
+
+.project-image {
+    width: 100%;
+    height: 200px; /* Фіксована висота для картинок */
+    background-color: #000;
+    overflow: hidden;
+}
+
+.project-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* КЛЮЧОВИЙ МОМЕНТ: Картинка заповнює блок, не розтягуючись */
+    object-position: center; /* Центруємо зображення */
+    transition: transform 0.5s ease;
+}
+
+.project-card:hover .project-img {
+    transform: scale(1.1); /* Легкий зум при наведенні */
+}
+
+/* Клас для приховання карток при фільтрації */
+.project-card.hidden {
+    display: none; 
+}
+
+/* Заглушка, якщо немає фото */
+.project-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: rgba(138, 99, 210, 0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.project-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Картинка гарно обрізається по центру */
+    transition: transform 0.5s ease;
+}
+
+.project-card:hover .project-image img {
+    transform: scale(1.1); /* Ефект зуму при наведенні */
+}
+
+/* Контент картки */
+.project-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    position: relative; /* ВАЖЛИВО */
+    z-index: 2;         /* ВАЖЛИВО: щоб текст був над фоном */
+}
+
+.project-header h4 {
+    color: #e0e0e0;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Бейджі статусу */
+.status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    backdrop-filter: blur(5px);
+    z-index: 2;
+}
+
+.status-badge.completed {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.idea {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .project-header {
@@ -529,17 +665,14 @@ nav {
 }
 
 .project-info h4 {
-    font-size: 1.3rem;
-    color: #e0e0e0;
-    margin-bottom: 0.25rem;
-    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .project-tech {
+    margin-bottom: 1rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
 }
 
 .tech-tag {
@@ -570,48 +703,76 @@ nav {
 }
 
 .project-description {
+    font-size: 0.9rem;
     color: #9ca3af;
-    margin-bottom: 2rem;
-    line-height: 1.6;
-    position: relative;
-    z-index: 2;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    flex-grow: 1; /* Опис розтягується, штовхаючи кнопки вниз */
 }
 
 .project-links {
+    margin-top: auto;
     display: flex;
     gap: 1rem;
-    position: relative;
-    z-index: 2;
+    position: relative; /* ВАЖЛИВО */
+    z-index: 10;        /* ВАЖЛИВО: кнопки мають бути найвище, щоб клікались */
 }
 
+/* Базовий стиль (Тьмяний / Спокійний стан) */
 .project-link {
-    padding: 0.75rem 1.5rem;
-    background: rgba(138, 99, 210, 0.2);
-    color: #8a63d2;
-    text-decoration: none;
-    border-radius: 25px;
-    font-weight: 500;
-    transition: all 0.3s ease;
+    flex: 1;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
+    
+    padding: 0.7rem 1rem;
     font-size: 0.9rem;
+    font-weight: 500;
+    
+    /* Тьмяний фон і рамка */
+    background: rgba(255, 255, 255, 0.03); /* Майже прозорий */
+    border: 1px solid rgba(138, 99, 210, 0.3); /* Тьмяно-фіолетова рамка */
+    color: rgba(255, 255, 255, 0.7) !important; /* Текст не чисто білий, трохи сірий */
+    
+    border-radius: 25px;
+    box-shadow: none; /* Без тіні у спокійному стані */
+    
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    z-index: 11;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Плавна анімація */
 }
 
+/* Ефект "Засвічування" при наведенні */
 .project-link:hover {
-    background: #8a63d2;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.project-link.primary {
+    /* Градієнт заповнює кнопку */
     background: linear-gradient(135deg, #8a63d2, #6b46c1);
-    color: white;
+    
+    /* Рамка стає прозорою (зливається з фоном) */
+    border-color: transparent;
+    
+    /* Текст стає яскраво-білим */
+    color: white !important;
+    
+    /* Кнопка піднімається */
+    transform: translateY(-2px);
+    
+    /* Додаємо сильне світіння (Glow effect) */
+    box-shadow: 0 0 20px rgba(138, 99, 210, 0.6); 
 }
 
+/* Прибираємо старий стиль primary, щоб він не перебивав */
+.project-link.primary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(138, 99, 210, 0.3);
+}
+/* Але ховер для primary має бути такий самий */
 .project-link.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(138, 99, 210, 0.4);
+    background: linear-gradient(135deg, #8a63d2, #6b46c1);
+    border-color: transparent;
+    box-shadow: 0 0 20px rgba(138, 99, 210, 0.6);
 }
 
 /* Contact Section */
@@ -634,6 +795,11 @@ nav {
     gap: 2rem;
     max-width: 600px;
     margin: 0 auto;
+    text-decoration: none;
+}
+
+.contact-grid a {
+    text-decoration: none;
 }
 
 .contact-card {
@@ -726,13 +892,17 @@ footer {
         font-size: 0.9rem;
     }
 
-    .project-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
 
-    .project-card {
-        padding: 1.5rem;
+    .model-viewer-container {
+    width: 100%;
+    height: 250px; /* Фіксована висота для в'ювера */
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    background: #000;
+    }
+    .model-viewer-container iframe {
+        width: 100%;
+        height: 100%;
     }
 
     .project-links {

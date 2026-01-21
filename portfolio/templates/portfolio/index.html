@@ -14,12 +14,12 @@
                 
                 <div class="hero-stats">
                     <!-- <div class="stat">
-                        <span class="stat-number">3+</span>
-                        <span class="stat-label">Проектів</span>
+                      <span class="stat-number">{{ projects.count }}</span>
+                      <span class="stat-label">Проєктів</span>
                     </div> -->
                     <div class="stat">
-                        <span class="stat-number">4</span>
-                        <span class="stat-label">Категорії</span>
+                      <span class="stat-number">{{ categories.count }}</span>
+                      <span class="stat-label">Категорій</span>
                     </div>
                     <div class="stat">
                         <span class="stat-number">2</span>
@@ -50,474 +50,71 @@
         <div class="container">
             <div class="section-title">
                 <h2>Мої Роботи</h2>
-                <p>Колекція проектів, які демонструють мої навички у різних галузях розробки</p>
+                <p>Колекція проєктів, які демонструють мої навички</p>
             </div>
             
-            <!-- Category Filter -->
             <div class="category-filter">
                 <button class="filter-btn active" data-category="all">Усі</button>
-                <button class="filter-btn" data-category="mobile">Мобільні додатки</button>
-                <button class="filter-btn" data-category="web">Веб-розробка</button>
-                <button class="filter-btn" data-category="games">Ігри та скрипти</button>
-                <button class="filter-btn" data-category="3d_models">3D моделі</button>
-                <button class="filter-btn" data-category="other">Інше</button>
+                {% for cat in categories %}
+                    <button class="filter-btn" data-category="{{ cat.slug }}">
+                        <i class="{{ cat.icon_class }}"></i> {{ cat.name }}
+                    </button>
+                {% endfor %}
             </div>
 
-            <!-- Mobile Apps Category -->
-            <div class="project-category fade-in" data-category="mobile">
-                <div class="category-header">
-                    <div class="category-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <div class="category-info">
-                        <h3>Мобільні додатки</h3>
-                        <p>Android застосунки з фокусом на користувацький досвід та функціональність</p>
-                    </div>
-                </div>
-                
-                <div class="project-grid">
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fas fa-wifi"></i>
+            <div class="project-grid">
+                {% for project in projects %}
+                <div class="project-card fade-in visible" data-category="{{ project.category.slug }}">
+                    
+                    <div class="project-image-container">
+                        {% if project.image %}
+                            <img src="{{ project.image.url }}" alt="{{ project.title }}" class="project-img">
+                        {% else %}
+                            <div class="project-placeholder">
+                                <i class="{{ project.category.icon_class }}"></i>
                             </div>
-                            <div class="project-info">
-                                <h4>OptiFI</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Java</span>
-                                    <span class="tech-tag">Android SDK</span>
-                                    <span class="tech-tag">GPS</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            Android-додаток для створення теплової карти покриття Wi-Fi мереж з можливістю відображення сили сигналу та рекомендацій щодо оптимізації покриття.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/OptiFi" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
+                        {% endif %}
+                        
+                        {% if project.is_completed %}
+                            <span class="status-badge completed">Завершено</span>
+                        {% else %}
+                            <span class="status-badge idea">В розробці</span>
+                        {% endif %}
                     </div>
 
-                    <div class="project-card">
+                    <div class="project-content">
                         <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>MapARGuide</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Java</span>
-                                    <span class="tech-tag">AR Core</span>
-                                    <span class="tech-tag">OpenGL</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
+                            <h4>{{ project.title }}</h4>
                         </div>
-                        <p class="project-description">
-                            AR-навігація з підтримкою офлайн режиму. Додаток надає можливості навігації з доповненою реальністю для зручного орієнтування у просторі.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/MapARGuide" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
 
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-barcode"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>Scanora</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Java</span>
-                                    <span class="tech-tag">REST API</span>
-                                    <span class="tech-tag">TCP</span>
-                                </div>
-                                <div class="project-status-idea">Ідея</div>
-                            </div>
+                        <div class="project-tech">
+                            {% for tech in project.get_tech_list %}
+                                <span class="tech-tag">{{ tech }}</span>
+                            {% endfor %}
                         </div>
+                        
+                        {% if project.description %}
                         <p class="project-description">
-                            Scanora - це комплексне рішення для автоматизації складських процесів, яке включає в себе
-                            мобільний додаток на Android для роботи з товарами безпосередньо на складі та серверну
-                            частину на C# для централізованого управління даними та генерації звітів.
+                            {{ project.description|truncatechars:120 }}
                         </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/Scanora" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
+                        {% endif %}
 
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-file-prescription"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>CypherGuard</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Java</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            CypherGuard — це потужний додаток для Android, який дозволяє користувачам шифрувати
-                                та дешифрувати текст за допомогою різних методів шифрування, таких як метод Цезаря та метод Віженера.
-                        </p>
                         <div class="project-links">
-                            <a href="https://github.com/Nazoferon/CypherGuard" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
+                            {% if project.github_link %}
+                            <a href="{{ project.github_link }}" class="project-link" target="_blank">
+                                <i class="fab fa-github"></i> GitHub
                             </a>
+                            {% endif %}
+                            
+                            {% if project.demo_link %}
+                            <a href="{{ project.demo_link }}" class="project-link primary" target="_blank">
+                                <i class="fas fa-eye"></i> Перегляд
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Web Development Category -->
-            <div class="project-category fade-in" data-category="web">
-                <div class="category-header">
-                    <div class="category-icon">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <div class="category-info">
-                        <h3>Веб-розробка</h3>
-                        <p>Сучасні веб-застосунки з фокусом на продуктивність та користувацький інтерфейс</p>
-                    </div>
-                </div>
-                
-                <div class="project-grid">
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fas fa-car"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>AutopartsPRO</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Python</span>
-                                    <span class="tech-tag">JavaScript</span>
-                                    <span class="tech-tag">HTML/CSS</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            Інноваційний веб-застосунок для зручного перегляду та управління автомобільними запчастинами з системою рекомендацій та інтегрованою системою закупівель.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/AutopartsPRO" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3D Models Category -->
-            <div class="project-category fade-in" data-category="3d_models">
-                <div class="category-header">
-                    <div class="category-icon">
-                        <i class="fas fa-cube"></i>
-                    </div>
-                    <div class="category-info">
-                        <h3>3D моделі</h3>
-                        <p>3D моделі, котрі були створені за час університету та повсякденного життя.</p>
-                    </div>
-                </div>
-                
-                <div class="project-grid">
-                  <div class="project-card">
-                      <div class="project-header">
-                          <div class="project-icon">
-                              <i class="fas fa-cube"></i>
-                          </div>
-                          <div class="project-info">
-                              <h4>BMW 5 Series F11 Touring Rear Cargo Cover Slide</h4>
-                              <div class="project-tech">
-                                  <span class="tech-tag">Autodesk Fusion</span>
-                              </div>
-                              <div class="project-status-completed">Завершено</div>
-                          </div>
-                      </div>
-                      <p class="project-description">
-                          This is a replacement part for the BMW 5 Series Touring (F11). It is the sliding clip ("leash" or "dog") located in the D-pillar track that automatically raises and lowers the rear cargo blind (luggage cover) when the trunk is opened. OEM Part Number: 51437232775 Tested on: BMW F11 520d Touring
-                      </p>
-                      <div class="project-links">
-                          <a href="https://www.printables.com/model/1558775-bmw-5-series-f11-touring-rear-cargo-cover-slide-cl" class="project-link primary">
-                              <i class="fas fa-print"></i>
-                              Printables
-                          </a>
-                      </div>
-                  </div>
-
-                  <div class="project-card">
-                      <div class="project-header">
-                          <div class="project-icon">
-                              <i class="fas fa-cube"></i>
-                          </div>
-                          <div class="project-info">
-                              <h4>Zenit</h4>
-                              <div class="project-tech">
-                                  <span class="tech-tag">Blender</span>
-                              </div>
-                              <div class="project-status-completed">Завершено</div>
-                          </div>
-                      </div>
-                      <div class="project-links">
-                          <a href="https://skfb.ly/pFDOB" class="project-link primary">
-                              <i class="fas fa-print"></i>
-                              Sketchfab
-                          </a>
-                      </div>
-                  </div>
-
-                  <div class="project-card">
-                      <div class="project-header">
-                          <div class="project-icon">
-                              <i class="fas fa-cube"></i>
-                          </div>
-                          <div class="project-info">
-                              <h4>Sponge Bob</h4>
-                              <div class="project-tech">
-                                  <span class="tech-tag">Blender</span>
-                              </div>
-                              <div class="project-status-completed">Завершено</div>
-                          </div>
-                      </div>
-                      <div class="project-links">
-                          <a href="https://skfb.ly/pFDOR" class="project-link primary">
-                              <i class="fas fa-print"></i>
-                              Sketchfab
-                          </a>
-                      </div>
-                  </div>
-
-                  <div class="project-card">
-                      <div class="project-header">
-                          <div class="project-icon">
-                              <i class="fas fa-cube"></i>
-                          </div>
-                          <div class="project-info">
-                              <h4>Garage Rick (Rick and Morty)</h4>
-                              <div class="project-tech">
-                                  <span class="tech-tag">Blender</span>
-                              </div>
-                              <div class="project-status-completed">Завершено</div>
-                          </div>
-                      </div>
-                      <div class="project-links">
-                          <a href="https://skfb.ly/pFDP7" class="project-link primary">
-                              <i class="fas fa-print"></i>
-                              Sketchfab
-                          </a>
-                      </div>
-                  </div>
-
-                  <div class="project-card">
-                      <div class="project-header">
-                          <div class="project-icon">
-                              <i class="fas fa-cube"></i>
-                          </div>
-                          <div class="project-info">
-                              <h4>Electric Tower</h4>
-                              <div class="project-tech">
-                                  <span class="tech-tag">Blender</span>
-                              </div>
-                              <div class="project-status-completed">Завершено</div>
-                          </div>
-                      </div>
-                      <div class="project-links">
-                          <a href="https://skfb.ly/pFFLu" class="project-link primary">
-                              <i class="fas fa-print"></i>
-                              Sketchfab
-                          </a>
-                      </div>
-                  </div>
-                </div>
-
-
-            </div>
-
-            <!-- Games & Scripts Category -->
-            <div class="project-category fade-in" data-category="games">
-                <div class="category-header">
-                    <div class="category-icon">
-                        <i class="fas fa-gamepad"></i>
-                    </div>
-                    <div class="category-info">
-                        <h3>Ігри та скрипти</h3>
-                        <p>Скрипти для GTA SA:MP та інші ігрові модифікації на Lua</p>
-                    </div>
-                </div>
-                
-                <div class="project-grid">
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>GangHelper</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Lua</span>
-                                    <span class="tech-tag">SA:MP</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            Скрипт для SA:MP, який допомагає відстежувати членів союзних та ворожих
-                            банд у грі за допомогою візуальних маркерів та зручного інтерфейсу управління.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/GangHelper" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Other Projects Category -->
-            <div class="project-category fade-in" data-category="other">
-                <div class="category-header">
-                    <div class="category-icon">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <div class="category-info">
-                        <h3>Інші проекти</h3>
-                        <p>Утиліти, бібліотеки та експериментальні проекти</p>
-                    </div>
-                </div>
-                
-                <div class="project-grid">
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-cloud"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>Nextcloud bot Python</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Python</span>
-                                    <span class="tech-tag">Telegram</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            Цей проєкт — бот на базі Python, розроблений для взаємодії з Nextcloud, 
-                            популярною платформою хмарного сховища. Бот має на меті спростити взаємодію 
-                            користувачів з Nextcloud, забезпечуючи інтуїтивно зрозумілий інтерфейс 
-                            для керування файлами, обміну даними та співпраці з іншими.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/nextcloud_bot" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-plug"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>VolynEnergyBot</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Python</span>
-                                    <span class="tech-tag">Telegram</span>
-                                    <span class="tech-tag">HTTP</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            Цей бот Telegram надає інформацію про відключення електроенергії 
-                            на основі введених користувачами даних про місцевість і вулицю. 
-                            Бот збирає дані з певного веб-сайту та повертає відповідну інформацію користувачеві.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/VolynEnergyBot" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-solid fa-circle-question"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>HelpGrid</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Python</span>
-                                    <span class="tech-tag">Telegram</span>
-                                    <span class="tech-tag">SQL</span>
-                                </div>
-                                <div class="project-status-completed">Завершено</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            HelpGrid — це Telegram-бот, розроблений для автоматизації обслуговування клієнтів 
-                            інтернет-провайдера. Бот дозволяє користувачам швидко отримувати інформацію про тарифи, 
-                            перевіряти статус послуг, повідомляти про технічні проблеми та взаємодіяти зі службою підтримки.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/HelpGrid" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="project-card">
-                        <div class="project-header">
-                            <div class="project-icon">
-                                <i class="fa-regular fa-file-lines"></i>
-                            </div>
-                            <div class="project-info">
-                                <h4>ГЛИБИНА 4.0</h4>
-                                <div class="project-tech">
-                                    <span class="tech-tag">Python</span>
-                                    <span class="tech-tag">Java</span>
-                                    <span class="tech-tag">Node.js</span>
-                                    <span class="tech-tag">SQL</span>
-                                    <span class="tech-tag">HTML\CSS</span>
-                                </div>
-                                <div class="project-status-idea">Ідея</div>
-                            </div>
-                        </div>
-                        <p class="project-description">
-                            «Глибина 4.0» — це сучасний програмний комплекс, який створює цифрового двійника шахти. 
-                            Це віртуальна копія реальної шахти, що дозволяє в реальному часі бачити все, що відбувається 
-                            під землею: від руху шахтарів до стану обладнання та рівня газів. Система допомагає диспетчерам 
-                            та інженерам швидко реагувати на небезпеки, оптимізувати роботу шахти та підвищувати безпеку.
-                        </p>
-                        <div class="project-links">
-                            <a href="https://github.com/Nazoferon/HelpGrid" class="project-link primary">
-                                <i class="fab fa-github"></i>
-                                GitHub
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </section>
