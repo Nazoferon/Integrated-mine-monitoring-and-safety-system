@@ -5,10 +5,13 @@ from django.conf import settings
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('', views.diploma_home, name='diploma_home'),  # Головна сторінка дипломного сайту
-    path('profile/', views.profile, name='profile'),  # Сторінка профілю
-    path('mine_map/', views.mine_map, name='mine_map'),  # Сторінка з картою шахти
-    path('download_map/', views.download_map, name='download_map'), # Завантаження карти шахти
+    path('', views.diploma_home, name='diploma_home'),  # Головна сторінка
+    path('profile/', views.profile, name='profile'),  # Профіль
+    path('mine_map/', views.mine_map, name='mine_map'),  # Перегляд карти
+    path('download_map/', views.download_map, name='download_map'), # Завантаження карти
+    
+    # --- НОВЕ API ДЛЯ ЗАВАНТАЖЕННЯ КАРТИ З ПРОГРАМИ ---
+    path('api/upload-map/', views.upload_map_api, name='upload_map_api'),
 
     # URL для скидання пароля
     path('password-reset/', 
