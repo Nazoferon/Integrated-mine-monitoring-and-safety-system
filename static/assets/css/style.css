@@ -242,6 +242,39 @@ nav {
     }
 }
 
+/* --- МОБІЛЬНА АДАПТАЦІЯ ТА ЕФЕКТ НАТИСКАННЯ --- */
+
+/* Стан :active спрацьовує в момент дотику пальцем або кліку мишкою */
+.project-link:active {
+    /* 1. Кнопка трохи зменшується (ефект фізичного натискання) */
+    transform: scale(0.95) !important;
+    
+    /* 2. Миттєво заливаємо градієнтом, щоб було видно реакцію */
+    background: linear-gradient(135deg, #8a63d2, #6b46c1);
+    border-color: transparent;
+    color: white !important;
+    
+    /* 3. Міняємо тінь: прибираємо зовнішню і додаємо легку внутрішню */
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    
+    /* Прибираємо світіння, щоб виглядало саме як натискання, а не наведення */
+    filter: brightness(0.9);
+}
+
+/* FIX: Прибираємо "залипання" ховера на мобільних */
+@media (hover: none) {
+    .project-link:hover {
+        /* На телефонах ховер не має змінювати кнопку до натискання */
+        transform: none;
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(138, 99, 210, 0.3);
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    
+    /* Але коли натиснули - спрацює :active (код вище) */
+}
+
 /* Hero Section */
 .hero {
     min-height: 100vh;
