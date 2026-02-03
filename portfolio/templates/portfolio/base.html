@@ -57,9 +57,13 @@
     </main>
 
     <footer>
-        <div class="container">
-            <p>&copy; 2025 BunB. Усі права захищено.</p>
-        </div>
+      <div class="container">
+        <p>&copy; <span id="currentYear"></span> BunB. Усі права захищено.</p>
+      </div>
+      
+      <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+      </script>
     </footer>
 
     <script src="{% static 'assets/js/script.js' %}"></script>
