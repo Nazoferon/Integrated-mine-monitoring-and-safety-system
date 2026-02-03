@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'portfolio',
     'diploma',
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 MIDDLEWARE = [

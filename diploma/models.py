@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 import os
 from uuid import uuid4
+from PIL import Image
 
 # --- ДОПОМІЖНІ ФУНКЦІЇ ---
 def user_profile_photo_path(instance, filename):
@@ -39,14 +41,20 @@ class InfrastructureDevice(models.Model):
     def __str__(self): return f"{self.uid} [{self.wifi_bssid or 'NO MAC'}]"
 
 # --- 2. ПЕРСОНАЛ ---
-# --- 2. ПЕРСОНАЛ ---
+
+# Валідатор для перевірки розміру файлу ДО завантаження (щоб не вантажили 100МБ)
+def validate_image_size(image):
+    file_size = image.size
+    limit_mb = 5
+    if file_size > limit_mb * 1024 * 1024:
+        raise ValidationError(f"Максимальний розмір файлу {limit_mb} MB")
 
 class Employee(models.Model):
     # Тільки основні ролі для диплому
     POSITION_CHOICES = [
         ('GOV', 'Гірник очисного вибою (ГОВ)'),  # Основний робітник у забої
         ('PROH', 'Прохідник'),                   # Прокладає штреки
-        ('EXPLODER', 'Майстер підривнки'),          # Керівник (ходить по дільницях)
+        ('EXPLODER', 'Майстер підривник'),          # Керівник (ходить по дільницях)
         ('MASTER', 'Гірничий майстер'),          # Керівник (ходить по дільницях)
         ('ELECTRO', 'Гірничий електрослюсар'),   # Ремонтник (постійно переміщується)
         ('DISP', 'Диспетчер'),                   # Сидить на поверхні (для адмінки)
@@ -59,14 +67,23 @@ class Employee(models.Model):
         ('SOS', 'ТРИВОГА (SOS)'),
     ]
 
-    first_name = models.CharField(max_length=50, verbose_name="Ім'я")
     last_name = models.CharField(max_length=50, verbose_name="Прізвище")
+    first_name = models.CharField(max_length=50, verbose_name="Ім'я")
     patronymic = models.CharField(max_length=50, blank=True, verbose_name="По батькові")
     
     # Номер жетона (генерується автоматично)
     badge_number = models.CharField(max_length=30, unique=True, blank=True, verbose_name="№ Жетона")
     
-    photo = models.ImageField(upload_to=employee_photo_path, null=True, blank=True, verbose_name="Фото")
+    # ДОДАЄМО ВАЛІДАТОР І HELP TEXT
+    photo = models.ImageField(
+        upload_to=employee_photo_path, 
+        null=True, 
+        blank=True, 
+        verbose_name="Фото",
+        validators=[validate_image_size], # Перевірка на 5 МБ
+        help_text="Макс. розмір 5 МБ. Фото буде автоматично стиснуто."
+    )
+
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, default='GOV', verbose_name="Посада")
     
     safety_status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='OFF_SHIFT', verbose_name="Статус")
@@ -85,6 +102,21 @@ class Employee(models.Model):
             self.badge_number = f"{pos_code}-{initials}-{count:03d}" 
         
         super().save(*args, **kwargs)
+
+    # ЛОГІКА СТИСНЕННЯ ФОТО
+        if self.photo:
+            try:
+                img_path = self.photo.path
+                img = Image.open(img_path)
+                
+                # Якщо картинка занадто велика (більше 800px по висоті чи ширині)
+                if img.height > 800 or img.width > 800:
+                    output_size = (800, 800)
+                    img.thumbnail(output_size) # Зменшуємо пропорційно
+                    img.save(img_path, quality=85, optimize=True) # Перезберігаємо стиснутою
+            except Exception as e:
+                # Якщо файл не є картинкою або сталася помилка - ігноруємо, щоб не ламати збереження
+                print(f"Помилка обробки фото: {e}")
 
     def __str__(self):
         return f"{self.last_name} {self.first_name} (#{self.badge_number})"

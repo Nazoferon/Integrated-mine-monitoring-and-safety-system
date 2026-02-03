@@ -16,6 +16,7 @@ db.sqlite3
 
 # Backup files
 backup.sh
+portfolio_backup.json
 
 # Media files
 media/
