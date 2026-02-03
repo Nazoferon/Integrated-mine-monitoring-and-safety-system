@@ -8,8 +8,8 @@ from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 import json
 
-# Імпорт ваших моделей (переконайтесь, що вони є в models.py)
 from .forms import UserForm, ProfileForm
+# Імпортуємо нові моделі
 from .models import MineMap, UserProfile, InfrastructureDevice
 
 @login_required
@@ -18,7 +18,6 @@ def diploma_home(request):
 
 @login_required
 def profile(request):
-    # Автоматично створюємо профіль, якщо його немає
     if not hasattr(request.user, 'userprofile'):
         UserProfile.objects.create(user=request.user)
     
@@ -40,52 +39,68 @@ def profile(request):
         'profile_form': profile_form
     })
 
-# --- API ДЛЯ MINECAD (Завантаження карти з програми) ---
+# --- API: ЗАВАНТАЖЕННЯ КАРТИ ТА СИНХРОНІЗАЦІЯ РЕПІТЕРІВ ---
 @csrf_exempt
 def upload_map_api(request):
     """
-    Приймає JSON з настільної програми MineCAD.
-    Зберігає карту та оновлює список пристроїв.
+    Приймає JSON з MineCAD.
+    1. Оновлює карту "Основний горизонт".
+    2. Автоматично створює або оновлює координати репітерів.
     """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             
             with transaction.atomic():
-                # 1. Створюємо або оновлюємо карту
-                # Можна створювати нову щоразу для історії, або оновлювати одну
-                new_map = MineMap.objects.create(
-                    name=f"Mine Map (Upload {data.get('timestamp', '')})",
-                    map_data=data,
-                    last_edited_by=request.user if request.user.is_authenticated else None
+                # 1. Працюємо з однією картою (оновлюємо її, а не створюємо нову)
+                mine_map, created = MineMap.objects.get_or_create(
+                    name="Основний горизонт"
                 )
+                # Оновлюємо JSON дані карти
+                mine_map.map_data = data
+                mine_map.save()
                 
-                # 2. Оновлюємо таблицю фізичних пристроїв
-                created_count = 0
+                # 2. Витягуємо список пристроїв для синхронізації
+                devices_list = []
                 
-                # Якщо пристрої вкладені в тунелі (структура MineCAD v29)
+                # Підтримка нової структури (плоский список devices)
+                if 'devices' in data:
+                    devices_list.extend(data['devices'])
+                
+                # Підтримка вкладеної структури (tunnels -> devices)
                 if 'tunnels' in data:
                     for tunnel in data['tunnels']:
                         if 'devices' in tunnel:
-                            for dev in tunnel['devices']:
-                                InfrastructureDevice.objects.update_or_create(
-                                    uid=dev['id'],
-                                    defaults={
-                                        'device_type': 'WIFI_REP',
-                                        'map_location': new_map,
-                                        'x': dev['x'],
-                                        'y': dev['y'],
-                                        'status': 'ONLINE'
-                                    }
-                                )
-                                created_count += 1
-                                
-                # Якщо є окремий список 'yards' або інші, їх теж можна обробити тут
+                            devices_list.extend(tunnel['devices'])
+
+                # 3. Синхронізація таблиці InfrastructureDevice
+                updated_count = 0
+                active_uids = [] # Збережемо ID, які прийшли в цьому запиті
+
+                for dev in devices_list:
+                    uid = dev.get('id')
+                    if uid:
+                        # update_or_create: якщо репітер вже є - оновить координати, якщо ні - створить
+                        # Поле wifi_bssid не чіпаємо (воно заповнюється вручну в адмінці)
+                        InfrastructureDevice.objects.update_or_create(
+                            uid=uid,
+                            defaults={
+                                'map_location': mine_map,
+                                'x': dev.get('x', 0),
+                                'y': dev.get('y', 0),
+                                'is_active': True
+                            }
+                        )
+                        active_uids.append(uid)
+                        updated_count += 1
+                
+                # (Опціонально) Можна деактивувати репітери, яких більше немає на карті
+                # InfrastructureDevice.objects.filter(map_location=mine_map).exclude(uid__in=active_uids).update(is_active=False)
 
             return JsonResponse({
                 'status': 'success', 
-                'message': f'Карту збережено! Оновлено пристроїв: {created_count}',
-                'map_id': new_map.id
+                'message': f'Карту оновлено! Синхронізовано репітерів: {updated_count}',
+                'map_id': mine_map.id
             })
 
         except Exception as e:
@@ -93,28 +108,31 @@ def upload_map_api(request):
     
     return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
 
-# --- ПЕРЕГЛЯД КАРТИ НА САЙТІ ---
+# --- ПЕРЕГЛЯД КАРТИ ---
 @login_required
 def mine_map(request):
     """
-    Відображення останньої актуальної карти на веб-сторінці.
+    Відображення карти. Беремо "Основний горизонт" або останню оновленую.
     """
-    # Беремо останню завантажену карту
-    mine_map = MineMap.objects.order_by('-created_at').first()
+    # Спробуємо знайти карту за назвою, або візьмемо першу ліпшу
+    mine_map = MineMap.objects.filter(name="Основний горизонт").first()
+    if not mine_map:
+        mine_map = MineMap.objects.order_by('-updated_at').first()
     
     map_data = mine_map.map_data if mine_map else {}
-    last_edited = mine_map.last_edited_by.username if mine_map and mine_map.last_edited_by else 'Система'
     
     return render(request, 'diploma/mine_map.html', {
         'map_data': json.dumps(map_data),
-        'last_edited_by': last_edited,
         'map_name': mine_map.name if mine_map else "Немає даних"
     })
 
 @login_required
 def download_map(request):
     """Завантаження JSON файлу карти"""
-    mine_map = MineMap.objects.order_by('-created_at').first()
+    mine_map = MineMap.objects.filter(name="Основний горизонт").first()
+    if not mine_map:
+        mine_map = MineMap.objects.order_by('-updated_at').first()
+
     if not mine_map:
         return HttpResponse("Карта ще не створена", status=404)
         
