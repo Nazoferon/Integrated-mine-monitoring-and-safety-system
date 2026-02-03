@@ -44,44 +44,41 @@ def profile(request):
 def upload_map_api(request):
     """
     Приймає JSON з MineCAD.
-    1. Оновлює карту "Основний горизонт".
-    2. Автоматично створює або оновлює координати репітерів.
+    Повна синхронізація: Створення нових + Оновлення існуючих + ВИДАЛЕННЯ зниклих.
     """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             
             with transaction.atomic():
-                # 1. Працюємо з однією картою (оновлюємо її, а не створюємо нову)
+                # 1. Отримуємо або створюємо карту
                 mine_map, created = MineMap.objects.get_or_create(
                     name="Основний горизонт"
                 )
-                # Оновлюємо JSON дані карти
                 mine_map.map_data = data
                 mine_map.save()
                 
-                # 2. Витягуємо список пристроїв для синхронізації
+                # 2. Формуємо єдиний список пристроїв з JSON
                 devices_list = []
                 
-                # Підтримка нової структури (плоский список devices)
+                # Підтримка нової структури MineCAD
                 if 'devices' in data:
                     devices_list.extend(data['devices'])
                 
-                # Підтримка вкладеної структури (tunnels -> devices)
+                # Підтримка старої структури (вкладені в тунелі)
                 if 'tunnels' in data:
                     for tunnel in data['tunnels']:
                         if 'devices' in tunnel:
                             devices_list.extend(tunnel['devices'])
 
-                # 3. Синхронізація таблиці InfrastructureDevice
-                updated_count = 0
-                active_uids = [] # Збережемо ID, які прийшли в цьому запиті
+                # 3. Синхронізація (Upsert)
+                # Збираємо список UID, які ДІЙСНО є на новій карті
+                active_uids = [] 
 
                 for dev in devices_list:
                     uid = dev.get('id')
                     if uid:
-                        # update_or_create: якщо репітер вже є - оновить координати, якщо ні - створить
-                        # Поле wifi_bssid не чіпаємо (воно заповнюється вручну в адмінці)
+                        # Створюємо або оновлюємо
                         InfrastructureDevice.objects.update_or_create(
                             uid=uid,
                             defaults={
@@ -92,14 +89,14 @@ def upload_map_api(request):
                             }
                         )
                         active_uids.append(uid)
-                        updated_count += 1
                 
-                # (Опціонально) Можна деактивувати репітери, яких більше немає на карті
-                # InfrastructureDevice.objects.filter(map_location=mine_map).exclude(uid__in=active_uids).update(is_active=False)
+                # 4. ОЧИЩЕННЯ (Garbage Collection)
+                # Видаляємо всі репітери цієї карти, чиїх UID немає в списку active_uids
+                deleted_count, _ = InfrastructureDevice.objects.filter(map_location=mine_map).exclude(uid__in=active_uids).delete()
 
             return JsonResponse({
                 'status': 'success', 
-                'message': f'Карту оновлено! Синхронізовано репітерів: {updated_count}',
+                'message': f'Карту оновлено! Синхронізовано: {len(active_uids)}. Видалено старих: {deleted_count}.',
                 'map_id': mine_map.id
             })
 
