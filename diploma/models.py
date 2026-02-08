@@ -122,24 +122,52 @@ class Employee(models.Model):
         return f"{self.last_name} {self.first_name} (#{self.badge_number})"
 
 # --- 3. ОБЛАДНАННЯ ---
+# --- 3. ОБЛАДНАННЯ ---
+
 class MinerDevice(models.Model):
     mac_address = models.CharField(max_length=17, unique=True, verbose_name="MAC (ESP32)")
-    
-    # Інвентарний номер теж авто-генеруємо
     inventory_number = models.CharField(max_length=50, unique=True, blank=True, verbose_name="Інв. номер")
-    
     firmware_version = models.CharField(max_length=20, default="1.0.0", verbose_name="Прошивка")
-    assigned_to = models.OneToOneField(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='device', verbose_name="Видано")
+    
+    is_static = models.BooleanField(default=False, verbose_name="Стаціонарний (на стіні)?")
+    static_x = models.FloatField(null=True, blank=True, verbose_name="X (якщо стаціонарний)")
+    static_y = models.FloatField(null=True, blank=True, verbose_name="Y (якщо стаціонарний)")
+
+    assigned_to = models.OneToOneField(
+        Employee, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name='device', verbose_name="Видано (кому)"
+    )
     is_active = models.BooleanField(default=True)
 
+    # --- 2. ЛОГІКА ПЕРЕВІРКИ (VALIDATION) ---
+    def clean(self):
+        # Перевірка 1: Якщо НЕ стаціонарний -> Працівник ОБОВ'ЯЗКОВИЙ
+        if not self.is_static and self.assigned_to is None:
+            raise ValidationError({
+                'assigned_to': "Мобільна коногонка мусіть бути видана працівнику! Оберіть працівника або позначте як 'Стаціонарний'."
+            })
+
+        # Перевірка 2: Якщо стаціонарний -> Працівник ЗАБОРОНЕНИЙ
+        if self.is_static and self.assigned_to is not None:
+            raise ValidationError({
+                'assigned_to': "Стаціонарний датчик не може бути прив'язаний до людини. Очистіть це поле."
+            })
+
     def save(self, *args, **kwargs):
+        # Авто-генерація номера
         if not self.inventory_number:
             count = MinerDevice.objects.count() + 1
-            self.inventory_number = f"LAMP-{count:04d}" # LAMP-0001
+            prefix = "SENS" if self.is_static else "LAMP"
+            self.inventory_number = f"{prefix}-{count:04d}"
+            
+        # Запускаємо перевірку clean() перед записом у БД
+        self.clean()
+        
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.inventory_number} ({self.mac_address})"
+        type_label = "📍СТІНА" if self.is_static else "👤КАСКА"
+        return f"{self.inventory_number} [{type_label}]"
 
 # --- 4. ТЕЛЕМЕТРІЯ ---
 class TelemetryLog(models.Model):

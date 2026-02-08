@@ -25,10 +25,24 @@ class EmployeeAdmin(admin.ModelAdmin):
 
 @admin.register(MinerDevice)
 class MinerDeviceAdmin(admin.ModelAdmin):
-    list_display = ('inventory_number', 'mac_address', 'assigned_to', 'is_active')
+    list_display = ('inventory_number', 'is_static', 'assigned_to', 'mac_address', 'is_active')
+    list_filter = ('is_static', 'is_active')
     search_fields = ('inventory_number', 'mac_address')
-    # ІНВЕНТАРНИЙ НОМЕР ТІЛЬКИ ДЛЯ ЧИТАННЯ
-    readonly_fields = ('inventory_number',) 
+    readonly_fields = ('inventory_number',)
+    
+    fieldsets = (
+        ('Основне', {
+            'fields': ('mac_address', 'inventory_number', 'firmware_version', 'is_active')
+        }),
+        ('Режим роботи', {
+            'fields': ('is_static', 'assigned_to'),
+            'description': 'Якщо пристрій стаціонарний - працівника не вказуємо.'
+        }),
+        ('Координати (Тільки для стаціонарних)', {
+            'fields': ('static_x', 'static_y'),
+            'classes': ('collapse',), # Ховаємо, щоб не заважало
+        }),
+    )
 
 @admin.register(TelemetryLog)
 class TelemetryLogAdmin(admin.ModelAdmin):
