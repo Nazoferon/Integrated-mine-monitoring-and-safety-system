@@ -189,12 +189,33 @@ class TelemetryLog(models.Model):
 
 # --- 5. ТРИВОГИ ---
 class SecurityAlert(models.Model):
+    ALERT_STATUS_CHOICES = [
+        ('NEW', '🔴 Нова (Необроблена)'),
+        ('IN_PROGRESS', '🟡 В процесі порятунку'),
+        ('RESOLVED', '🟢 Вирішено (Безпечно)'),
+    ]
+
     created_at = models.DateTimeField(auto_now_add=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     device = models.ForeignKey(MinerDevice, on_delete=models.CASCADE)
-    location_label = models.CharField(max_length=100, verbose_name="Місце")
+    
+    # --- НОВЕ ПОЛЕ ДЛЯ РЕПІТЕРА ---
+    connected_repeater = models.ForeignKey(
+        InfrastructureDevice, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Найближчий репітер"
+    )
+    
+    location_label = models.CharField(max_length=100, verbose_name="Місце", blank=True)
     reason = models.CharField(max_length=50, verbose_name="Причина")
+    
+    status = models.CharField(max_length=20, choices=ALERT_STATUS_CHOICES, default='NEW', verbose_name="Статус обробки")
+    rescue_notes = models.TextField(blank=True, verbose_name="Нотатки диспетчера / Вжиті заходи")
+    
     is_resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    def __str__(self): return f"SOS: {self.employee.last_name}"
+
+    def __str__(self): return f"SOS: {self.employee.last_name} ({self.status})"

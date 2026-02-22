@@ -6,15 +6,112 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 import json
 
 from .forms import UserForm, ProfileForm
 # Імпортуємо нові моделі
-from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice
+from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog
 
 @login_required
 def diploma_home(request):
-    return render(request, 'diploma/diploma_home.html')
+    # 1. Статистика по персоналу
+    # Вважаємо, що працівник "в шахті", якщо його статус НЕ 'OFF_SHIFT'
+    online_staff = Employee.objects.exclude(safety_status='OFF_SHIFT')
+    online_count = online_staff.count()
+    
+    # Кількість попереджень і тривог
+    warning_count = Employee.objects.filter(safety_status__in=['WARNING', 'SOS']).count()
+    
+    # Беремо 4 останніх оновлених працівників для бічної панелі
+    recent_staff = online_staff.order_by('-last_update')[:4]
+
+    # 2. Тривоги та Сповіщення
+    # Беремо всі невирішені тривоги
+    active_alerts = SecurityAlert.objects.filter(is_resolved=False).order_by('-created_at')[:5]
+    critical_alerts_count = active_alerts.count()
+
+    # 3. Телеметрія (Показники середовища)
+    # Беремо останній запис телеметрії для виведення середніх/останніх показників
+    latest_telemetry = TelemetryLog.objects.order_by('-timestamp').first()
+    
+    avg_temp = latest_telemetry.temperature if latest_telemetry and latest_telemetry.temperature else 0.0
+    avg_hum = latest_telemetry.humidity if latest_telemetry and latest_telemetry.humidity else 0.0
+    gas_level = latest_telemetry.gas_level if latest_telemetry and latest_telemetry.gas_level else 0
+
+    context = {
+        'online_count': online_count,
+        'warning_count': warning_count,
+        'recent_staff': recent_staff,
+        'active_alerts': active_alerts,
+        'critical_alerts_count': critical_alerts_count,
+        'avg_temp': avg_temp,
+        'avg_hum': avg_hum,
+        'gas_level': gas_level,
+    }
+    
+    return render(request, 'diploma/diploma_home.html', context)
+
+def alert_telemetry_api(request, alert_id):
+    alert = get_object_or_404(SecurityAlert, id=alert_id)
+    latest = TelemetryLog.objects.filter(device=alert.device).order_by('-timestamp').first()
+    
+    if not latest:
+        return JsonResponse({'status': 'no_data'})
+        
+    return JsonResponse({
+        'status': 'ok',
+        'timestamp': latest.timestamp.strftime('%H:%M:%S'),
+        'gas': latest.gas_level,
+        'temp': latest.temperature,
+        'moving': latest.is_moving,
+        'rssi': latest.wifi_signal_strength,
+        'repeater': latest.connected_repeater.uid if latest.connected_repeater else "Втрачено"
+    })
+
+def alert_detail(request, alert_id):
+    alert = get_object_or_404(SecurityAlert, id=alert_id)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        notes = request.POST.get('rescue_notes')
+        
+        # Оновлюємо статус
+        if new_status:
+            alert.status = new_status
+            
+            # Якщо диспетчер закриває тривогу
+            if new_status == 'RESOLVED':
+                alert.is_resolved = True
+                alert.resolved_at = timezone.now()
+                alert.resolved_by = request.user
+                
+                # АВТОМАТИКА: Повертаємо працівнику нормальний статус
+                emp = alert.employee
+                emp.safety_status = 'OK'
+                emp.save()
+                
+            # Якщо диспетчер щойно взяв у роботу (відправив рятувальників)
+            elif new_status == 'IN_PROGRESS':
+                alert.is_resolved = False
+                alert.resolved_at = None
+        
+        # Оновлюємо нотатки
+        if notes is not None:
+            alert.rescue_notes = notes
+            
+        alert.save()
+        messages.success(request, f"Статус тривоги оновлено на: {alert.get_status_display()}")
+        return redirect('alert_detail', alert_id=alert.id)
+        
+    # Отримуємо останні показники телеметрії з коногонки, яка дала збій
+    latest_telemetry = TelemetryLog.objects.filter(device=alert.device).order_by('-timestamp').first()
+    
+    return render(request, 'diploma/alert_detail.html', {
+      'alert': alert,
+      'telemetry': latest_telemetry
+    })
 
 @login_required
 def profile(request):
