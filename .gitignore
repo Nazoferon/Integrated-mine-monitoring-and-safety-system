@@ -10,6 +10,9 @@ venv/
 .env
 settings_local.py
 
+# settings project
+settings.py
+
 # Database
 *.sqlite3
 *.db
