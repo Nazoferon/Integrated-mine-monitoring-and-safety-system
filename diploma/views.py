@@ -10,7 +10,7 @@ import json
 
 from .forms import UserForm, ProfileForm
 # Імпортуємо нові моделі
-from .models import MineMap, UserProfile, InfrastructureDevice
+from .models import MineMap, UserProfile, InfrastructureDevice, Employee
 
 @login_required
 def diploma_home(request):
@@ -38,6 +38,18 @@ def profile(request):
         'user_form': user_form,
         'profile_form': profile_form
     })
+
+def personnel_list(request):
+    # Отримуємо всіх працівників. 
+    # Якщо пристрій прив'язаний через OneToOneField (related_name='device'),
+    # використовуємо select_related для оптимізації БД.
+    employees = Employee.objects.all().select_related('device')
+    
+    context = {
+        'employees': employees,
+        'total_employees': employees.count(),
+    }
+    return render(request, 'diploma/personnel.html', context)
 
 # --- API: ЗАВАНТАЖЕННЯ КАРТИ ТА СИНХРОНІЗАЦІЯ РЕПІТЕРІВ ---
 @csrf_exempt

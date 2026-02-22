@@ -9,6 +9,7 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),  # Профіль
     path('mine_map/', views.mine_map, name='mine_map'),  # Перегляд карти
     path('download_map/', views.download_map, name='download_map'), # Завантаження карти
+    path('personnel/', views.personnel_list, name='personnel'),  # Персонал
     
     # --- НОВЕ API ДЛЯ ЗАВАНТАЖЕННЯ КАРТИ З ПРОГРАМИ ---
     path('api/upload-map/', views.upload_map_api, name='upload_map_api'),
