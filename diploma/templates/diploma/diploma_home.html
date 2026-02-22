@@ -1,212 +1,428 @@
 {% extends 'diploma/base.html' %}
+{% load static %}
 
 {% block title %}Головна панель - Глибина 4.0{% endblock %}
 
 {% block content %}
 <div class="dashboard-grid">
-    <div class="status-overview">
-        <div class="status-card online">
-            <div class="status-icon">
-                <i class="fas fa-users"></i>
+  <div class="status-overview">
+    <div class="status-card online">
+      <div class="status-icon">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="status-info">
+        <h3>{{ online_count }}</h3>
+        <p>Персонал онлайн</p>
+      </div>
+    </div>
+    <div class="status-card {% if warning_count > 0 %}warning{% else %}normal{% endif %}">
+      <div class="status-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="status-info">
+        <h3>{{ warning_count }}</h3>
+        <p>Активні попередження</p>
+      </div>
+    </div>
+    <div class="status-card normal">
+      <div class="status-icon">
+        <i class="fas fa-thermometer-half"></i>
+      </div>
+      <div class="status-info">
+        <h3>{{ avg_temp|floatformat:1 }}°C</h3>
+        <p>Температура</p>
+      </div>
+    </div>
+    <div class="status-card normal">
+      <div class="status-icon">
+        <i class="fas fa-tint"></i>
+      </div>
+      <div class="status-info">
+        <h3>{{ avg_hum|floatformat:0 }}%</h3>
+        <p>Вологість</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="card alert-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fas fa-bell"></i>
+          Активні Сповіщення
+        </h2>
+        {% if critical_alerts_count > 0 %}
+        <span class="badge badge-critical">{{ critical_alerts_count }} критичних</span>
+        {% else %}
+        <span class="badge" style="background: #28a745;">Все спокійно</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% for alert in active_alerts %}
+        <a href="{% url 'alert_detail' alert.id %}" class="alert-link-wrapper"
+          style="text-decoration: none; color: inherit; display: block;">
+          <div
+            class="alert-item {% if alert.reason == 'MAN_DOWN' or alert.reason == 'SOS' %}critical{% else %}warning{% endif %}">
+            <div class="alert-icon">
+              {% if alert.reason == 'SOS' %}
+              <i class="fas fa-skull-crossbones"></i>
+              {% elif alert.reason == 'MAN_DOWN' %}
+              <i class="fas fa-user-injured"></i>
+              {% else %}
+              <i class="fas fa-exclamation-circle"></i>
+              {% endif %}
             </div>
-            <div class="status-info">
-                <h3>{{ online_count }}</h3>
-                <p>Персонал онлайн</p>
+            <div class="alert-content">
+              <h4>{{ alert.get_reason_display|default:alert.reason }}</h4>
+              <p>{{ alert.location_label }} - Працівник: {{ alert.employee.last_name }}</p>
+              <span class="alert-time">{{ alert.created_at|timesince }} тому</span>
             </div>
+            <div class="alert-action" style="display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-chevron-right"></i>
+            </div>
+          </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745; opacity: 0.7;"></i>
+          <p>Наразі активних інцидентів немає.</p>
         </div>
-        <div class="status-card {% if warning_count > 0 %}warning{% else %}normal{% endif %}">
-            <div class="status-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="status-info">
-                <h3>{{ warning_count }}</h3>
-                <p>Активні попередження</p>
-            </div>
-        </div>
-        <div class="status-card normal">
-            <div class="status-icon">
-                <i class="fas fa-thermometer-half"></i>
-            </div>
-            <div class="status-info">
-                <h3>{{ avg_temp|floatformat:1 }}°C</h3>
-                <p>Температура</p>
-            </div>
-        </div>
-        <div class="status-card normal">
-            <div class="status-icon">
-                <i class="fas fa-tint"></i>
-            </div>
-            <div class="status-info">
-                <h3>{{ avg_hum|floatformat:0 }}%</h3>
-                <p>Вологість</p>
-            </div>
-        </div>
+        {% endfor %}
+      </div>
     </div>
 
-    <div class="main-content">
-        <div class="card alert-card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-bell"></i>
-                    Активні Сповіщення
-                </h2>
-                {% if critical_alerts_count > 0 %}
-                    <span class="badge badge-critical">{{ critical_alerts_count }} критичних</span>
-                {% else %}
-                    <span class="badge" style="background: #28a745;">Все спокійно</span>
-                {% endif %}
+    <div class="card map-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fas fa-map-marked-alt"></i>
+          Інтерактивна Карта Шахти
+        </h2>
+        <div class="map-controls">
+          <a href="{% url 'mine_map' %}" class="btn-control active" style="text-decoration: none;">Відкрити карту</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="map-container">
+          <div class="card-body p-0" style="position: relative; overflow: hidden; height: 400px;">
+            <a href="{% url 'mine_map' %}" class="map-hover-overlay">
+              <div class="overlay-content">
+                <i class="fas fa-expand-arrows-alt"></i>
+                <span>Розгорнути інтерактивну карту</span>
+              </div>
+            </a>
+
+            <canvas id="homeMapCanvas" style="background: #0f0f0f; width: 100%; height: 100%;"></canvas>
+
+            <div class="map-legend"
+              style="position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; pointer-events: none;">
+              <div class="legend-item"><span class="legend-color safe"></span><span>Безпечно</span></div>
+              <div class="legend-item"><span class="legend-color warning"></span><span>Увага</span></div>
+              <div class="legend-item"><span class="legend-color critical"></span><span>Небезпека</span></div>
             </div>
-            <div class="card-body">
-              {% for alert in active_alerts %}
-                  <a href="{% url 'alert_detail' alert.id %}" class="alert-link-wrapper" style="text-decoration: none; color: inherit; display: block;">
-                      <div class="alert-item {% if alert.reason == 'MAN_DOWN' or alert.reason == 'SOS' %}critical{% else %}warning{% endif %}">
-                          <div class="alert-icon">
-                              {% if alert.reason == 'SOS' %}
-                                  <i class="fas fa-skull-crossbones"></i>
-                              {% elif alert.reason == 'MAN_DOWN' %}
-                                  <i class="fas fa-user-injured"></i>
-                              {% else %}
-                                  <i class="fas fa-exclamation-circle"></i>
-                              {% endif %}
-                          </div>
-                          <div class="alert-content">
-                              <h4>{{ alert.get_reason_display|default:alert.reason }}</h4>
-                              <p>{{ alert.location_label }} - Працівник: {{ alert.employee.last_name }}</p>
-                              <span class="alert-time">{{ alert.created_at|timesince }} тому</span>
-                          </div>
-                          <div class="alert-action" style="display: flex; align-items: center; justify-content: center;">
-                              <i class="fas fa-chevron-right"></i>
-                          </div>
-                      </div>
-                  </a>
-              {% empty %}
-                  <div class="text-center py-4 text-muted">
-                      <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745; opacity: 0.7;"></i>
-                      <p>Наразі активних інцидентів немає.</p>
-                  </div>
-              {% endfor %}
           </div>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div class="card map-card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-map-marked-alt"></i>
-                    Інтерактивна Карта Шахти
-                </h2>
-                <div class="map-controls">
-                    <a href="{% url 'mine_map' %}" class="btn-control active" style="text-decoration: none;">Відкрити карту</a>
-                </div>
+  <div class="sidebar-content">
+    <div class="card staff-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fas fa-users"></i>
+          Персонал у Шахті
+        </h2>
+        <span class="online-indicator">{{ online_count }} онлайн</span>
+      </div>
+      <div class="card-body">
+        <div class="staff-list">
+          {% for emp in recent_staff %}
+          <div class="staff-item">
+            <div class="staff-avatar">
+              {% if emp.photo %}
+              <img src="{{ emp.photo.url }}" alt="Avatar"
+                style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
+              {% else %}
+              <i class="fas fa-hard-hat"></i>
+              {% endif %}
             </div>
-            <div class="card-body">
-                <div class="map-container">
-                    <div class="map-placeholder">
-                        <i class="fas fa-mountain"></i>
-                        <h3>3D Карта шахти</h3>
-                        <p>Інтерактивне відображення структури шахти</p>
-                        <div class="map-legend">
-                            <div class="legend-item">
-                                <span class="legend-color safe"></span>
-                                <span>Безпечна зона</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color warning"></span>
-                                <span>Попередження</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color critical"></span>
-                                <span>Небезпечна зона</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="staff-info">
+              <h4>{{ emp.first_name }} {{ emp.last_name }}</h4>
+              <p>{{ emp.get_position_display }}</p>
+              {% if emp.safety_status == 'OK' %}
+              <span class="staff-status online">Норма</span>
+              {% elif emp.safety_status == 'WARNING' %}
+              <span class="staff-status" style="color: #f39c12;">Увага</span>
+              {% elif emp.safety_status == 'SOS' %}
+              <span class="staff-status" style="color: #e74c3c;">ТРИВОГА</span>
+              {% else %}
+              <span class="staff-status offline">Офлайн</span>
+              {% endif %}
             </div>
+          </div>
+          {% empty %}
+          <p class="text-muted text-center py-3">Наразі в шахті немає працівників.</p>
+          {% endfor %}
         </div>
+        <a href="{% url 'personnel' %}" class="btn-view-all" style="text-decoration: none; display: flex;">
+          <span>Переглянути всіх</span>
+          <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
     </div>
 
-    <div class="sidebar-content">
-        <div class="card staff-card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-users"></i>
-                    Персонал у Шахті
-                </h2>
-                <span class="online-indicator">{{ online_count }} онлайн</span>
+    <div class="card environment-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fas fa-chart-line"></i>
+          Показники Середовища
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-value">{{ avg_temp|floatformat:1 }}°C</div>
+            <div class="metric-label">Температура</div>
+            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0.0°C</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">{{ avg_hum|floatformat:0 }}%</div>
+            <div class="metric-label">Вологість</div>
+            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">{{ gas_level }}</div>
+            <div class="metric-label">Газ (CO PPM)</div>
+            <div class="metric-trend {% if gas_level > 250 %}up{% else %}stable{% endif %}">
+              {% if gas_level > 250 %}
+              <i class="fas fa-arrow-up" style="color: #e74c3c;"></i>
+              {% else %}
+              <i class="fas fa-minus"></i>
+              {% endif %}
             </div>
-            <div class="card-body">
-                <div class="staff-list">
-                    {% for emp in recent_staff %}
-                        <div class="staff-item">
-                            <div class="staff-avatar">
-                                {% if emp.photo %}
-                                    <img src="{{ emp.photo.url }}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
-                                {% else %}
-                                    <i class="fas fa-hard-hat"></i>
-                                {% endif %}
-                            </div>
-                            <div class="staff-info">
-                                <h4>{{ emp.first_name }} {{ emp.last_name }}</h4>
-                                <p>{{ emp.get_position_display }}</p>
-                                {% if emp.safety_status == 'OK' %}
-                                    <span class="staff-status online">Норма</span>
-                                {% elif emp.safety_status == 'WARNING' %}
-                                    <span class="staff-status" style="color: #f39c12;">Увага</span>
-                                {% elif emp.safety_status == 'SOS' %}
-                                    <span class="staff-status" style="color: #e74c3c;">ТРИВОГА</span>
-                                {% else %}
-                                    <span class="staff-status offline">Офлайн</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% empty %}
-                        <p class="text-muted text-center py-3">Наразі в шахті немає працівників.</p>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'personnel' %}" class="btn-view-all" style="text-decoration: none; display: flex;">
-                    <span>Переглянути всіх</span>
-                    <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">98.2%</div>
+            <div class="metric-label">Кисень</div>
+            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
+          </div>
         </div>
-
-        <div class="card environment-card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-chart-line"></i>
-                    Показники Середовища
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="metric-grid">
-                    <div class="metric-item">
-                        <div class="metric-value">{{ avg_temp|floatformat:1 }}°C</div>
-                        <div class="metric-label">Температура</div>
-                        <div class="metric-trend stable"><i class="fas fa-minus"></i> 0.0°C</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value">{{ avg_hum|floatformat:0 }}%</div>
-                        <div class="metric-label">Вологість</div>
-                        <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value">{{ gas_level }}</div>
-                        <div class="metric-label">Газ (CO PPM)</div>
-                        <div class="metric-trend {% if gas_level > 250 %}up{% else %}stable{% endif %}">
-                            {% if gas_level > 250 %}
-                                <i class="fas fa-arrow-up" style="color: #e74c3c;"></i>
-                            {% else %}
-                                <i class="fas fa-minus"></i>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value">98.2%</div>
-                        <div class="metric-label">Кисень</div>
-                        <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // 1. Отримуємо дані
+    const rawData = '{{ map_data | escapejs }}';
+    const mapData = rawData ? JSON.parse(rawData) : { tunnels: [], yards: [], devices: [] };
+    const canvas = document.getElementById('homeMapCanvas');
+
+    if (!canvas || (!mapData.tunnels && !mapData.yards)) {
+      console.log("Дані карти порожні або canvas не знайдено");
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    // Функція для фонового оновлення тривог
+    // Функція для автоматичного оновлення списку тривог
+    function updateAlerts() {
+      fetch('/diploma/api/active-alerts/')
+        .then(response => response.json())
+        .then(data => {
+          const container = document.querySelector('.card.alert-card .card-body');
+          const badge = document.querySelector('.badge-critical');
+
+          // --- НОВА ЛОГІКА ДЛЯ ЗАГОЛОВКА СТОРІНКИ ---
+          if (data.count > 0) {
+            // Додаємо кількість тривог та іконку в назву вкладки
+            document.title = `🚨 (${data.count}) Тривога! - Глибина 4.0`;
+          } else {
+            // Повертаємо стандартний заголовок
+            document.title = "Головна панель - Глибина 4.0";
+          }
+          // ------------------------------------------
+
+          // Оновлення бейджа на сторінці
+          if (badge) {
+            if (data.count > 0) {
+              badge.style.display = 'inline-block';
+              badge.innerText = `${data.count} критичних`;
+              badge.style.background = '#dc3545';
+            } else {
+              badge.innerText = 'Все спокійно';
+              badge.style.background = '#28a745';
+            }
+          }
+          const staffContainer = document.querySelector('.staff-list');
+          if (staffContainer && data.staff) {
+            let staffHtml = '';
+            data.staff.forEach(emp => {
+              let statusHtml = '';
+              // Логіка кольорів статусу
+              if (emp.status === 'OK') {
+                statusHtml = '<span class="staff-status online">Норма</span>';
+              } else if (emp.status === 'WARNING') {
+                statusHtml = '<span class="staff-status" style="color: #f39c12;">Увага</span>';
+              } else if (emp.status === 'SOS') {
+                statusHtml = '<span class="staff-status" style="color: #e74c3c; font-weight: bold; animation: pulse 1s infinite;">ТРИВОГА</span>';
+              }
+
+              const avatarHtml = emp.photo_url
+                ? `<img src="${emp.photo_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+                : `<i class="fas fa-hard-hat"></i>`;
+
+              staffHtml += `
+                        <div class="staff-item">
+                            <div class="staff-avatar">${avatarHtml}</div>
+                            <div class="staff-info">
+                                <h4>${emp.full_name}</h4>
+                                <p>${emp.position}</p>
+                                ${statusHtml}
+                            </div>
+                        </div>`;
+            });
+            staffContainer.innerHTML = staffHtml;
+          }
+          // Оновлення списку (твій існуючий код)
+          if (data.count > 0) {
+            let html = '';
+            data.alerts.forEach(alert => {
+              const alertClass = alert.is_critical ? 'critical' : 'warning';
+              const icon = alert.is_critical ? 'fa-skull-crossbones' : 'fa-exclamation-circle';
+              html += `
+                        <a href="/diploma/alert/${alert.id}/" class="alert-link-wrapper" style="text-decoration: none; color: inherit; display: block;">
+                            <div class="alert-item ${alertClass}">
+                                <div class="alert-icon"><i class="fas ${icon}"></i></div>
+                                <div class="alert-content">
+                                    <h4>${alert.reason}</h4>
+                                    <p>${alert.location} - Працівник: ${alert.employee}</p>
+                                    <span class="alert-time">${alert.time}</span>
+                                </div>
+                                <div class="alert-action"><i class="fas fa-chevron-right"></i></div>
+                            </div>
+                        </a>`;
+            });
+            container.innerHTML = html;
+          } else {
+            container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745; opacity: 0.7;"></i>
+                        <p>Наразі активних інцидентів немає.</p>
+                    </div>`;
+          }
+        });
+    }
+
+    // Запускаємо перевірку кожні 5 секунд
+    setInterval(updateAlerts, 5000);
+
+    function drawPreviewMap() {
+      // Встановлюємо розмір полотна рівним розміру контейнера
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // --- АВТОМАТИЧНЕ МАСШТАБУВАННЯ ---
+      // Вираховуємо межі карти (щоб знати, якого вона розміру)
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+      const points = [];
+      if (mapData.tunnels) {
+        mapData.tunnels.forEach(t => {
+          points.push({ x: t.x1 * 10, y: t.y1 * 10 }, { x: t.x2 * 10, y: t.y2 * 10 });
+        });
+      }
+      if (mapData.yards) {
+        mapData.yards.forEach(y => {
+          points.push({ x: (y.x - y.w / 2) * 10, y: (y.y - y.h / 2) * 10 });
+          points.push({ x: (y.x + y.w / 2) * 10, y: (y.y + y.h / 2) * 10 });
+        });
+      }
+
+      if (points.length === 0) return;
+
+      points.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      const mapWidth = maxX - minX;
+      const mapHeight = maxY - minY;
+
+      // Розраховуємо масштаб, щоб втиснути карту (з відступом 20%)
+      const padding = Math.max(mapWidth, mapHeight) * 0.2;
+      const scaleX = (canvas.width - padding) / mapWidth;
+      const scaleY = (canvas.height - padding) / mapHeight;
+      const scale = Math.min(scaleX, scaleY);
+
+      // Центруємо
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-(minX + maxX) / 2, -(minY + maxY) / 2);
+
+      // --- МАЛЮВАННЯ (аналогічно твоїй карті) ---
+
+      // 1. Руддвори
+      if (mapData.yards) {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        mapData.yards.forEach(y => {
+          const x = y.x * 10, yPos = y.y * 10, w = y.w * 10, h = y.h * 10;
+          ctx.fillRect(x - w / 2, yPos - h / 2, w, h);
+          ctx.strokeRect(x - w / 2, yPos - h / 2, w, h);
+        });
+      }
+
+      // 2. Тунелі
+      if (mapData.tunnels) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        mapData.tunnels.forEach(t => {
+          const x1 = t.x1 * 10, y1 = t.y1 * 10, x2 = t.x2 * 10, y2 = t.y2 * 10;
+
+          // Зовнішня частина штреку
+          ctx.lineWidth = 12;
+          ctx.strokeStyle = '#222';
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+          // Внутрішня частина (колір породи)
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#5a4d41';
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+          // Пристрої на тунелях
+          if (t.devices) {
+            t.devices.forEach(d => {
+              ctx.beginPath();
+              ctx.arc(d.x * 10, d.y * 10, 4, 0, Math.PI * 2);
+              ctx.fillStyle = '#00ffff';
+              ctx.shadowBlur = 5;
+              ctx.shadowColor = '#00ffff';
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            });
+          }
+        });
+      }
+
+      ctx.restore();
+    }
+
+    // Викликаємо малювання
+    drawPreviewMap();
+
+    // Перемальовуємо при зміні розміру вікна
+    window.addEventListener('resize', drawPreviewMap);
+  });
+</script>
 {% endblock %}
