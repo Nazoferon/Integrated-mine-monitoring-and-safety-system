@@ -18,12 +18,14 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Завантажуємо змінні з файлу .env
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5y%&m1nc^te9#vk3n45#5tw%dro_2)b8+hl-pn6)^cl9d(f8jx'
+SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsafe-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -85,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'django_project',
         'USER': 'bunb',
-        'PASSWORD': 'nazar4ik_GO2003',
+        'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -153,5 +155,5 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nazar.haniuk.dev@gmail.com'  # Ваш Gmail
-EMAIL_HOST_PASSWORD = 'zpjp sdhh nvgk spgl'  # Пароль додатка з кроку 1
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')  # Пароль додатка
 DEFAULT_FROM_EMAIL = 'Глибина 4.0 <nazar.haniuk.dev@gmail.com>' # Від кого надсилати листи за замовчуванням
