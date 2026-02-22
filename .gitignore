@@ -8,6 +8,7 @@
 # Virtual environment
 venv/
 .env
+settings_local.py
 
 # Database
 *.sqlite3
