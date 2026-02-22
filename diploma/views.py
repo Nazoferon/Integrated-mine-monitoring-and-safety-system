@@ -10,7 +10,7 @@ import json
 
 from .forms import UserForm, ProfileForm
 # Імпортуємо нові моделі
-from .models import MineMap, UserProfile, InfrastructureDevice, Employee
+from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice
 
 @login_required
 def diploma_home(request):
@@ -50,6 +50,27 @@ def personnel_list(request):
         'total_employees': employees.count(),
     }
     return render(request, 'diploma/personnel.html', context)
+
+def equipment_list(request):
+    # Мобільні пристрої (Коногонки)
+    lamps = MinerDevice.objects.filter(is_static=False).select_related('assigned_to')
+    
+    # Стаціонарні датчики
+    sensors = MinerDevice.objects.filter(is_static=True)
+    
+    # Wi-Fi інфраструктура (Репітери)
+    repeaters = InfrastructureDevice.objects.select_related('map_location')
+    
+    context = {
+        'lamps': lamps,
+        'sensors': sensors,
+        'repeaters': repeaters,
+        'total_lamps': lamps.count(),
+        'total_sensors': sensors.count(),
+        'total_repeaters': repeaters.count(),
+        'total_devices': lamps.count() + sensors.count() + repeaters.count(),
+    }
+    return render(request, 'diploma/equipment.html', context)
 
 # --- API: ЗАВАНТАЖЕННЯ КАРТИ ТА СИНХРОНІЗАЦІЯ РЕПІТЕРІВ ---
 @csrf_exempt
