@@ -1,0 +1,61 @@
+/* Metrics */
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.metric-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 12px;
+    text-align: center;
+    transition: var(--transition-normal);
+}
+
+.metric-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.metric-value {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.metric-trend {
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.metric-trend.up {
+    color: var(--critical);
+}
+
+.metric-trend.down {
+    color: var(--success);
+}
+
+.metric-trend.stable {
+    color: var(--text-secondary);
+}
+
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .metric-grid {
+        grid-template-columns: 1fr;
+    }
+}

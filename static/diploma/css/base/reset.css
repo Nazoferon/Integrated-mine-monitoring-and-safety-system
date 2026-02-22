@@ -1,0 +1,74 @@
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* iOS Safari Fixes */
+@supports (-webkit-touch-callout: none) {
+    .dashboard-body {
+        height: -webkit-fill-available;
+    }
+    
+    .dashboard-container {
+        min-height: -webkit-fill-available;
+    }
+    
+    .sidebar-nav {
+        height: calc(100vh - var(--header-height));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .logo svg {
+        shape-rendering: geometricPrecision;
+    }
+}
+
+
+/* Print Styles */
+@media print {
+    .dashboard-header,
+    .sidebar,
+    .dashboard-footer {
+        display: none;
+    }
+    
+    .dashboard-main {
+        margin-left: 0;
+        padding: 0;
+    }
+    
+    .card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}
+
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -1,0 +1,30 @@
+/* ROOT */
+:root {
+    /* Colors */
+    --primary-dark: #0a1c2e;
+    --secondary-dark: #1a2d4d;
+    --accent-blue: #4dabf7;
+    --accent-light: #93c5fd;
+    --text-primary: #e0e7ff;
+    --text-secondary: #a3bffa;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --critical: #ef4444;
+    --border: #2a4066;
+    --card-bg: #1e3a5f;
+    
+    /* Layout */
+    --sidebar-width: 260px;
+    --header-height: 60px;
+    --border-radius: 8px;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.3);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}

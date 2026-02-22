@@ -1,0 +1,95 @@
+/* Button */
+.btn-logout, .btn-login {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--critical);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition-normal);
+    cursor: pointer;
+    border: none;
+    line-height: 1.2;
+    height: 32px;
+}
+
+.btn-logout:hover, .btn-login:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-logout-mobile {
+    width: 100%;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--critical);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 10px 12px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    transition: var(--transition-normal);
+    cursor: pointer;
+    border: none;
+}
+
+.btn-logout-mobile:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-view-all {
+    width: 100%;
+    background: rgba(77, 171, 247, 0.1);
+    border: 1px solid rgba(77, 171, 247, 0.3);
+    color: var(--accent-blue);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    border: none;
+    font-size: 13px;
+}
+
+.btn-view-all:hover {
+    background: rgba(77, 171, 247, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    border: none;
+}
+
+.btn-control.active, .btn-control:hover {
+    background: var(--accent-blue);
+    color: white;
+}
+
+
+/* Mobile Devices */
+@media (max-width: 768px) {
+  .btn-control {
+        flex: 1;
+        text-align: center;
+    }
+}

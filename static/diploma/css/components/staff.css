@@ -1,0 +1,76 @@
+/* Staff */
+.staff-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.staff-item:last-child {
+    border-bottom: none;
+}
+
+.staff-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.staff-info h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 1px;
+    line-height: 1.2;
+}
+
+.staff-info p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.staff-status {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.staff-status.online {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--success);
+}
+
+.staff-status.offline {
+    background: rgba(107, 114, 128, 0.2);
+    color: #6b7280;
+}
+
+.online-indicator {
+    font-size: 11px;
+    color: var(--success);
+    font-weight: 600;
+}
+
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .staff-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 6px;
+    }
+    
+    .staff-info {
+        text-align: center;
+    }
+}
