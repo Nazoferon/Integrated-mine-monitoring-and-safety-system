@@ -122,45 +122,50 @@
                 </div>
 
                 <ul>
-                    <li class="nav-item active">
-                        <a href="{% url 'diploma_home' %}" class="nav-link">
-                            <i class="fas fa-home"></i>
-                            <span>Головна</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{% url 'mine_map' %}" class="nav-link">
-                            <i class="fas fa-map-marked-alt"></i>
-                            <span>Карта Шахти</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-users"></i>
-                            <span>Персонал</span>
-                            <span class="badge">24</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-cogs"></i>
-                            <span>Обладнання</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-chart-bar"></i>
-                            <span>Звіти</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>Сповіщення</span>
-                            <span class="badge badge-warning">3</span>
-                        </a>
-                    </li>
-                </ul>
+                  <li class="nav-item {% if request.resolver_match.url_name == 'diploma_home' %}active{% endif %}">
+                      <a href="{% url 'diploma_home' %}" class="nav-link">
+                          <i class="fas fa-home"></i>
+                          <span>Головна</span>
+                      </a>
+                  </li>
+                  
+                  <li class="nav-item {% if request.resolver_match.url_name == 'mine_map' %}active{% endif %}">
+                      <a href="{% url 'mine_map' %}" class="nav-link">
+                          <i class="fas fa-map-marked-alt"></i>
+                          <span>Карта Шахти</span>
+                      </a>
+                  </li>
+                  
+                  <li class="nav-item">
+                      <a href="#" class="nav-link">
+                          <i class="fas fa-users"></i>
+                          <span>Персонал</span>
+                          <span class="badge">24</span>
+                      </a>
+                  </li>
+                  
+                  <li class="nav-item">
+                      <a href="#" class="nav-link">
+                          <i class="fas fa-cogs"></i>
+                          <span>Обладнання</span>
+                      </a>
+                  </li>
+                  
+                  <li class="nav-item">
+                      <a href="#" class="nav-link">
+                          <i class="fas fa-chart-bar"></i>
+                          <span>Звіти</span>
+                      </a>
+                  </li>
+                  
+                  <li class="nav-item">
+                      <a href="#" class="nav-link">
+                          <i class="fas fa-exclamation-triangle"></i>
+                          <span>Сповіщення</span>
+                          <span class="badge badge-warning">3</span>
+                      </a>
+                  </li>
+              </ul>
             </nav>
         </aside>
 
@@ -175,7 +180,7 @@
     <footer class="dashboard-footer">
         <div class="container-fluid">
             <div class="footer-content">
-                <p>&copy; 2025 Глибина 4.0. Інтелектуальна система моніторингу шахти. Усі права захищено.</p>
+                <p>&copy; 2026 Глибина 4.0. Інтелектуальна система моніторингу шахти. Усі права захищено.</p>
                 <div class="footer-status">
                     <span class="status-indicator online"></span>
                     <span></span> <!-- System status -->
