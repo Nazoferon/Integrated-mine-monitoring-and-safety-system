@@ -3,13 +3,13 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views 
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import reverse_lazy 
+from django.urls import reverse_lazy
 from django.urls import path
 
-from portfolio.views import home  
+from portfolio.views import home
 
 urlpatterns = [
-    path('admin_admin/', admin.site.urls),
+    path('secret-mine-control/', admin.site.urls),
     path('', include('portfolio.urls')),  # Домашня сторінка — portfolio
     path('diploma/', include('diploma.urls')),
 

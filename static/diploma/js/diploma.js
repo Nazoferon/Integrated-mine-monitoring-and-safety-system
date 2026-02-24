@@ -890,33 +890,6 @@ window.toggleMobileMenu = () => {
     }
 };
 
-// Стилі для анімацій сповіщень
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOutRight {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    .notification-toast.show {
-        transform: translateX(0) !important;
-        opacity: 1 !important;
-    }
-    
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-        .notification-toast {
-            transition: none !important;
-        }
-    }
-`;
-document.head.appendChild(notificationStyles);
-
 // Обробка закриття сторінки
 window.addEventListener('beforeunload', () => {
     if (window.dashboardApp) {

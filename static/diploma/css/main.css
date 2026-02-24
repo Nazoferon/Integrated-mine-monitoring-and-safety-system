@@ -21,4 +21,7 @@
 
 /* ===== 4. СТОРІНКИ (Специфічні стилі) ===== */
 @import 'pages/profile.css';
-@import 'pages/mine-map.css';
+@import 'pages/mine_map.css';
+@import 'pages/diploma_home.css';
+@import 'pages/personnel.css';
+@import 'pages/equipment.css';

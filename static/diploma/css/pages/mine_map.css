@@ -1,0 +1,323 @@
+/* Стилі для бокової панелі */
+.map-sidebar {
+    width: 300px;
+    padding: 1rem;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-top: 1rem;
+}
+
+.properties-panel, .objects-list, .map-stats {
+    margin-bottom: 1.5rem;
+}
+
+.properties-panel h3, .objects-list h4, .map-stats h3 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.property {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.property label {
+    width: 80px;
+    color: var(--text-muted);
+}
+
+.property input, .property span {
+    flex: 1;
+    padding: 0.3rem;
+    border-radius: var(--border-radius);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+}
+
+.list-group {
+    margin-bottom: 1rem;
+}
+
+.list-group ul {
+    list-style: none;
+    padding: 0;
+}
+
+.list-group li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.3rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.list-group li:hover {
+    background: rgba(77, 171, 247, 0.1);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-item i {
+    color: var(--primary-blue);
+}
+
+.stat-item span:nth-child(2) {
+    flex: 1;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem;
+    background: var(--primary-blue);
+    color: var(--text-light);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+}
+
+@media (max-width: 768px) {
+    .map-sidebar {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .properties-panel, .objects-list, .map-stats {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .map-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .add-dropdown, .submenu-items {
+        position: static;
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .notification {
+        top: 10px;
+        right: 10px;
+        font-size: 0.85rem;
+        padding: 0.8rem;
+    }
+}
+
+/* ================================================
+   Карта Шахти — mine_map.html
+   ================================================ */
+
+/* На весь екран без відступів */
+.dashboard-main .container-fluid {
+    padding: 0 !important;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+}
+
+.mine-map-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background: #0f0f0f;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- ЛІВА ПАНЕЛЬ --- */
+.map-objects-panel {
+    position: absolute;
+    left: 20px; top: 20px; bottom: 20px;
+    width: 280px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid #444;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    color: #ddd;
+    z-index: 10;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+}
+
+.map-objects-panel.collapsed { transform: translateX(-320px); }
+
+/* Кнопка згортання */
+.panel-toggle {
+    position: absolute; right: -30px; top: 50%;
+    width: 30px; height: 60px;
+    background: #333;
+    border-radius: 0 8px 8px 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: 1px solid #444; border-left: none; color: #aaa;
+}
+.panel-toggle:hover { color: #fff; background: #444; }
+
+.panel-header {
+    padding: 15px; border-bottom: 1px solid #444;
+    background: rgba(255, 255, 255, 0.05); border-radius: 12px 12px 0 0;
+}
+.panel-header h4 { margin: 0; font-size: 16px; color: #4dabf7; font-weight: 600; }
+.panel-stats { font-size: 11px; color: #888; margin-top: 5px; }
+
+/* Список */
+.objects-list { flex: 1; overflow-y: auto; padding: 10px; }
+.objects-list::-webkit-scrollbar { width: 4px; }
+.objects-list::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+
+.obj-group-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: #666; margin: 15px 0 5px 5px; font-weight: bold;
+}
+
+/* Елементи списку */
+.list-tunnel-item {
+    margin-bottom: 4px; border-radius: 6px; overflow: hidden;
+    border: 1px solid transparent; transition: 0.2s;
+}
+.tunnel-header {
+    padding: 8px 12px; background: rgba(255,255,255,0.03); cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: #ccc;
+}
+.tunnel-header:hover { background: rgba(255,255,255,0.08); color: white; }
+
+/* Активний (вибраний) */
+.list-tunnel-item.selected .tunnel-header {
+    background: rgba(77, 171, 247, 0.15); border-left: 3px solid #4dabf7;
+    padding-left: 9px; color: #4dabf7;
+}
+
+/* Вкладені пристрої */
+.tunnel-devices-list {
+    display: none; background: rgba(0,0,0,0.2); padding: 2px 0; border-top: 1px solid #444;
+}
+.list-tunnel-item.expanded .tunnel-devices-list { display: block; }
+.list-tunnel-item.expanded .fa-chevron-right { transform: rotate(90deg); }
+
+.list-device-item {
+    padding: 6px 12px 6px 30px; font-size: 12px; color: #999;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+}
+.list-device-item:hover { color: white; background: rgba(255,255,255,0.05); }
+.list-device-item.selected {
+    color: #4dabf7; font-weight: bold; background: rgba(77, 171, 247, 0.1);
+}
+
+.status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #00ff00; box-shadow: 0 0 5px #00ff00;
+}
+
+/* --- КАРТА --- */
+.map-canvas-area {
+    flex: 1; position: relative; overflow: hidden; cursor: grab;
+    background: radial-gradient(circle at center, #141414 0%, #0a0a0a 100%);
+}
+.map-canvas-area:active { cursor: grabbing; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* Плаваючі кнопки */
+.map-controls-floating {
+    position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 10;
+}
+.map-btn {
+    background: rgba(0,0,0,0.6); border: 1px solid #555; color: white;
+    width: 40px; height: 40px; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px); transition: 0.2s;
+}
+.map-btn:hover { background: #4dabf7; border-color: #4dabf7; transform: scale(1.05); }
+
+/* --- POPUP --- */
+#map-popup {
+    position: absolute;
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid #4dabf7;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    display: none;
+    z-index: 200;
+    font-size: 13px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+    min-width: 160px;
+    pointer-events: none;
+    transform: translate(-50%, -120%);
+}
+#map-popup::after {
+    content: ''; position: absolute; bottom: -6px; left: 50%; margin-left: -6px;
+    border-width: 6px 6px 0; border-style: solid;
+    border-color: #4dabf7 transparent transparent transparent;
+}
+.popup-title {
+    color: #4dabf7; font-weight: bold; font-size: 14px;
+    margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px;
+}
+.popup-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.popup-label { color: #888; }
+
+/* For Mine maps */
+.mine-map-page .last-edited {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+
+/* Адаптивність для .last-edited */
+@media (max-width: 768px) {
+    .mine-map-page .last-edited {
+        font-size: 0.85rem;
+        margin-bottom: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+  .mine-map-page .last-edited {
+        font-size: 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+}
+
+/* Анімації сповіщень */
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.notification-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notification-toast {
+        transition: none;
+    }
+}

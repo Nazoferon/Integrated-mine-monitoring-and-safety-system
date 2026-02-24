@@ -1,0 +1,177 @@
+/* --- ХЕДЕР ТА ЕЛЕМЕНТИ КЕРУВАННЯ --- */
+.personnel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #333;
+}
+.personnel-title h2 { color: #fff; font-weight: 600; margin: 0; }
+.personnel-title span { color: #888; font-size: 14px; }
+
+.controls-wrapper {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Стильний пошук */
+.search-wrapper {
+    position: relative;
+    width: 300px;
+}
+.custom-search {
+    width: 100%;
+    background: rgba(20, 20, 20, 0.8);
+    border: 1px solid #444;
+    border-radius: 30px;
+    padding: 10px 20px 10px 45px;
+    color: #fff;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+}
+.custom-search::placeholder { color: #666; }
+.custom-search:focus {
+    outline: none;
+    border-color: #4dabf7;
+    box-shadow: 0 0 15px rgba(77, 171, 247, 0.3), inset 0 2px 5px rgba(0,0,0,0.5);
+    background: rgba(30, 30, 30, 0.9);
+}
+.search-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4dabf7;
+    transition: all 0.3s;
+}
+.custom-search:focus + .search-icon { text-shadow: 0 0 8px #4dabf7; }
+
+/* Кнопки перемикання вигляду */
+.view-toggles {
+    display: flex;
+    background: rgba(20, 20, 20, 0.8);
+    border: 1px solid #444;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.btn-view {
+    background: transparent;
+    border: none;
+    color: #666;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-view:hover { color: #fff; }
+.btn-view.active {
+    background: rgba(77, 171, 247, 0.2);
+    color: #4dabf7;
+}
+
+/* --- КАРТКИ ПРАЦІВНИКІВ (СІТКА - За замовчуванням) --- */
+.employee-card {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid #444;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.employee-card:hover {
+    transform: translateY(-5px);
+    border-color: #4dabf7;
+    box-shadow: 0 10px 25px rgba(77, 171, 247, 0.15);
+}
+.card-top-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #4dabf7, transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.employee-card:hover .card-top-line { opacity: 1; }
+
+.emp-photo-wrapper {
+    position: relative;
+    width: 90px; height: 90px;
+    margin: 0 auto 15px;
+    flex-shrink: 0;
+}
+.emp-photo {
+    width: 100%; height: 100%;
+    object-fit: cover; border-radius: 50%;
+    border: 3px solid #2a2a2a; transition: 0.3s;
+}
+.employee-card:hover .emp-photo { border-color: #4dabf7; }
+
+.emp-no-photo {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: #222; display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: #555; border: 3px solid #333;
+}
+
+.emp-name { color: #fff; font-size: 18px; font-weight: 600; margin-bottom: 5px; }
+.emp-position { color: #4dabf7; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+
+.emp-details {
+    background: rgba(0, 0, 0, 0.3); border-radius: 8px;
+    padding: 10px; margin-bottom: 15px; text-align: left;
+    flex-grow: 1;
+}
+.emp-detail-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.detail-label { color: #888; }
+.detail-value { color: #ddd; font-weight: 500; font-family: monospace; }
+
+.device-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    margin-top: auto;
+}
+.status-active { background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+.status-inactive { background: rgba(108, 117, 125, 0.1); color: #adb5bd; border: 1px solid rgba(108, 117, 125, 0.3); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-active { background: #28a745; box-shadow: 0 0 5px #28a745; }
+.dot-inactive { background: #6c757d; }
+
+/* --- СПИСОК (АЛЬТЕРНАТИВНИЙ ВИГЛЯД) --- */
+#personnelGrid.list-view .col-12 {
+    flex: 0 0 100%; max-width: 100%; /* Кожна картка на всю ширину */
+}
+#personnelGrid.list-view .employee-card {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    padding: 15px 25px;
+    height: auto;
+}
+#personnelGrid.list-view .card-top-line {
+    width: 4px; height: 100%; top: 0; left: 0; bottom: 0; right: auto;
+    background: linear-gradient(180deg, transparent, #4dabf7, transparent);
+}
+#personnelGrid.list-view .emp-photo-wrapper {
+    margin: 0 20px 0 0;
+    width: 60px; height: 60px;
+}
+#personnelGrid.list-view .emp-no-photo { font-size: 24px; }
+#personnelGrid.list-view .emp-info-main {
+    width: 250px; flex-shrink: 0;
+}
+#personnelGrid.list-view .emp-position { margin-bottom: 0; }
+#personnelGrid.list-view .emp-details {
+    margin: 0 20px; background: transparent; padding: 0;
+    display: flex; gap: 30px; align-items: center; flex-grow: 1; border-left: 1px solid #444; padding-left: 30px;
+}
+#personnelGrid.list-view .emp-detail-item { margin: 0; flex-direction: column; }
+#personnelGrid.list-view .device-status { margin-top: 0; }

@@ -28,7 +28,8 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsafe-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+X_FRAME_OPTIONS = 'DENY'
 
 ALLOWED_HOSTS = ['bunb.pp.ua', 'www.bunb.pp.ua', '91.98.171.31']
 CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']
@@ -47,10 +48,12 @@ INSTALLED_APPS = [
     'portfolio',
     'diploma',
     'django_cleanup.apps.CleanupConfig',
+    'csp',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -149,7 +152,6 @@ SESSION_COOKIE_AGE = 3600  # 1 година
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Сесія закривається при закритті браузера
 
 # Налаштування електронної пошти через Gmail SMTP
-
 LOGIN_URL = reverse_lazy('login')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -158,3 +160,49 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nazar.haniuk.dev@gmail.com'  # Ваш Gmail
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')  # Пароль додатка
 DEFAULT_FROM_EMAIL = 'Глибина 4.0 <nazar.haniuk.dev@gmail.com>' # Від кого надсилати листи за замовчуванням
+
+
+# Вказуємо Django, що ми за Cloudflare/Nginx, який вже обробляє HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+
+# Забороняємо передавати кукі через незахищений HTTP
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# Вирішує W004: Увімкнення HSTS (HTTP Strict Transport Security) 1 year
+SECURE_HSTS_SECONDS = 31536000 # 1 year in seconds
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# --- НАЛАШТУВАННЯ CSP ---
+CONTENT_SECURITY_POLICY = {
+    'DIRECTIVES': {
+        'default-src': ("'self'",),
+        'font-src': (
+            "'self'",
+            'https://fonts.gstatic.com',
+            'https://cdnjs.cloudflare.com'
+        ),
+        'img-src': ("'self'", 'data:', 'blob:'),
+        'script-src': (
+            "'self'",
+            "'unsafe-eval'",
+            'https://cdnjs.cloudflare.com',
+            'https://cdn.jsdelivr.net',
+            'https://static.cloudflareinsights.com'
+        ),
+        'style-src': (
+            "'self'",
+            # "'unsafe-inline'", 
+            'https://cdnjs.cloudflare.com',
+            'https://fonts.googleapis.com',
+            'https://cdn.jsdelivr.net'
+        ),
+        'connect-src': (
+            "'self'",
+            'https://cloudflareinsights.com',
+            'https://cdn.jsdelivr.net',
+        )
+    }
+}

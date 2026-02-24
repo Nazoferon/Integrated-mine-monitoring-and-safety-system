@@ -1,377 +1,458 @@
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Debug: mine_map.js loaded');
+// mine_map.js — 2D карта шахти (Canvas API)
+// Дані mapData передаються через window.MINE_MAP_DATA з HTML-шаблону
 
-    // Перевірка бібліотек
-    if (typeof fabric === 'undefined') {
-        console.error('Debug: Fabric.js not loaded - check CDN or adblocker');
-        alert('Помилка: Fabric.js не завантажено. Вимкніть adblocker або перевірте мережу');
-        return;
-    }
-    if (typeof THREE === 'undefined') {
-        console.error('Debug: Three.js not loaded');
-        alert('Помилка: Three.js не завантажено');
-        return;
-    }
-    console.log('Debug: Fabric.js and Three.js loaded successfully');
+(function () {
+    // --- ЗМІННІ ---
+    const canvas = document.getElementById('map-canvas');
+    const ctx = canvas.getContext('2d');
+    const popup = document.getElementById('map-popup');
+    const mapArea = document.getElementById('map-area');
 
-    // Ініціалізація canvas
-    const mapContainer = document.querySelector('.map-container');
-    if (!mapContainer) {
-        console.error('Debug: .map-container not found');
-        return;
+    // Дані з Django-шаблону (передаються через json_script фільтр)
+    const rawData = document.getElementById('mine-map-data');
+    let mapData;
+    try {
+        mapData = rawData ? JSON.parse(rawData.textContent) : { tunnels: [], yards: [], devices: [] };
+    } catch(e) {
+        mapData = { tunnels: [], yards: [], devices: [] };
     }
-    const canvas = new fabric.Canvas('map-canvas', {
-        width: mapContainer.offsetWidth,
-        height: mapContainer.offsetHeight,
-        backgroundColor: '#333'
-    });
-    let is3D = false;
-    let isEditMode = false;
-    let scene, camera, renderer, cube;
+    let scale = 1.0;
+    let offsetX = 0, offsetY = 0;
+    let isDragging = false, startX, startY;
+
+    let hoveredObject = null;
     let selectedObject = null;
 
-    // Ініціалізація 3D
-    function init3D() {
-        console.log('Debug: Initializing 3D view');
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(75, mapContainer.offsetWidth / mapContainer.offsetHeight, 0.1, 1000);
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(mapContainer.offsetWidth, mapContainer.offsetHeight);
-        document.getElementById('map-3d').appendChild(renderer.domElement);
+    // --- ІНІЦІАЛІЗАЦІЯ ---
+    function initMap() {
+        if (!canvas || !ctx || !mapArea) return;
 
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x4dabf7 });
-        cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
-        camera.position.z = 5;
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-        animate3D();
-    }
-
-    function animate3D() {
-        if (is3D) {
-            requestAnimationFrame(animate3D);
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
-    }
-
-    // Завантаження даних
-    let mapData = initialMapData || { tunnels: [], wifi: [], equipment: [] };
-    console.log('Debug: Initial mapData', mapData);
-    function loadMapData() {
-        canvas.clear();
-        canvas.setBackgroundColor('#333', canvas.renderAll.bind(canvas));
-        try {
-            mapData.tunnels.forEach(tunnel => {
-                console.log('Debug: Loading tunnel', tunnel);
-                canvas.add(new fabric.Rect(tunnel));
-            });
-            mapData.wifi.forEach(point => {
-                console.log('Debug: Loading wifi point', point);
-                canvas.add(new fabric.Circle(point));
-            });
-            mapData.equipment.forEach(eq => {
-                console.log('Debug: Loading equipment', eq);
-                canvas.add(eq.type === 'lift' ? new fabric.Circle(eq) : new fabric.Rect(eq));
-            });
-            updateListsAndStats();
-        } catch (error) {
-            console.error('Debug: Error loading mapData', error);
-        }
-    }
-    loadMapData();
-
-    // Оновлення списків і статистики
-    function updateListsAndStats() {
-        console.log('Debug: Updating lists and stats');
-        const lists = {
-            tunnels: document.getElementById('tunnels-list'),
-            wifi: document.getElementById('wifi-list'),
-            combine: document.getElementById('combine-list'),
-            lift: document.getElementById('lift-list'),
-            conveyor: document.getElementById('conveyor-list'),
-            drill: document.getElementById('drill-list')
-        };
-        Object.values(lists).forEach(list => list.innerHTML = '');
-        mapData.tunnels.forEach((t, i) => addListItem(lists.tunnels, `Тунель ${i + 1}`, t));
-        mapData.wifi.forEach((w, i) => addListItem(lists.wifi, `Wi-Fi ${i + 1}`, w));
-        mapData.equipment.forEach((e, i) => {
-            const list = e.type === 'combine' ? lists.combine :
-                        e.type === 'lift' ? lists.lift :
-                        e.type === 'conveyor' ? lists.conveyor : lists.drill;
-            addListItem(list, `${e.type.charAt(0).toUpperCase() + e.type.slice(1)} ${i + 1}`, e);
-        });
-        document.getElementById('stats-tunnels').textContent = mapData.tunnels.length;
-        document.getElementById('stats-wifi').textContent = mapData.wifi.length;
-        document.getElementById('stats-equipment').textContent = mapData.equipment.length;
-    }
-
-    function addListItem(list, name, obj) {
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <span>${name}</span>
-            <div>
-                <button class="edit-btn btn"><i class="fas fa-edit"></i></button>
-                <button class="delete-btn btn"><i class="fas fa-trash"></i></button>
-                <button class="duplicate-btn btn"><i class="fas fa-copy"></i></button>
-            </div>
-        `;
-        li.querySelector('.edit-btn').addEventListener('click', () => selectObject(obj));
-        li.querySelector('.delete-btn').addEventListener('click', () => deleteObject(obj));
-        li.querySelector('.duplicate-btn').addEventListener('click', () => duplicateObject(obj));
-        list.appendChild(li);
-    }
-
-    // Switch редагування
-    const editSwitch = document.getElementById('edit-mode-switch');
-    if (editSwitch) {
-        editSwitch.addEventListener('change', (e) => {
-            isEditMode = e.target.checked;
-            console.log('Debug: Edit mode changed to', isEditMode);
-            const addMenu = document.querySelector('.add-menu');
-            const saveBtn = document.getElementById('save-map');
-            if (addMenu) addMenu.style.display = isEditMode ? 'block' : 'none';
-            if (saveBtn) saveBtn.style.display = isEditMode ? 'block' : 'none';
-            canvas.selection = isEditMode;
-            canvas.forEachObject(obj => obj.selectable = isEditMode);
-            canvas.renderAll();
-        });
-    } else {
-        console.error('Debug: edit-mode-switch not found');
-    }
-
-    // Вибір об'єкта
-    function selectObject(obj) {
-        console.log('Debug: Selecting object', obj);
-        canvas.setActiveObject(obj);
-        selectedObject = obj;
-        updatePropertiesPanel();
-    }
-
-    function updatePropertiesPanel() {
-        console.log('Debug: Updating properties panel');
-        const typeEl = document.getElementById('prop-type');
-        const leftEl = document.getElementById('prop-left');
-        const topEl = document.getElementById('prop-top');
-        const widthEl = document.getElementById('prop-width');
-        const heightEl = document.getElementById('prop-height');
-        const radiusEl = document.getElementById('prop-radius');
-        if (!selectedObject) {
-            typeEl.textContent = 'Невідомий';
-            leftEl.value = '';
-            topEl.value = '';
-            widthEl.value = '';
-            heightEl.value = '';
-            radiusEl.value = '';
-            return;
-        }
-        typeEl.textContent = selectedObject.type || 'Невідомий';
-        leftEl.value = selectedObject.left || 0;
-        topEl.value = selectedObject.top || 0;
-        widthEl.value = selectedObject.width || '';
-        heightEl.value = selectedObject.height || '';
-        radiusEl.value = selectedObject.radius || '';
-        [leftEl, topEl, widthEl, heightEl, radiusEl].forEach(el => el.disabled = !isEditMode);
-    }
-
-    canvas.on('selection:created', (e) => {
-        selectedObject = e.target;
-        updatePropertiesPanel();
-    });
-    canvas.on('selection:updated', (e) => {
-        selectedObject = e.target;
-        updatePropertiesPanel();
-    });
-    canvas.on('selection:cleared', () => {
-        selectedObject = null;
-        updatePropertiesPanel();
-    });
-
-    // Додавання об'єктів
-    function addObject(type, props) {
-        console.log(`Debug: Adding ${type}`);
-        const obj = type === 'circle' ? new fabric.Circle(props) : new fabric.Rect(props);
-        canvas.add(obj);
-        mapData[type === 'circle' ? 'wifi' : type === 'tunnel' ? 'tunnels' : 'equipment'].push(props);
-        updateListsAndStats();
-        canvas.renderAll();
-    }
-
-    document.getElementById('add-tunnel').addEventListener('click', () => addObject('tunnel', {
-        left: 50, top: 50, width: 100, height: 20, fill: 'gray', selectable: true
-    }));
-    document.getElementById('add-wifi').addEventListener('click', () => addObject('circle', {
-        left: 100, top: 100, radius: 10, fill: 'blue', selectable: true
-    }));
-    document.getElementById('add-combine').addEventListener('click', () => addObject('equipment', {
-        left: 150, top: 150, width: 50, height: 30, fill: 'red', selectable: true, type: 'combine'
-    }));
-    document.getElementById('add-lift').addEventListener('click', () => addObject('circle', {
-        left: 200, top: 200, radius: 15, fill: 'green', selectable: true, type: 'lift'
-    }));
-    document.getElementById('add-conveyor').addEventListener('click', () => addObject('equipment', {
-        left: 250, top: 250, width: 80, height: 15, fill: 'purple', selectable: true, type: 'conveyor'
-    }));
-    document.getElementById('add-drill').addEventListener('click', () => addObject('equipment', {
-        left: 300, top: 300, width: 40, height: 40, fill: 'orange', selectable: true, type: 'drill'
-    }));
-
-    // Застосування властивостей
-    document.getElementById('apply-properties').addEventListener('click', () => {
-        if (!selectedObject || !isEditMode) return;
-        console.log('Debug: Applying properties');
-        selectedObject.set({
-            left: parseFloat(document.getElementById('prop-left').value) || selectedObject.left,
-            top: parseFloat(document.getElementById('prop-top').value) || selectedObject.top,
-            width: parseFloat(document.getElementById('prop-width').value) || selectedObject.width,
-            height: parseFloat(document.getElementById('prop-height').value) || selectedObject.height,
-            radius: parseFloat(document.getElementById('prop-radius').value) || selectedObject.radius
-        });
-        canvas.renderAll();
-        updateMapData();
-        updateListsAndStats();
-    });
-
-    // Видалення об'єкта
-    function deleteObject(obj) {
-        console.log('Debug: Deleting object', obj);
-        canvas.remove(obj);
-        ['tunnels', 'wifi', 'equipment'].forEach(key => {
-            mapData[key] = mapData[key].filter(item => item !== obj);
-        });
-        updateListsAndStats();
-        canvas.renderAll();
-    }
-
-    document.getElementById('delete-object').addEventListener('click', () => {
-        if (selectedObject) deleteObject(selectedObject);
-    });
-
-    // Дублювання об'єкта
-    function duplicateObject(obj) {
-        console.log('Debug: Duplicating object', obj);
-        const newObj = fabric.util.object.clone(obj);
-        newObj.set({ left: obj.left + 10, top: obj.top + 10 });
-        canvas.add(newObj);
-        mapData[obj.type === 'circle' ? 'wifi' : obj.type === 'tunnel' ? 'tunnels' : 'equipment'].push(newObj);
-        updateListsAndStats();
-        canvas.renderAll();
-    }
-
-    // Збереження карти
-    document.getElementById('save-map').addEventListener('click', () => {
-        console.log('Debug: Saving mapData', mapData);
-        document.getElementById('loading-message').style.display = 'block';
-        fetch('/diploma/mine_map/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: 'map_data=' + encodeURIComponent(JSON.stringify(mapData))
-        })
-        .then(response => {
-            console.log('Debug: Save response status', response.status);
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById('loading-message').style.display = 'none';
-            if (data.status === 'success') {
-                document.querySelector('.last-edited').textContent = `Останній редагував: ${data.last_edited_by}`;
-                document.getElementById('success-message').style.display = 'block';
-                setTimeout(() => document.getElementById('success-message').style.display = 'none', 2000);
-                console.log('Debug: Map saved successfully', data);
+        canvas.addEventListener('mousedown', e => {
+            if (hoveredObject) {
+                selectObject(hoveredObject.type, hoveredObject.data);
+                isDragging = false;
             } else {
-                console.error('Debug: Save failed', data);
+                selectObject(null, null);
+                isDragging = true;
+                startX = e.clientX - offsetX;
+                startY = e.clientY - offsetY;
+                canvas.style.cursor = 'grabbing';
             }
-        })
-        .catch(error => {
-            document.getElementById('loading-message').style.display = 'none';
-            console.error('Debug: Save fetch error', error);
+            draw();
         });
-    });
 
-    // Експорт JSON
-    document.getElementById('export-json').addEventListener('click', () => {
-        console.log('Debug: Exporting JSON');
-        const json = JSON.stringify(mapData, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'mine_map.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
 
-    // Завантаження JSON
-    document.getElementById('download-map').addEventListener('click', () => {
-        console.log('Debug: Downloading map');
-        document.getElementById('loading-message').style.display = 'block';
-        fetch('/diploma/download_map/')
-        .then(response => {
-            console.log('Debug: Download response status', response.status);
-            return response.blob();
-        })
-        .then(blob => {
-            document.getElementById('loading-message').style.display = 'none';
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'mine_map.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            document.getElementById('success-message').style.display = 'block';
-            setTimeout(() => document.getElementById('success-message').style.display = 'none', 2000);
-        })
-        .catch(error => {
-            document.getElementById('loading-message').style.display = 'none';
-            console.error('Debug: Download fetch error', error);
+            if (isDragging) {
+                offsetX = e.clientX - startX;
+                offsetY = e.clientY - startY;
+                updatePopupPosition();
+                draw();
+            } else {
+                checkHover(mx, my);
+                draw();
+            }
         });
-    });
 
-    // Допомога
-    document.getElementById('help-btn').addEventListener('click', () => {
-        console.log('Debug: Help button clicked');
-        alert('Інструкція:\n1. Увімкніть режим редагування.\n2. Додавайте тунелі, Wi-Fi точки, техніку через меню.\n3. Редагуйте властивості в панелі.\n4. Збережіть або експортуйте карту.');
-    });
-
-    // Перемикання 2D/3D
-    document.getElementById('toggle-2d-3d').addEventListener('click', () => {
-        is3D = !is3D;
-        console.log('Debug: Toggle 2D/3D to', is3D ? '3D' : '2D');
-        document.getElementById('map-canvas').style.display = is3D ? 'none' : 'block';
-        document.getElementById('map-3d').style.display = is3D ? 'block' : 'none';
-        if (is3D && !scene) init3D();
-    });
-
-    // Resize
-    window.addEventListener('resize', () => {
-        console.log('Debug: Window resized');
-        canvas.setDimensions({
-            width: mapContainer.offsetWidth,
-            height: mapContainer.offsetHeight
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
         });
-        if (is3D && renderer) {
-            renderer.setSize(mapContainer.offsetWidth, mapContainer.offsetHeight);
-            camera.aspect = mapContainer.offsetWidth / mapContainer.offsetHeight;
-            camera.updateProjectionMatrix();
+
+        // Зум до курсора
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomSpeed = 0.1;
+            const delta = e.deltaY < 0 ? 1 : -1;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            zoomAtPoint(mx, my, delta * zoomSpeed);
+        }, { passive: false });
+
+        buildHierarchyTree();
+
+        // Кнопка згортання панелі
+        const toggleBtn = document.querySelector('.panel-toggle');
+        if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+
+        // Кнопка скидання виду
+        const resetBtn = document.querySelector('[data-action="reset-view"]');
+        if (resetBtn) resetBtn.addEventListener('click', () => window.resetView());
+
+        // Автоцентрування
+        if (mapData.tunnels && mapData.tunnels.length > 0) {
+            // Знаходимо центр всіх тунелів
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            mapData.tunnels.forEach(t => {
+                minX = Math.min(minX, t.x1, t.x2);
+                maxX = Math.max(maxX, t.x1, t.x2);
+                minY = Math.min(minY, t.y1, t.y2);
+                maxY = Math.max(maxY, t.y1, t.y2);
+            });
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+            // Підбираємо масштаб щоб вмістити всю карту
+            const scaleX = canvas.width / (rangeX * 10 + 200);
+            const scaleY = canvas.height / (rangeY * 10 + 200);
+            scale = Math.min(scaleX, scaleY, 2.0);
+            focusOnPoint(centerX * 10, centerY * 10);
+        } else {
+            resetView();
         }
-        canvas.renderAll();
-    });
-
-    function updateMapData() {
-        console.log('Debug: Updating mapData');
-        mapData.tunnels = canvas.getObjects().filter(o => o.type === 'rect' && !o.type.includes('equipment')).map(o => ({
-            left: o.left, top: o.top, width: o.width, height: o.height, fill: o.fill
-        }));
-        mapData.wifi = canvas.getObjects().filter(o => o.type === 'circle' && !o.type.includes('equipment')).map(o => ({
-            left: o.left, top: o.top, radius: o.radius, fill: o.fill
-        }));
-        mapData.equipment = canvas.getObjects().filter(o => o.type.includes('equipment')).map(o => ({
-            left: o.left, top: o.top, width: o.width, height: o.height, radius: o.radius, fill: o.fill, type: o.type
-        }));
     }
-});
+
+    function resizeCanvas() {
+        canvas.width = mapArea.clientWidth;
+        canvas.height = mapArea.clientHeight;
+        draw();
+    }
+
+    function zoomAtPoint(x, y, amount) {
+        const wx = (x - offsetX) / scale;
+        const wy = (y - offsetY) / scale;
+        let newScale = scale * (1 + amount);
+        newScale = Math.max(0.1, Math.min(10.0, newScale));
+        offsetX = x - wx * newScale;
+        offsetY = y - wy * newScale;
+        scale = newScale;
+        updatePopupPosition();
+        draw();
+    }
+
+    // --- МАЛЮВАННЯ ---
+    function draw() {
+        ctx.fillStyle = '#0f0f0f';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+
+        // 1. РУДДВОРИ
+        if (mapData.yards) {
+            mapData.yards.forEach(y => {
+                const x = y.x * 10, yPos = y.y * 10, w = y.w * 10, h = y.h * 10;
+                ctx.fillStyle = '#222';
+                ctx.fillRect(x - w / 2, yPos - h / 2, w, h);
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x - w / 2, yPos - h / 2, w, h);
+
+                if (scale > 0.3) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(y.name || 'Руддвір', x, yPos);
+                }
+            });
+        }
+
+        // 2. ШТРЕКИ
+        if (mapData.tunnels) {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            mapData.tunnels.forEach(t => {
+                const isHovered = (hoveredObject && hoveredObject.data === t);
+                const isSelected = (selectedObject && selectedObject.data === t);
+                const x1 = t.x1 * 10, y1 = t.y1 * 10, x2 = t.x2 * 10, y2 = t.y2 * 10;
+
+                // Підсвітка
+                if (isSelected || isHovered) {
+                    ctx.lineWidth = 16;
+                    ctx.strokeStyle = isSelected ? '#4dabf7' : '#333';
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                } else {
+                    ctx.lineWidth = 12;
+                    ctx.strokeStyle = '#222';
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+
+                // Внутрішня частина
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#5a4d41';
+                ctx.stroke();
+
+                // Назва
+                if (scale > 0.4 || isSelected) {
+                    ctx.fillStyle = isSelected ? '#4dabf7' : '#888';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(t.name, (x1 + x2) / 2, (y1 + y2) / 2 - 10);
+                }
+
+                // Пристрої штреку
+                if (t.devices) t.devices.forEach(d => drawDevice(d.x * 10, d.y * 10, d));
+            });
+        }
+
+        // 3. ОКРЕМІ ПРИСТРОЇ
+        if (mapData.devices) mapData.devices.forEach(d => drawDevice(d.x * 10, d.y * 10, d));
+
+        ctx.restore();
+    }
+
+    function drawDevice(x, y, d) {
+        const isHovered = (hoveredObject && hoveredObject.data === d);
+        const isSelected = (selectedObject && selectedObject.data === d);
+
+        if (isSelected || isHovered) {
+            ctx.beginPath();
+            ctx.arc(x, y, 14, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? 'rgba(77, 171, 247, 0.4)' : 'rgba(255,255,255,0.2)';
+            ctx.fill();
+            if (isSelected) {
+                ctx.strokeStyle = '#4dabf7';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#00ffff';
+        ctx.fill();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        if (scale > 0.6 || isSelected) {
+            ctx.fillStyle = isSelected ? '#4dabf7' : '#fff';
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(d.id, x, y - 12);
+        }
+    }
+
+    function drawGrid() {
+        const step = 50 * scale;
+        if (step < 10) return;
+        ctx.beginPath();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1;
+        const sx = (offsetX % step) - step, sy = (offsetY % step) - step;
+        for (let x = sx; x < canvas.width; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+        for (let y = sy; y < canvas.height; y += step) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+        ctx.stroke();
+    }
+
+    // --- ХОВЕР ---
+    function checkHover(mx, my) {
+        const wx = (mx - offsetX) / scale;
+        const wy = (my - offsetY) / scale;
+        hoveredObject = null;
+        canvas.style.cursor = 'grab';
+
+        const checkDevs = (list) => {
+            list.forEach(d => {
+                const dist = Math.hypot(d.x * 10 - wx, d.y * 10 - wy);
+                if (dist < 15 / scale + 5) {
+                    hoveredObject = { type: 'device', data: d };
+                    canvas.style.cursor = 'pointer';
+                }
+            });
+        };
+        if (mapData.tunnels) mapData.tunnels.forEach(t => { if (t.devices) checkDevs(t.devices); });
+        if (mapData.devices) checkDevs(mapData.devices);
+
+        if (hoveredObject) return;
+
+        if (mapData.tunnels) {
+            mapData.tunnels.forEach(t => {
+                const dist = distToSegment(wx, wy, t.x1 * 10, t.y1 * 10, t.x2 * 10, t.y2 * 10);
+                if (dist < 10) {
+                    hoveredObject = { type: 'tunnel', data: t };
+                    canvas.style.cursor = 'pointer';
+                }
+            });
+        }
+    }
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+        const l2 = (x1 - x2) ** 2 + (y1 - y2) ** 2;
+        if (l2 === 0) return Math.hypot(px - x1, py - y1);
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+    }
+
+    // --- ВИБІР + POPUP ---
+    function selectObject(type, data) {
+        selectedObject = (type && data) ? { type, data } : null;
+
+        document.querySelectorAll('.list-tunnel-item, .list-device-item').forEach(el => el.classList.remove('selected'));
+
+        if (selectedObject) {
+            if (type === 'tunnel') {
+                const idx = mapData.tunnels.indexOf(data);
+                if (idx >= 0) document.getElementById(`tree-tunnel-${idx}`).classList.add('selected');
+            } else if (type === 'device') {
+                mapData.tunnels.forEach((t, tIdx) => {
+                    if (t.devices) {
+                        const dIdx = t.devices.indexOf(data);
+                        if (dIdx >= 0) {
+                            document.getElementById(`tree-tunnel-${tIdx}`).classList.add('expanded');
+                            document.getElementById(`tree-dev-${tIdx}-${dIdx}`).classList.add('selected');
+                        }
+                    }
+                });
+            }
+            showPopup();
+        } else {
+            popup.style.display = 'none';
+        }
+        draw();
+    }
+
+    function showPopup() {
+        if (!selectedObject) return;
+
+        let html = '';
+        if (selectedObject.type === 'device') {
+            const d = selectedObject.data;
+            html = `<div class="popup-title"><i class="fas fa-wifi"></i> ${d.id}</div>
+                    <div class="popup-row"><span class="popup-label">Тип:</span> WiFi Repeater</div>
+                    <div class="popup-row"><span class="popup-label">Статус:</span> <span style="color:#00ff00">Online</span></div>
+                    <div class="popup-row"><span class="popup-label">Коорд:</span> ${d.x}, ${d.y}</div>`;
+        } else if (selectedObject.type === 'tunnel') {
+            const t = selectedObject.data;
+            const len = Math.hypot(t.x2 - t.x1, t.y2 - t.y1).toFixed(1);
+            html = `<div class="popup-title"><i class="fas fa-road"></i> ${t.name}</div>
+                    <div class="popup-row"><span class="popup-label">Довжина:</span> ${len} м</div>
+                    <div class="popup-row"><span class="popup-label">Пристроїв:</span> ${t.devices ? t.devices.length : 0}</div>`;
+        }
+        popup.innerHTML = html;
+        popup.style.display = 'block';
+        updatePopupPosition();
+    }
+
+    function updatePopupPosition() {
+        if (!selectedObject) return;
+
+        let wx, wy;
+        if (selectedObject.type === 'device') {
+            wx = selectedObject.data.x * 10;
+            wy = selectedObject.data.y * 10;
+        } else {
+            const t = selectedObject.data;
+            wx = (t.x1 + t.x2) / 2 * 10;
+            wy = (t.y1 + t.y2) / 2 * 10;
+        }
+
+        popup.style.left = (wx * scale + offsetX) + 'px';
+        popup.style.top = (wy * scale + offsetY) + 'px';
+    }
+
+    // --- UI ДЕРЕВО ---
+    function buildHierarchyTree() {
+        const container = document.getElementById('objects-tree-container');
+        container.innerHTML = '';
+
+        let tCount = 0, dCount = 0;
+
+        if (mapData.yards && mapData.yards.length > 0) {
+            container.innerHTML += `<div class="obj-group-title">Інфраструктура</div>`;
+            mapData.yards.forEach(y => {
+                container.innerHTML += `<div class="yard-item">${y.name || 'Руддвір'}</div>`;
+            });
+        }
+
+        if (mapData.tunnels) {
+            container.innerHTML += `<div class="obj-group-title">Штреки та Мережа</div>`;
+            mapData.tunnels.forEach((t, idx) => {
+                tCount++;
+                const hasDevs = t.devices && t.devices.length > 0;
+
+                let html = `
+                    <div class="list-tunnel-item" id="tree-tunnel-${idx}">
+                        <div class="tunnel-header" data-action="tunnel" data-idx="${idx}">
+                            <span><i class="fas fa-road icon-tunnel"></i> ${t.name}</span>
+                            ${hasDevs ? `<i class="fas fa-chevron-right icon-chevron"></i>` : ''}
+                        </div>
+                `;
+
+                if (hasDevs) {
+                    html += `<div class="tunnel-devices-list">`;
+                    t.devices.forEach((d, dIdx) => {
+                        dCount++;
+                        html += `
+                            <div class="list-device-item" id="tree-dev-${idx}-${dIdx}" data-action="device" data-tidx="${idx}" data-didx="${dIdx}">
+                                <span><i class="fas fa-wifi icon-wifi"></i> ${d.id}</span>
+                                <span class="status-dot"></span>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+                html += `</div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        document.getElementById('stat-tunnels').innerText = tCount;
+        document.getElementById('stat-devices').innerText = dCount;
+
+        // Делегування подій замість inline onclick
+        container.addEventListener('click', e => {
+            const deviceEl = e.target.closest('[data-action="device"]');
+            if (deviceEl) {
+                e.stopPropagation();
+                const tIdx = parseInt(deviceEl.dataset.tidx);
+                const dIdx = parseInt(deviceEl.dataset.didx);
+                const d = mapData.tunnels[tIdx].devices[dIdx];
+                selectObject('device', d);
+                focusOnPoint(d.x * 10, d.y * 10);
+                return;
+            }
+            const tunnelEl = e.target.closest('[data-action="tunnel"]');
+            if (tunnelEl) {
+                const idx = parseInt(tunnelEl.dataset.idx);
+                const t = mapData.tunnels[idx];
+                document.getElementById(`tree-tunnel-${idx}`).classList.toggle('expanded');
+                selectObject('tunnel', t);
+                focusOnPoint((t.x1 + t.x2) / 2 * 10, (t.y1 + t.y2) / 2 * 10);
+            }
+        });
+    }
+
+    function focusOnPoint(x, y) {
+        offsetX = canvas.width / 2 - x * scale;
+        offsetY = canvas.height / 2 - y * scale;
+        updatePopupPosition();
+        draw();
+    }
+
+    window.resetView = function () {
+        scale = 1.0;
+        offsetX = canvas.width / 2;
+        offsetY = canvas.height / 2;
+        updatePopupPosition();
+        draw();
+    };
+
+    // Sidebar toggle — підключається через addEventListener в initMap
+    function toggleSidebar() {
+        const p = document.getElementById('sidebar-panel');
+        const i = document.getElementById('toggle-icon');
+        p.classList.toggle('collapsed');
+        i.className = p.classList.contains('collapsed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+    }
+
+    // --- СТАРТ ---
+    initMap();
+})();

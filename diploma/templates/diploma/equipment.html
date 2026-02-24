@@ -4,63 +4,7 @@
 {% block title %}Обладнання - Глибина 4.0{% endblock %}
 
 {% block extra_css %}
-<style>
-    .eq-header { margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-    .eq-title h2 { color: #fff; font-weight: 600; margin: 0; }
-    .eq-title span { color: #888; font-size: 14px; }
-    
-    /* СТАТИСТИКА (Верхні плашки) */
-    .stat-cards-wrapper { display: flex; gap: 20px; margin-bottom: 30px; }
-    .stat-card {
-        flex: 1; background: rgba(30,30,30,0.8); border: 1px solid #444; border-radius: 12px;
-        padding: 20px; display: flex; align-items: center; justify-content: space-between;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: 0.3s;
-    }
-    .stat-card:hover { border-color: #4dabf7; transform: translateY(-3px); }
-    .stat-info h3 { margin: 0; font-size: 28px; color: #fff; font-weight: bold; }
-    .stat-info p { margin: 0; color: #888; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-    .stat-icon { font-size: 40px; color: rgba(77, 171, 247, 0.3); }
-
-    /* Вкладки (Tabs) */
-    .nav-pills .nav-link { color: #888; border-radius: 8px; margin-right: 10px; border: 1px solid transparent; transition: 0.3s; }
-    .nav-pills .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .nav-pills .nav-link.active { background: rgba(77, 171, 247, 0.15); color: #4dabf7; border-color: #4dabf7; font-weight: bold; }
-
-    /* ТАБЛИЦІ В СТИЛІ КІБЕРПАНК */
-    .tech-table { width: 100%; color: #ddd; border-collapse: separate; border-spacing: 0 8px; }
-    .tech-table th { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; padding: 0 15px 10px; border: none; }
-    .tech-table tr.data-row { background: rgba(20,20,20,0.6); transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .tech-table tr.data-row:hover { background: rgba(40,40,40,0.9); transform: scale(1.01); border-left: 2px solid #4dabf7; }
-    .tech-table td { padding: 15px; border-top: 1px solid #333; border-bottom: 1px solid #333; vertical-align: middle; }
-    .tech-table td:first-child { border-left: 1px solid #333; border-radius: 8px 0 0 8px; }
-    .tech-table td:last-child { border-right: 1px solid #333; border-radius: 0 8px 8px 0; }
-
-    /* Елементи дизайну */
-    .mac-address { font-family: 'Courier New', monospace; color: #a5d8ff; background: rgba(165,216,255,0.1); padding: 3px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(165,216,255,0.2); }
-    .fw-badge { background: #333; color: #aaa; font-size: 11px; padding: 3px 6px; border-radius: 4px; border: 1px solid #555; }
-    
-    .status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold; }
-    .status-indicator.on { color: #00ff88; }
-    .status-indicator.off { color: #ff4444; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .status-indicator.on .status-dot { background: #00ff88; box-shadow: 0 0 8px #00ff88; animation: pulse 2s infinite; }
-    .status-indicator.off .status-dot { background: #ff4444; }
-
-    /* Імітація батареї */
-    .battery-wrapper { width: 60px; height: 14px; border: 1px solid #555; border-radius: 3px; position: relative; display: inline-block; vertical-align: middle; padding: 1px; }
-    .battery-wrapper::after { content: ''; position: absolute; right: -4px; top: 3px; width: 3px; height: 6px; background: #555; border-radius: 0 2px 2px 0; }
-    .battery-level { height: 100%; border-radius: 1px; }
-    .bat-high { background: #00ff88; width: 90%; }
-    .bat-med { background: #ffd700; width: 50%; }
-    .bat-low { background: #ff4444; width: 15%; animation: blink 1s infinite; }
-
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-    
-    /* Пошук */
-    .eq-search { background: rgba(20,20,20,0.8); border: 1px solid #444; color: white; padding: 8px 15px 8px 35px; border-radius: 20px; outline: none; transition: 0.3s; width: 250px; }
-    .eq-search:focus { border-color: #4dabf7; box-shadow: 0 0 10px rgba(77, 171, 247, 0.2); }
-</style>
+<link rel="stylesheet" href="{% static 'diploma/css/pages/equipment.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -70,7 +14,7 @@
         <span>Управління пристроями IoT та інфраструктурою</span>
     </div>
     <div class="position-relative">
-        <i class="fas fa-search position-absolute text-muted" style="top: 50%; left: 12px; transform: translateY(-50%);"></i>
+        <i class="fas fa-search position-absolute text-muted eq-search-icon"></i>
         <input type="text" id="eqSearchInput" class="eq-search" placeholder="Пошук по MAC, Інв. №...">
     </div>
 </div>
@@ -139,7 +83,7 @@
                         <td class="search-target">
                             {% if item.assigned_to %}
                                 {{ item.assigned_to.last_name }} {{ item.assigned_to.first_name|first }}. 
-                                <span class="text-muted" style="font-size: 11px;">({{ item.assigned_to.badge_number }})</span>
+                                <span class="text-muted badge-number">({{ item.assigned_to.badge_number }})</span>
                             {% else %}
                                 <span class="text-warning">На складі</span>
                             {% endif %}
@@ -239,28 +183,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Супер-швидкий скрипт пошуку по всіх таблицях
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('eqSearchInput');
-        
-        searchInput.addEventListener('input', function(e) {
-            const term = e.target.value.toLowerCase().trim();
-            const rows = document.querySelectorAll('.data-row');
-            
-            rows.forEach(row => {
-                // Шукаємо текст тільки в ячейках з класом search-target
-                const textData = Array.from(row.querySelectorAll('.search-target'))
-                                      .map(td => td.textContent.toLowerCase())
-                                      .join(' ');
-                
-                if (textData.includes(term)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-    });
-</script>
+    <script src="{% static 'diploma/js/equipment.js' %}?v=1"></script>
 {% endblock %}

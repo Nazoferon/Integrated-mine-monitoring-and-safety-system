@@ -1,0 +1,82 @@
+/* Бейджі статусу тривог */
+.badge-safe {
+    background: #28a745;
+    color: #fff;
+}
+.badge-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+/* Статуси персоналу */
+.staff-status.status-warning {
+    color: #f39c12;
+}
+.staff-status.status-sos {
+    color: #e74c3c;
+    font-weight: bold;
+    animation: pulse 1s infinite;
+}
+
+/* Аватар персоналу */
+.staff-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Іконка успіху (зелена галочка) */
+.icon-success {
+    color: #28a745;
+    opacity: 0.7;
+}
+
+/* Іконка небезпеки (червона стрілка газу) */
+.icon-danger {
+    color: #e74c3c;
+}
+
+/* Посилання без підкреслення */
+.alert-link-wrapper {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.btn-view-all {
+    text-decoration: none;
+    display: flex;
+}
+.btn-control {
+    text-decoration: none;
+}
+
+/* Alert action центрування */
+.alert-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Превью карти на головній */
+.map-preview-wrapper {
+    position: relative;
+    overflow: hidden;
+    height: 400px;
+}
+.home-map-canvas {
+    background: #0f0f0f;
+    width: 100%;
+    height: 100%;
+}
+
+/* Легенда карти */
+.map-legend {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    border-radius: 8px;
+    pointer-events: none;
+}

@@ -122,7 +122,6 @@ class Employee(models.Model):
         return f"{self.last_name} {self.first_name} (#{self.badge_number})"
 
 # --- 3. ОБЛАДНАННЯ ---
-# --- 3. ОБЛАДНАННЯ ---
 
 class MinerDevice(models.Model):
     mac_address = models.CharField(max_length=17, unique=True, verbose_name="MAC (ESP32)")
@@ -144,7 +143,7 @@ class MinerDevice(models.Model):
         # Перевірка 1: Якщо НЕ стаціонарний -> Працівник ОБОВ'ЯЗКОВИЙ
         if not self.is_static and self.assigned_to is None:
             raise ValidationError({
-                'assigned_to': "Мобільна коногонка мусіть бути видана працівнику! Оберіть працівника або позначте як 'Стаціонарний'."
+                'assigned_to': "Мобільна коногонка мусить бути видана працівнику! Оберіть працівника або позначте як 'Стаціонарний'."
             })
 
         # Перевірка 2: Якщо стаціонарний -> Працівник ЗАБОРОНЕНИЙ
