@@ -127,7 +127,7 @@
    ================================================ */
 
 /* На весь екран без відступів */
-.dashboard-main .container-fluid {
+.mine-map-page .dashboard-main .container-fluid {
     padding: 0 !important;
     height: calc(100vh - 70px);
     overflow: hidden;

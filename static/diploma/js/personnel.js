@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (noResultsMsg) {
-                noResultsMsg.style.display = (visibleCards === 0 && cards.length > 0) ? 'block' : 'none';
+              noResultsMsg.style.display = (visibleCards === 0 && cards.length > 0) ? 'block' : 'none';
             }
         });
     }
