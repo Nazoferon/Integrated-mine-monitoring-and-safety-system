@@ -265,25 +265,4 @@
         width: calc(100% - 20px);
         max-width: 280px;
     }
-
-    .user-welcome-mobile {
-        padding: 0.4rem 0.8rem;
-    }
-
-    .user-welcome-mobile .fas.fa-user-circle {
-        font-size: 1.8rem;
-    }
-
-    .user-welcome-mobile .user-profile-photo {
-        width: 28px;
-        height: 28px;
-    }
-
-    .user-welcome-mobile .username {
-        font-size: 0.95rem;
-    }
-
-    .user-welcome-mobile .user-role {
-        font-size: 0.8rem;
-    }
 }

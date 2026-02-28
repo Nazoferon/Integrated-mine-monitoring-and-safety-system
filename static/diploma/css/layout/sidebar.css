@@ -170,6 +170,43 @@
     .mobile-user-info {
         display: block;
     }
+
+    .user-welcome-mobile {
+        padding: 0.4rem 0.8rem;
+    }
+
+    .user-welcome-mobile .fas.fa-user-circle {
+        font-size: 1.8rem;
+    }
+
+    .user-welcome-mobile .user-profile-photo {
+        width: 28px;
+        height: 28px;
+    }
+
+    .user-welcome-mobile .username {
+        font-size: 0.95rem;
+    }
+
+    .user-welcome-mobile .user-role {
+        font-size: 0.8rem;
+    }
+
+    /* Animation for sidebar elements */
+    .sidebar.active .mobile-user-info,
+    .sidebar.active .nav-item {
+        animation: slideInContent 0.4s ease forwards;
+        opacity: 0;
+    }
+
+    .sidebar.active .mobile-user-info { animation-delay: 0.1s; }
+    .sidebar.active .nav-item:nth-child(1) { animation-delay: 0.15s; }
+    .sidebar.active .nav-item:nth-child(2) { animation-delay: 0.2s; }
+    .sidebar.active .nav-item:nth-child(3) { animation-delay: 0.25s; }
+    .sidebar.active .nav-item:nth-child(4) { animation-delay: 0.3s; }
+    .sidebar.active .nav-item:nth-child(5) { animation-delay: 0.35s; }
+    .sidebar.active .nav-item:nth-child(6) { animation-delay: 0.4s; }
+    .sidebar.active .nav-item:nth-child(n+7) { animation-delay: 0.45s; }
 }
 
 
@@ -178,5 +215,39 @@
   .sidebar {
         width: 260px;
         top: 50px;
+    }
+
+    .user-welcome-mobile {
+        padding: 0.3rem 0.6rem;
+    }
+
+    .user-welcome-mobile .fas.fa-user-circle {
+        font-size: 1.6rem;
+    }
+
+    .user-welcome-mobile .user-profile-photo {
+        width: 24px;
+        height: 24px;
+        border-width: 1px;
+    }
+
+    .user-welcome-mobile .username {
+        font-size: 0.9rem;
+    }
+
+    .user-welcome-mobile .user-role {
+        font-size: 0.75rem;
+    }
+}
+
+/* Animation Keyframes */
+@keyframes slideInContent {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }
