@@ -157,3 +157,64 @@
 
 /* Номер жетону в таблиці */
 .badge-number { font-size: 11px; }
+
+
+/* Розширені стилі для пошуку з кнопкою очищення */
+.search-wrapper {
+    position: relative;
+    width: 300px;
+}
+
+.eq-search {
+    background: rgba(20,20,20,0.8);
+    border: 1px solid #444;
+    color: white;
+    padding: 8px 40px 8px 35px; /* збільшено правий відступ */
+    border-radius: 20px;
+    outline: none;
+    transition: 0.3s;
+    width: 100%;
+}
+
+.eq-search:focus {
+    border-color: #4dabf7;
+    box-shadow: 0 0 10px rgba(77, 171, 247, 0.2);
+}
+
+.eq-search-icon {
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    z-index: 2;
+    pointer-events: none;
+}
+
+.clear-eq-search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 16px;
+    display: none;
+    transition: color 0.2s ease;
+    z-index: 2;
+}
+
+.clear-eq-search-btn:hover {
+    color: #4dabf7;
+}
+
+.clear-eq-search-btn.visible {
+    display: block;
+}
+
+/* Анімація для іконки при фокусі */
+.eq-search:focus ~ .eq-search-icon {
+    color: #4dabf7;
+    text-shadow: 0 0 8px #4dabf7;
+}

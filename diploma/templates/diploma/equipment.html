@@ -9,179 +9,204 @@
 
 {% block content %}
 <div class="eq-header mt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-    <div class="eq-title">
-        <h2><i class="fas fa-microchip text-primary"></i> Парк Обладнання</h2>
-        <span>Управління пристроями IoT та інфраструктурою</span>
-    </div>
-    <div class="position-relative">
-        <i class="fas fa-search position-absolute text-muted eq-search-icon"></i>
-        <input type="text" id="eqSearchInput" class="eq-search" placeholder="Пошук по MAC, Інв. №...">
-    </div>
+  <div class="eq-title">
+    <h2><i class="fas fa-microchip text-primary"></i> Парк Обладнання</h2>
+    <span>Управління пристроями IoT та інфраструктурою</span>
+  </div>
+  <div class="search-wrapper position-relative">
+    <i class="fas fa-search position-absolute text-muted eq-search-icon"></i>
+    <input type="text" id="eqSearchInput" class="eq-search" placeholder="Пошук по MAC, Інв. №...">
+    <button type="button" id="clearEqSearchBtn" class="clear-eq-search-btn" aria-label="Очистити пошук">
+      <i class="fas fa-times-circle"></i>
+    </button>
+  </div>
 </div>
 
 <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>{{ total_lamps }}</h3>
-                <p>Мобільні (Коногонки)</p>
-            </div>
-            <i class="fas fa-hard-hat stat-icon"></i>
-        </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-info">
+        <h3>{{ total_lamps }}</h3>
+        <p>Мобільні (Коногонки)</p>
+      </div>
+      <i class="fas fa-hard-hat stat-icon"></i>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>{{ total_sensors }}</h3>
-                <p>Стаціонарні датчики</p>
-            </div>
-            <i class="fas fa-temperature-high stat-icon"></i>
-        </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-info">
+        <h3>{{ total_sensors }}</h3>
+        <p>Стаціонарні датчики</p>
+      </div>
+      <i class="fas fa-temperature-high stat-icon"></i>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>{{ total_repeaters }}</h3>
-                <p>Мережа (Wi-Fi)</p>
-            </div>
-            <i class="fas fa-wifi stat-icon"></i>
-        </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-info">
+        <h3>{{ total_repeaters }}</h3>
+        <p>Мережа (Wi-Fi)</p>
+      </div>
+      <i class="fas fa-wifi stat-icon"></i>
     </div>
+  </div>
 </div>
 
 <ul class="nav nav-pills mb-4" id="eqTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="lamps-tab" data-bs-toggle="pill" data-bs-target="#lamps" type="button" role="tab"><i class="fas fa-user-astronaut"></i> Мобільні пристрої (Lamps)</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="sensors-tab" data-bs-toggle="pill" data-bs-target="#sensors" type="button" role="tab"><i class="fas fa-satellite-dish"></i> Стаціонарні (Sensors)</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="network-tab" data-bs-toggle="pill" data-bs-target="#network" type="button" role="tab"><i class="fas fa-network-wired"></i> Інфраструктура (Network)</button>
-    </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="lamps-tab" data-bs-toggle="pill" data-bs-target="#lamps" type="button"
+      role="tab"><i class="fas fa-user-astronaut"></i> Мобільні пристрої (Lamps)</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="sensors-tab" data-bs-toggle="pill" data-bs-target="#sensors" type="button"
+      role="tab"><i class="fas fa-satellite-dish"></i> Стаціонарні (Sensors)</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="network-tab" data-bs-toggle="pill" data-bs-target="#network" type="button"
+      role="tab"><i class="fas fa-network-wired"></i> Інфраструктура (Network)</button>
+  </li>
 </ul>
 
 <div class="tab-content" id="eqTabsContent">
-    <div class="tab-pane fade show active" id="lamps" role="tabpanel">
-        <div class="table-responsive">
-            <table class="tech-table">
-                <thead>
-                    <tr>
-                        <th>Інв. Номер</th>
-                        <th>MAC Адреса</th>
-                        <th>Прив'язка (Кому)</th>
-                        <th>Батарея</th>
-                        <th>Прошивка</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in lamps %}
-                    <tr class="data-row">
-                        <td class="search-target font-weight-bold text-info"><i class="fas fa-lightbulb text-warning mr-2"></i> {{ item.inventory_number }}</td>
-                        <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
-                        <td class="search-target">
-                            {% if item.assigned_to %}
-                                {{ item.assigned_to.last_name }} {{ item.assigned_to.first_name|first }}. 
-                                <span class="text-muted badge-number">({{ item.assigned_to.badge_number }})</span>
-                            {% else %}
-                                <span class="text-warning">На складі</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="battery-wrapper" title="Рівень заряду (Імітація)">
-                                <div class="battery-level {% cycle 'bat-high' 'bat-med' 'bat-low' 'bat-high' %}"></div>
-                            </div>
-                        </td>
-                        <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
-                        <td>
-                            {% if item.is_active %}
-                                <div class="status-indicator on"><div class="status-dot"></div> Online</div>
-                            {% else %}
-                                <div class="status-indicator off"><div class="status-dot"></div> Offline</div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">Обладнання не знайдено</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <div class="tab-pane fade show active" id="lamps" role="tabpanel">
+    <div class="table-responsive">
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>Інв. Номер</th>
+            <th>MAC Адреса</th>
+            <th>Прив'язка (Кому)</th>
+            <th>Батарея</th>
+            <th>Прошивка</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in lamps %}
+          <tr class="data-row">
+            <td class="search-target font-weight-bold text-info"><i class="fas fa-lightbulb text-warning mr-2"></i>
+              {{ item.inventory_number }}</td>
+            <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
+            <td class="search-target">
+              {% if item.assigned_to %}
+              {{ item.assigned_to.last_name }} {{ item.assigned_to.first_name|first }}.
+              <span class="text-muted badge-number">({{ item.assigned_to.badge_number }})</span>
+              {% else %}
+              <span class="text-warning">На складі</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="battery-wrapper" title="Рівень заряду (Імітація)">
+                <div class="battery-level {% cycle 'bat-high' 'bat-med' 'bat-low' 'bat-high' %}"></div>
+              </div>
+            </td>
+            <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
+            <td>
+              {% if item.is_active %}
+              <div class="status-indicator on">
+                <div class="status-dot"></div> Online
+              </div>
+              {% else %}
+              <div class="status-indicator off">
+                <div class="status-dot"></div> Offline
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Обладнання не знайдено</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <div class="tab-pane fade" id="sensors" role="tabpanel">
-        <div class="table-responsive">
-            <table class="tech-table">
-                <thead>
-                    <tr>
-                        <th>Інв. Номер</th>
-                        <th>MAC Адреса</th>
-                        <th>Координати (X, Y)</th>
-                        <th>Прошивка</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in sensors %}
-                    <tr class="data-row">
-                        <td class="search-target font-weight-bold text-primary"><i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number }}</td>
-                        <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
-                        <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
-                        <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
-                        <td>
-                            {% if item.is_active %}
-                                <div class="status-indicator on"><div class="status-dot"></div> Online</div>
-                            {% else %}
-                                <div class="status-indicator off"><div class="status-dot"></div> Offline</div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">Датчики не знайдено</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <div class="tab-pane fade" id="sensors" role="tabpanel">
+    <div class="table-responsive">
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>Інв. Номер</th>
+            <th>MAC Адреса</th>
+            <th>Координати (X, Y)</th>
+            <th>Прошивка</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in sensors %}
+          <tr class="data-row">
+            <td class="search-target font-weight-bold text-primary"><i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number }}</td>
+            <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
+            <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
+            <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
+            <td>
+              {% if item.is_active %}
+              <div class="status-indicator on">
+                <div class="status-dot"></div> Online
+              </div>
+              {% else %}
+              <div class="status-indicator off">
+                <div class="status-dot"></div> Offline
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">Датчики не знайдено</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <div class="tab-pane fade" id="network" role="tabpanel">
-        <div class="table-responsive">
-            <table class="tech-table">
-                <thead>
-                    <tr>
-                        <th>ID Вузла</th>
-                        <th>BSSID (MAC)</th>
-                        <th>Локація (Карта)</th>
-                        <th>Координати</th>
-                        <th>Статус мережі</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in repeaters %}
-                    <tr class="data-row">
-                        <td class="search-target font-weight-bold text-success"><i class="fas fa-broadcast-tower mr-2"></i> {{ item.uid }}</td>
-                        <td class="search-target"><span class="mac-address">{{ item.wifi_bssid|default:"Unknown" }}</span></td>
-                        <td class="search-target">{{ item.map_location.name }}</td>
-                        <td>{{ item.x }}, {{ item.y }}</td>
-                        <td>
-                            {% if item.is_active %}
-                                <div class="status-indicator on"><div class="status-dot"></div> Signal OK</div>
-                            {% else %}
-                                <div class="status-indicator off"><div class="status-dot"></div> No Signal</div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">Репітери не завантажено з MineCAD</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <div class="tab-pane fade" id="network" role="tabpanel">
+    <div class="table-responsive">
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>ID Вузла</th>
+            <th>BSSID (MAC)</th>
+            <th>Локація (Карта)</th>
+            <th>Координати</th>
+            <th>Статус мережі</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in repeaters %}
+          <tr class="data-row">
+            <td class="search-target font-weight-bold text-success"><i class="fas fa-broadcast-tower mr-2"></i>{{ item.uid }}</td>
+            <td class="search-target"><span class="mac-address">{{ item.wifi_bssid|default:"Unknown" }}</span></td>
+            <td class="search-target">{{ item.map_location.name }}</td>
+            <td>{{ item.x }}, {{ item.y }}</td>
+            <td>
+              {% if item.is_active %}
+              <div class="status-indicator on">
+                <div class="status-dot"></div> Signal OK
+              </div>
+              {% else %}
+              <div class="status-indicator off">
+                <div class="status-dot"></div> No Signal
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">Репітери не завантажено з MineCAD</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'diploma/js/equipment.js' %}?v=1"></script>
+<script src="{% static 'diploma/js/equipment.js' %}?v=1"></script>
 {% endblock %}

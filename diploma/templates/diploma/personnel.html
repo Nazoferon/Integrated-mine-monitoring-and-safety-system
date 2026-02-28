@@ -10,81 +10,84 @@
 
 {% block content %}
 <div class="personnel-header mt-4">
-    <div class="personnel-title">
-        <h2><i class="fas fa-users text-primary"></i> Облік Персоналу</h2>
-        <span>Загальна кількість співробітників: {{ employees.count }}</span>
+  <div class="personnel-title">
+    <h2><i class="fas fa-users text-primary"></i> Облік Персоналу</h2>
+    <span>Загальна кількість співробітників: {{ employees.count }}</span>
+  </div>
+
+  <div class="controls-wrapper">
+    <div class="search-wrapper">
+      <input type="text" id="searchInput" class="custom-search" placeholder="ПІБ, Жетон або Посада...">
+      <i class="fas fa-search search-icon"></i>
+      <button type="button" id="clearSearchBtn" class="clear-search-btn" aria-label="Очистити пошук">
+        <i class="fas fa-times-circle"></i>
+      </button>
     </div>
-    
-    <div class="controls-wrapper">
-        <div class="search-wrapper">
-            <input type="text" id="searchInput" class="custom-search" placeholder="ПІБ, Жетон або Посада...">
-            <i class="fas fa-search search-icon"></i>
-        </div>
-        
-        <div class="view-toggles">
-            <button class="btn-view active" id="btnGrid" title="Вигляд: Сітка"><i class="fas fa-th-large"></i></button>
-            <button class="btn-view" id="btnList" title="Вигляд: Список"><i class="fas fa-list"></i></button>
-        </div>
+
+    <div class="view-toggles">
+      <button class="btn-view active" id="btnGrid" title="Вигляд: Сітка"><i class="fas fa-th-large"></i></button>
+      <button class="btn-view" id="btnList" title="Вигляд: Список"><i class="fas fa-list"></i></button>
     </div>
+  </div>
 </div>
 
 <div id="noResultsMsg" class="text-center py-5 d-none">
-    <i class="fas fa-search-minus fa-3x text-muted mb-3"></i>
-    <h4 class="text-muted">Співробітників не знайдено</h4>
-    <p class="text-muted">За вашим запитом немає збігів за ПІБ, жетоном або посадою.</p>
+  <i class="fas fa-search-minus fa-3x text-muted mb-3"></i>
+  <h4 class="text-muted">Співробітників не знайдено</h4>
+  <p class="text-muted">За вашим запитом немає збігів за ПІБ, жетоном або посадою.</p>
 </div>
 
 <div class="row g-4 mb-5" id="personnelGrid">
-    {% for emp in employees %}
-    <div class="col-12 col-md-6 col-lg-4 col-xl-3 personnel-col">
-        <div class="employee-card">
-            <div class="card-top-line"></div>
-            
-            <div class="emp-photo-wrapper">
-                {% if emp.photo %}
-                    <img src="{{ emp.photo.url }}" alt="{{ emp.last_name }}" class="emp-photo">
-                {% else %}
-                    <div class="emp-no-photo">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="emp-info-main">
-                <div class="emp-name">{{ emp.last_name }} {{ emp.first_name }}</div>
-                <div class="emp-position">{{ emp.get_position_display }}</div>
-            </div>
-            
-            <div class="emp-details">
-                <div class="emp-detail-item">
-                    <span class="detail-label">Жетон:</span>
-                    <span class="detail-value">{{ emp.badge_number }}</span>
-                </div>
-            </div>
-            
-            {% if emp.device %}
-                <div class="device-status status-active">
-                    <div class="status-dot dot-active"></div>
-                    <span>{{ emp.device.inventory_number }}</span>
-                </div>
-            {% else %}
-                <div class="device-status status-inactive" title="Пристрій не видано">
-                    <div class="status-dot dot-inactive"></div>
-                    <span>Без пристрою</span>
-                </div>
-            {% endif %}
-            
+  {% for emp in employees %}
+  <div class="col-12 col-md-6 col-lg-4 col-xl-3 personnel-col">
+    <div class="employee-card">
+      <div class="card-top-line"></div>
+
+      <div class="emp-photo-wrapper">
+        {% if emp.photo %}
+        <img src="{{ emp.photo.url }}" alt="{{ emp.last_name }}" class="emp-photo">
+        {% else %}
+        <div class="emp-no-photo">
+          <i class="fas fa-user-tie"></i>
         </div>
+        {% endif %}
+      </div>
+
+      <div class="emp-info-main">
+        <div class="emp-name">{{ emp.last_name }} {{ emp.first_name }}</div>
+        <div class="emp-position">{{ emp.get_position_display }}</div>
+      </div>
+
+      <div class="emp-details">
+        <div class="emp-detail-item">
+          <span class="detail-label">Жетон:</span>
+          <span class="detail-value">{{ emp.badge_number }}</span>
+        </div>
+      </div>
+
+      {% if emp.device %}
+      <div class="device-status status-active">
+        <div class="status-dot dot-active"></div>
+        <span>{{ emp.device.inventory_number }}</span>
+      </div>
+      {% else %}
+      <div class="device-status status-inactive" title="Пристрій не видано">
+        <div class="status-dot dot-inactive"></div>
+        <span>Без пристрою</span>
+      </div>
+      {% endif %}
+
     </div>
-    {% empty %}
-    <div class="col-12 text-center py-5">
-        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-        <h4 class="text-muted">База персоналу порожня</h4>
-    </div>
-    {% endfor %}
+  </div>
+  {% empty %}
+  <div class="col-12 text-center py-5">
+    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+    <h4 class="text-muted">База персоналу порожня</h4>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'diploma/js/personnel.js' %}?v=1"></script>
+<script src="{% static 'diploma/js/personnel.js' %}?v=1"></script>
 {% endblock %}
