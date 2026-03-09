@@ -24,10 +24,26 @@
 .nav-pills .nav-link.active { background: rgba(77, 171, 247, 0.15); color: #4dabf7; border-color: #4dabf7; font-weight: bold; }
 
 /* --- ТАБЛИЦІ --- */
-.tech-table { width: 100%; color: #ddd; border-collapse: separate; border-spacing: 0 8px; }
+.table-responsive { width: 100%; }
+.tech-table { width: 100% !important; color: #ddd; border-collapse: separate; border-spacing: 0 8px; }
 .tech-table th { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; padding: 0 15px 10px; border: none; }
-.tech-table tr.data-row { background: rgba(20,20,20,0.6); transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.tech-table tr.data-row:hover { background: rgba(40,40,40,0.9); transform: scale(1.01); border-left: 2px solid #4dabf7; }
+.tech-table th.sortable { cursor: pointer; transition: color 0.2s; }
+.tech-table th.sortable:hover { color: #4dabf7; }
+.tech-table th.sortable .fas { margin-left: 5px; color: #888; transition: color 0.2s; }
+.tech-table th.sortable:hover .fas { color: #4dabf7; }
+
+/* Іконки сортування */
+.tech-table th.sortable .fa-sort-up,
+.tech-table th.sortable .fa-sort-down { display: none; }
+
+.tech-table th.sort-asc .fa-sort { display: none; }
+.tech-table th.sort-asc .fa-sort-up { display: inline-block; color: #4dabf7; }
+
+.tech-table th.sort-desc .fa-sort { display: none; }
+.tech-table th.sort-desc .fa-sort-down { display: inline-block; color: #4dabf7; }
+
+.tech-table tr.tech-row { background: rgba(20,20,20,0.6); transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.tech-table tr.tech-row:hover { background: rgba(40,40,40,0.9); border-left: 2px solid #4dabf7; }
 .tech-table td { padding: 15px; border-top: 1px solid #333; border-bottom: 1px solid #333; vertical-align: middle; }
 .tech-table td:first-child { border-left: 1px solid #333; border-radius: 8px 0 0 8px; }
 .tech-table td:last-child { border-right: 1px solid #333; border-radius: 0 8px 8px 0; }
@@ -142,4 +158,24 @@
 .eq-search:focus ~ .eq-search-icon {
     color: #4dabf7;
     text-shadow: 0 0 8px #4dabf7;
+}
+
+/* --- СТИЛІ ДЛЯ КАРТОК-ВКЛАДОК --- */
+.custom-tab-btn {
+    background: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+}
+
+/* Коли картка вибрана (активна) */
+.custom-tab-btn.active .stat-card {
+    border-color: #4dabf7;
+    background: rgba(40, 50, 60, 0.9);
+    box-shadow: 0 0 20px rgba(77, 171, 247, 0.3);
+    transform: translateY(-3px);
+}
+
+/* Ефект при наведенні мишки */
+.custom-tab-btn:hover .stat-card {
+    border-color: #4dabf7;
 }

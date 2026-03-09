@@ -22,50 +22,48 @@
   </div>
 </div>
 
-<div class="row mb-4">
-  <div class="col-md-4">
-    <div class="stat-card">
-      <div class="stat-info">
-        <h3>{{ total_lamps }}</h3>
-        <p>Мобільні (Коногонки)</p>
-      </div>
-      <i class="fas fa-hard-hat stat-icon"></i>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="stat-card">
-      <div class="stat-info">
-        <h3>{{ total_sensors }}</h3>
-        <p>Стаціонарні датчики</p>
-      </div>
-      <i class="fas fa-temperature-high stat-icon"></i>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="stat-card">
-      <div class="stat-info">
-        <h3>{{ total_repeaters }}</h3>
-        <p>Мережа (Wi-Fi)</p>
-      </div>
-      <i class="fas fa-wifi stat-icon"></i>
-    </div>
-  </div>
-</div>
+<div class="nav nav-pills row mb-4" id="eqTabs" role="tablist" style="border: none; gap: 0;">
 
-<ul class="nav nav-pills mb-4" id="eqTabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="lamps-tab" data-bs-toggle="pill" data-bs-target="#lamps" type="button"
-      role="tab"><i class="fas fa-user-astronaut"></i> Мобільні пристрої (Lamps)</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="sensors-tab" data-bs-toggle="pill" data-bs-target="#sensors" type="button"
-      role="tab"><i class="fas fa-satellite-dish"></i> Стаціонарні (Sensors)</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="network-tab" data-bs-toggle="pill" data-bs-target="#network" type="button"
-      role="tab"><i class="fas fa-network-wired"></i> Інфраструктура (Network)</button>
-  </li>
-</ul>
+  <div class="col-md-4 mb-3 mb-md-0" role="presentation">
+    <button class="nav-link active w-100 h-100 p-0 text-start custom-tab-btn" id="lamps-tab" data-bs-toggle="pill"
+      data-bs-target="#lamps" type="button" role="tab">
+      <div class="stat-card h-100 m-0">
+        <div class="stat-info">
+          <h3>{{ lamps|length }}</h3>
+          <p>Мобільні (Коногонки)</p>
+        </div>
+        <i class="fas fa-hard-hat stat-icon"></i>
+      </div>
+    </button>
+  </div>
+
+  <div class="col-md-4 mb-3 mb-md-0" role="presentation">
+    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="sensors-tab" data-bs-toggle="pill"
+      data-bs-target="#sensors" type="button" role="tab">
+      <div class="stat-card h-100 m-0">
+        <div class="stat-info">
+          <h3>{{ sensors|length }}</h3>
+          <p>Стаціонарні датчики</p>
+        </div>
+        <i class="fas fa-temperature-high stat-icon"></i>
+      </div>
+    </button>
+  </div>
+
+  <div class="col-md-4 mb-3 mb-md-0" role="presentation">
+    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="network-tab" data-bs-toggle="pill"
+      data-bs-target="#network" type="button" role="tab">
+      <div class="stat-card h-100 m-0">
+        <div class="stat-info">
+          <h3>{{ repeaters|length }}</h3>
+          <p>Мережа (Wi-Fi)</p>
+        </div>
+        <i class="fas fa-wifi stat-icon"></i>
+      </div>
+    </button>
+  </div>
+
+</div>
 
 <div class="tab-content" id="eqTabsContent">
   <div class="tab-pane fade show active" id="lamps" role="tabpanel">
@@ -76,16 +74,19 @@
             <th>Інв. Номер</th>
             <th>MAC Адреса</th>
             <th>Прив'язка (Кому)</th>
-            <th>Батарея</th>
+            <th id="sort-battery" class="sortable" title="Сортувати по заряду">
+              Батарея <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
             <th>Прошивка</th>
             <th>Статус</th>
           </tr>
         </thead>
         <tbody>
           {% for item in lamps %}
-          <tr class="data-row">
-            <td class="search-target font-weight-bold text-info"><i class="fas fa-lightbulb text-warning mr-2"></i>
-              {{ item.inventory_number }}</td>
+          <tr class="tech-row">
+            <td class="search-target font-weight-bold text-primary">
+              <i class="fas fa-box text-secondary mr-2"></i>{{ item.inventory_number|default:"Без номера" }}
+            </td>
             <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
             <td class="search-target">
               {% if item.assigned_to %}
@@ -137,8 +138,9 @@
         </thead>
         <tbody>
           {% for item in sensors %}
-          <tr class="data-row">
-            <td class="search-target font-weight-bold text-primary"><i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number }}</td>
+          <tr class="tech-row">
+            <td class="search-target font-weight-bold text-primary"><i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number }}
+            </td>
             <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
             <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
             <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
@@ -178,8 +180,10 @@
         </thead>
         <tbody>
           {% for item in repeaters %}
-          <tr class="data-row">
-            <td class="search-target font-weight-bold text-success"><i class="fas fa-broadcast-tower mr-2"></i>{{ item.uid }}</td>
+          <tr class="tech-row">
+            <td class="search-target font-weight-bold text-success">
+              <i class="fas fa-broadcast-tower mr-2"></i>{{ item.uid|default:"Без ID" }}
+            </td>
             <td class="search-target"><span class="mac-address">{{ item.wifi_bssid|default:"Unknown" }}</span></td>
             <td class="search-target">{{ item.map_location.name }}</td>
             <td>{{ item.x }}, {{ item.y }}</td>

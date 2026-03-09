@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функція фільтрації
     function filterEquipment() {
         const term = searchInput.value.toLowerCase().trim();
-        const rows = document.querySelectorAll('.data-row');
+        const rows = document.querySelectorAll('.tech-row');
         
         // Показуємо/ховаємо кнопку очищення
         if (clearSearchBtn) {
@@ -59,14 +59,52 @@ document.addEventListener('DOMContentLoaded', function() {
         clearSearchBtn.addEventListener('click', clearSearch);
     }
     
-    // Додатково: додамо лічильник видимих рядків (опціонально)
-    function updateResultsCount() {
-        const visibleRows = document.querySelectorAll('.data-row[style="display: ""]').length;
-        const totalRows = document.querySelectorAll('.data-row').length;
-        const resultsInfo = document.getElementById('resultsCount');
-        
-        if (resultsInfo) {
-            resultsInfo.textContent = `Показано: ${visibleRows} з ${totalRows}`;
-        }
+    // --- 3. ЛОГІКА СОРТУВАННЯ ТАБЛИЦІ ПО БАТАРЕЇ ---
+    const batteryHeader = document.getElementById('sort-battery');
+
+    if (batteryHeader) {
+        let sortDirection = 'none'; // 'none', 'desc', 'asc'
+
+        // Функція для отримання числового значення заряду
+        const getBatteryValue = (row) => {
+            const levelDiv = row.querySelector('.battery-level');
+            if (!levelDiv) return 0;
+            if (levelDiv.classList.contains('bat-high')) return 3;
+            if (levelDiv.classList.contains('bat-med')) return 2;
+            if (levelDiv.classList.contains('bat-low')) return 1;
+            return 0;
+        };
+
+        batteryHeader.addEventListener('click', () => {
+            // Визначаємо напрямок сортування
+            if (sortDirection === 'none' || sortDirection === 'asc') {
+                sortDirection = 'desc'; // Спочатку сортуємо від більшого до меншого
+            } else {
+                sortDirection = 'asc';
+            }
+
+            // Оновлюємо класи для іконок
+            batteryHeader.classList.remove('sort-asc', 'sort-desc');
+            if (sortDirection === 'asc') {
+                batteryHeader.classList.add('sort-asc');
+            } else {
+                batteryHeader.classList.add('sort-desc');
+            }
+
+            // Отримуємо тіло таблиці та рядки
+            const tableBody = document.querySelector('#lamps tbody');
+            const rows = Array.from(tableBody.querySelectorAll('tr.tech-row'));
+
+            // Сортуємо масив рядків
+            rows.sort((rowA, rowB) => {
+                const valueA = getBatteryValue(rowA);
+                const valueB = getBatteryValue(rowB);
+
+                return (sortDirection === 'asc') ? valueA - valueB : valueB - valueA;
+            });
+
+            // Вставляємо відсортовані рядки назад в таблицю
+            rows.forEach(row => tableBody.appendChild(row));
+        });
     }
 });

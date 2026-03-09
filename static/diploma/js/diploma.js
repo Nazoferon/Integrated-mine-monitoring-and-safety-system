@@ -59,7 +59,7 @@ class DashboardApp {
             menuToggle: document.getElementById('menu-toggle'),
             sidebar: document.getElementById('sidebar'),
             sidebarOverlay: document.getElementById('sidebar-overlay'),
-            navLinks: document.querySelectorAll('.nav-link'),
+            navLinks: document.querySelectorAll('#sidebar .nav-link'),
             
             // Контент
             statusCards: document.querySelectorAll('.status-card'),
@@ -207,6 +207,10 @@ class DashboardApp {
         //e.preventDefault();
         
         const target = e.currentTarget;
+        
+        // FIX: Ігноруємо кліки по вкладках (Tabs), якщо вони випадково потрапили в вибірку
+        if (target.getAttribute('role') === 'tab' || (target.classList.contains('nav-link') && target.closest('.nav-pills'))) return;
+
         const navText = target.querySelector('span')?.textContent || 'Невідома сторінка';
         
         // Оновлення активної сторінки
