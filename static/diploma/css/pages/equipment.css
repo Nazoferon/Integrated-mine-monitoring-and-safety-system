@@ -19,6 +19,7 @@
 .stat-icon { font-size: 40px; color: rgba(77, 171, 247, 0.3); }
 
 /* --- ВКЛАДКИ (Tabs) --- */
+#eqTabs { border: none; gap: 0; }
 .nav-pills .nav-link { color: #888; border-radius: 8px; margin-right: 10px; border: 1px solid transparent; transition: 0.3s; }
 .nav-pills .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
 .nav-pills .nav-link.active { background: rgba(77, 171, 247, 0.15); color: #4dabf7; border-color: #4dabf7; font-weight: bold; }

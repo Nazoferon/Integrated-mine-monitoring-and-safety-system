@@ -1,110 +1,117 @@
-// Супер-швидкий скрипт пошуку по всіх таблицях
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("✅ Скрипт пошуку обладнання завантажено");
-    
-    const searchInput = document.getElementById('eqSearchInput');
-    const clearSearchBtn = document.getElementById('clearEqSearchBtn');
-    
-    // Функція фільтрації
-    function filterEquipment() {
-        const term = searchInput.value.toLowerCase().trim();
-        const rows = document.querySelectorAll('.tech-row');
-        
-        // Показуємо/ховаємо кнопку очищення
-        if (clearSearchBtn) {
-            if (searchInput.value.length > 0) {
-                clearSearchBtn.classList.add('visible');
-            } else {
-                clearSearchBtn.classList.remove('visible');
-            }
-        }
-        
-        rows.forEach(row => {
-            // Шукаємо текст тільки в ячейках з класом search-target
-            const textData = Array.from(row.querySelectorAll('.search-target'))
-                                  .map(td => td.textContent.toLowerCase())
-                                  .join(' ');
-            
-            if (textData.includes(term) || term === '') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-    
-    // Функція очищення
-    function clearSearch() {
-        if (searchInput) {
-            searchInput.value = '';
-            filterEquipment();
-            searchInput.focus();
-        }
-    }
-    
-    // Перевіряємо чи є інпут на сторінці, щоб не було помилок
-    if (searchInput) {
-        searchInput.addEventListener('input', filterEquipment);
-        
-        // Очищення при натисканні Escape
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                clearSearch();
-            }
-        });
-    }
-    
-    // Обробник для кнопки очищення
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', clearSearch);
-    }
-    
-    // --- 3. ЛОГІКА СОРТУВАННЯ ТАБЛИЦІ ПО БАТАРЕЇ ---
-    const batteryHeader = document.getElementById('sort-battery');
-
-    if (batteryHeader) {
-        let sortDirection = 'none'; // 'none', 'desc', 'asc'
-
-        // Функція для отримання числового значення заряду
-        const getBatteryValue = (row) => {
-            const levelDiv = row.querySelector('.battery-level');
-            if (!levelDiv) return 0;
-            if (levelDiv.classList.contains('bat-high')) return 3;
-            if (levelDiv.classList.contains('bat-med')) return 2;
-            if (levelDiv.classList.contains('bat-low')) return 1;
-            return 0;
+class EquipmentPage {
+    constructor() {
+        this.sortState = {
+            column: null,
+            direction: 'none' // 'asc', 'desc'
         };
+        this.elements = {};
+        this.init();
+    }
 
-        batteryHeader.addEventListener('click', () => {
-            // Визначаємо напрямок сортування
-            if (sortDirection === 'none' || sortDirection === 'asc') {
-                sortDirection = 'desc'; // Спочатку сортуємо від більшого до меншого
-            } else {
-                sortDirection = 'asc';
-            }
+    init() {
+        console.log("✅ Скрипт сторінки обладнання завантажено (v2.0)");
+        this.cacheElements();
+        this.setupEventListeners();
+        this.buildSearchCache();
+    }
 
-            // Оновлюємо класи для іконок
-            batteryHeader.classList.remove('sort-asc', 'sort-desc');
-            if (sortDirection === 'asc') {
-                batteryHeader.classList.add('sort-asc');
-            } else {
-                batteryHeader.classList.add('sort-desc');
-            }
+    cacheElements() {
+        this.elements = {
+            searchInput: document.getElementById('eqSearchInput'),
+            clearSearchBtn: document.getElementById('clearEqSearchBtn'),
+            allRows: document.querySelectorAll('.tech-row'),
+            sortableHeaders: document.querySelectorAll('.sortable')
+        };
+    }
 
-            // Отримуємо тіло таблиці та рядки
-            const tableBody = document.querySelector('#lamps tbody');
-            const rows = Array.from(tableBody.querySelectorAll('tr.tech-row'));
-
-            // Сортуємо масив рядків
-            rows.sort((rowA, rowB) => {
-                const valueA = getBatteryValue(rowA);
-                const valueB = getBatteryValue(rowB);
-
-                return (sortDirection === 'asc') ? valueA - valueB : valueB - valueA;
+    setupEventListeners() {
+        if (this.elements.searchInput) {
+            this.elements.searchInput.addEventListener('input', () => this.filterEquipment());
+            this.elements.searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') this.clearSearch();
             });
+        }
 
-            // Вставляємо відсортовані рядки назад в таблицю
-            rows.forEach(row => tableBody.appendChild(row));
+        if (this.elements.clearSearchBtn) {
+            this.elements.clearSearchBtn.addEventListener('click', () => this.clearSearch());
+        }
+
+        this.elements.sortableHeaders.forEach(header => {
+            header.addEventListener('click', (e) => this.handleSort(e));
         });
     }
+
+    // Створюємо кеш пошукового тексту для кращої продуктивності
+    buildSearchCache() {
+        this.elements.allRows.forEach(row => {
+            row.dataset.searchableText = Array.from(row.querySelectorAll('.search-target'))
+                .map(td => td.textContent.toLowerCase())
+                .join(' ');
+        });
+    }
+
+    filterEquipment() {
+        const term = this.elements.searchInput.value.toLowerCase().trim();
+        this.elements.clearSearchBtn.classList.toggle('visible', term.length > 0);
+
+        this.elements.allRows.forEach(row => {
+            const isVisible = row.dataset.searchableText.includes(term);
+            row.style.display = isVisible ? '' : 'none';
+        });
+    }
+
+    clearSearch() {
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = '';
+            this.filterEquipment();
+            this.elements.searchInput.focus();
+        }
+    }
+
+    handleSort(e) {
+        const header = e.currentTarget;
+        const sortBy = header.dataset.sortBy;
+        if (!sortBy) return;
+
+        // Визначаємо напрямок сортування
+        if (this.sortState.column === sortBy && this.sortState.direction === 'desc') {
+            this.sortState.direction = 'asc';
+        } else {
+            this.sortState.direction = 'desc';
+        }
+        this.sortState.column = sortBy;
+
+        // Оновлюємо стилі заголовків
+        this.elements.sortableHeaders.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        header.classList.add(this.sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+
+        // Отримуємо тіло таблиці та рядки
+        const tableBody = header.closest('table').querySelector('tbody');
+        const rows = Array.from(tableBody.querySelectorAll('tr.tech-row'));
+
+        // Сортуємо
+        rows.sort((rowA, rowB) => {
+            const valueA = this.getSortValue(rowA, sortBy);
+            const valueB = this.getSortValue(rowB, sortBy);
+
+            if (valueA < valueB) return this.sortState.direction === 'asc' ? -1 : 1;
+            if (valueA > valueB) return this.sortState.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        // Вставляємо відсортовані рядки назад
+        rows.forEach(row => tableBody.appendChild(row));
+    }
+
+    getSortValue(row, sortBy) {
+        // data-sort-by="name" -> row.dataset.name
+        const value = row.dataset[sortBy.toLowerCase()];
+        // Пробуємо перетворити на число для правильного числового сортування
+        const numValue = parseFloat(value);
+        return isNaN(numValue) ? value : numValue;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new EquipmentPage();
 });
