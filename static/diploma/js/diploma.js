@@ -3,7 +3,7 @@ class DashboardApp {
         this.config = {
             mobileBreakpoint: 768,
             animationDuration: 300,
-            realTimeUpdateInterval: 30000,
+            realTimeUpdateInterval: 5000,
             notificationTimeout: 5000
         };
 
@@ -490,33 +490,71 @@ class DashboardApp {
     updateDashboardData() {
         // Оновлення метрик
         this.updateMetrics();
-        
-        // Оновлення статусних карток
-        this.updateStatusCards();
     }
 
     /**
      * Оновлення метрик
      */
-    updateMetrics() {
-        const metrics = document.querySelectorAll('.metric-value');
-        
-        metrics.forEach(metric => {
-            const currentValue = parseFloat(metric.textContent);
-            const randomChange = (Math.random() - 0.5) * 0.3;
-            const newValue = Math.max(0, currentValue + randomChange);
+    async updateMetrics() {
+        try {
+            const response = await fetch('/diploma/api/dashboard-stats/');
+            if (!response.ok) return;
             
-            metric.textContent = newValue.toFixed(1) + 
-                (metric.textContent.includes('%') ? '%' : '°C');
-        });
-    }
+            const data = await response.json();
 
-    /**
-     * Оновлення статусних карток
-     */
-    updateStatusCards() {
-        // Тут можна оновити дані статусних карток
-        console.log('🔄 Оновлення статусних карток...');
+            // Допоміжна функція для візуальної анімації при зміні цифр
+            const updateValueWithAnimation = (element, newValue) => {
+                if (element.textContent !== String(newValue)) {
+                    element.textContent = newValue;
+                    // Легкий візуальний ефект оновлення
+                    element.style.transform = 'scale(1.1)';
+                    element.style.color = '#4dabf7';
+                    element.style.transition = 'all 0.3s ease';
+                    setTimeout(() => {
+                        element.style.transform = '';
+                        element.style.color = '';
+                    }, 300);
+                }
+            };
+            
+            // Оновлюємо нижні картки (Метрики середовища)
+            const metricItems = document.querySelectorAll('.metric-item');
+            metricItems.forEach(item => {
+                const label = item.querySelector('.metric-label')?.textContent || '';
+                const valueEl = item.querySelector('.metric-value');
+                
+                if (valueEl) {
+                    if (label.includes('Температура')) updateValueWithAnimation(valueEl, data.avg_temp.toFixed(1) + '°C');
+                    else if (label.includes('Вологість')) updateValueWithAnimation(valueEl, data.avg_hum.toFixed(0) + '%');
+                    else if (label.includes('Газ')) updateValueWithAnimation(valueEl, data.gas_level);
+                }
+            });
+
+            // Оновлюємо верхні статусні картки (швидкий огляд)
+            const statusCards = document.querySelectorAll('.status-card');
+            statusCards.forEach(card => {
+                const label = card.querySelector('p')?.textContent || '';
+                const valueEl = card.querySelector('h3');
+                
+                if (valueEl) {
+                    if (label.includes('Температура')) updateValueWithAnimation(valueEl, data.avg_temp.toFixed(1) + '°C');
+                    else if (label.includes('Вологість')) updateValueWithAnimation(valueEl, data.avg_hum.toFixed(0) + '%');
+                    else if (label.includes('Персонал онлайн')) updateValueWithAnimation(valueEl, data.online_count);
+                    else if (label.includes('Активні попередження')) {
+                        updateValueWithAnimation(valueEl, data.warning_count);
+                        if (data.warning_count > 0) {
+                            card.classList.remove('normal');
+                            card.classList.add('warning');
+                        } else {
+                            card.classList.remove('warning');
+                            card.classList.add('normal');
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Помилка автоматичного оновлення показників:', error);
+        }
     }
 
     /**
@@ -554,10 +592,10 @@ class DashboardApp {
     /**
      * Оновлення реальних даних
      */
-    updateRealTimeData() {
+    async updateRealTimeData() {
         if (!this.state.isOnline) return;
         
-        this.updateMetrics();
+        await this.updateMetrics();
         this.simulateNewNotifications();
         this.dispatchEvent('data:updated');
     }

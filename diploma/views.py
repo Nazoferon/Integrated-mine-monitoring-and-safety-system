@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Avg, Max
 from django.db import transaction
 from django.utils import timezone
 import json
@@ -26,19 +27,30 @@ def diploma_home(request):
     """Головна панель управління."""
     online_staff = Employee.objects.exclude(safety_status='OFF_SHIFT')
 
-    # Показники для віджетів
-    latest_telemetry = TelemetryLog.objects.order_by('-timestamp').first()
+    # Беремо ID останніх 50 записів телеметрії
+    recent_log_ids = TelemetryLog.objects.order_by('-timestamp').values_list('id', flat=True)[:50]
+    
+    # Рахуємо: СЕРЕДНЄ для температури/вологості, МАКСИМАЛЬНЕ для газу
+    stats = TelemetryLog.objects.filter(id__in=recent_log_ids).aggregate(
+        avg_temp=Avg('temperature'),
+        avg_hum=Avg('humidity'),
+        max_gas=Max('gas_level')
+    )
+    
     mine_map = get_active_map()
+
+    active_alerts_query = SecurityAlert.objects.filter(is_resolved=False)
+    alerts_count = active_alerts_query.count()
 
     context = {
         'online_count': online_staff.count(),
-        'warning_count': Employee.objects.filter(safety_status__in=['WARNING', 'SOS']).count(),
+        'warning_count': alerts_count,
         'recent_staff': online_staff.order_by('-last_update')[:4],
-        'active_alerts': SecurityAlert.objects.filter(is_resolved=False).order_by('-created_at')[:5],
-        'critical_alerts_count': SecurityAlert.objects.filter(is_resolved=False).count(),
-        'avg_temp': latest_telemetry.temperature if latest_telemetry else 0.0,
-        'avg_hum': latest_telemetry.humidity if latest_telemetry else 0.0,
-        'gas_level': latest_telemetry.gas_level if latest_telemetry else 0,
+        'active_alerts': active_alerts_query.order_by('-created_at')[:5],
+        'critical_alerts_count': alerts_count,
+        'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
+        'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
+        'gas_level': stats['max_gas'] if stats['max_gas'] is not None else 0,
         'map_data': mine_map.map_data if mine_map else {},
     }
     return render(request, 'diploma/diploma_home.html', context)
@@ -109,6 +121,26 @@ def alert_detail(request, alert_id):
 
 # --- API ЕНДПОІНТИ (ДЛЯ JS ТА ЗОВНІШНІХ ПРОГРАМ) ---
 
+
+def dashboard_stats_api(request):
+    """API для автоматичного оновлення показників мікроклімату на головній сторінці."""
+    recent_log_ids = TelemetryLog.objects.order_by('-timestamp').values_list('id', flat=True)[:50]
+    stats = TelemetryLog.objects.filter(id__in=recent_log_ids).aggregate(
+        avg_temp=Avg('temperature'),
+        avg_hum=Avg('humidity'),
+        max_gas=Max('gas_level')
+    )
+    
+    online_count = Employee.objects.exclude(safety_status='OFF_SHIFT').count()
+    warning_count = SecurityAlert.objects.filter(is_resolved=False).count()
+
+    return JsonResponse({
+        'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
+        'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
+        'gas_level': stats['max_gas'] if stats['max_gas'] is not None else 0,
+        'online_count': online_count,
+        'warning_count': warning_count,
+    })
 
 def active_alerts_api(request):
     try:
