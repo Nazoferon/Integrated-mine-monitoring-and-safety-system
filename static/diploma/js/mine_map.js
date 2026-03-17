@@ -411,7 +411,14 @@
     }
 
     function focusOnPoint(x, y) {
-        offsetX = canvas.width / 2 - x * scale;
+        // Враховуємо ширину лівої панелі (300px), щоб візуально центрувати у видимій області екрану
+        const sidebar = document.getElementById('sidebar-panel');
+        let sidebarOffset = 0;
+        if (sidebar && !sidebar.classList.contains('collapsed')) {
+            sidebarOffset = 300;
+        }
+
+        offsetX = (canvas.width + sidebarOffset) / 2 - x * scale;
         offsetY = canvas.height / 2 - y * scale;
         updatePopupPosition();
         draw();
@@ -459,14 +466,21 @@
             const rangeX = maxX - minX;
             const rangeY = maxY - minY;
             
-            const scaleX = canvas.width / (rangeX * 10 + 200);
+            // Враховуємо ширину бокової панелі для розрахунку масштабу
+            const sidebar = document.getElementById('sidebar-panel');
+            const sidebarOffset = (sidebar && !sidebar.classList.contains('collapsed')) ? 300 : 0;
+            const visibleWidth = canvas.width - sidebarOffset;
+            
+            const scaleX = visibleWidth / (rangeX * 10 + 200);
             const scaleY = canvas.height / (rangeY * 10 + 200);
             scale = (rangeX === 0 && rangeY === 0) ? 1.0 : Math.min(scaleX, scaleY, 2.0);
             
             focusOnPoint(centerX * 10, centerY * 10);
         } else {
             scale = 1.0;
-            offsetX = canvas.width / 2;
+            const sidebar = document.getElementById('sidebar-panel');
+            const sidebarOffset = (sidebar && !sidebar.classList.contains('collapsed')) ? 300 : 0;
+            offsetX = (canvas.width + sidebarOffset) / 2;
             offsetY = canvas.height / 2;
             updatePopupPosition();
             draw();
