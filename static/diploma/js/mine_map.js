@@ -87,27 +87,7 @@
         if (resetBtn) resetBtn.addEventListener('click', () => window.resetView());
 
         // Автоцентрування
-        if (mapData.tunnels && mapData.tunnels.length > 0) {
-            // Знаходимо центр всіх тунелів
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            mapData.tunnels.forEach(t => {
-                minX = Math.min(minX, t.x1, t.x2);
-                maxX = Math.max(maxX, t.x1, t.x2);
-                minY = Math.min(minY, t.y1, t.y2);
-                maxY = Math.max(maxY, t.y1, t.y2);
-            });
-            const centerX = (minX + maxX) / 2;
-            const centerY = (minY + maxY) / 2;
-            const rangeX = maxX - minX;
-            const rangeY = maxY - minY;
-            // Підбираємо масштаб щоб вмістити всю карту
-            const scaleX = canvas.width / (rangeX * 10 + 200);
-            const scaleY = canvas.height / (rangeY * 10 + 200);
-            scale = Math.min(scaleX, scaleY, 2.0);
-            focusOnPoint(centerX * 10, centerY * 10);
-        } else {
-            resetView();
-        }
+        window.resetView();
     }
 
     function resizeCanvas() {
@@ -327,7 +307,7 @@
             const d = selectedObject.data;
             html = `<div class="popup-title"><i class="fas fa-wifi"></i> ${d.id}</div>
                     <div class="popup-row"><span class="popup-label">Тип:</span> WiFi Repeater</div>
-                    <div class="popup-row"><span class="popup-label">Статус:</span> <span style="color:#00ff00">Online</span></div>
+                    <div class="popup-row"><span class="popup-label">Статус:</span> <span class="status-online">Online</span></div>
                     <div class="popup-row"><span class="popup-label">Коорд:</span> ${d.x}, ${d.y}</div>`;
         } else if (selectedObject.type === 'tunnel') {
             const t = selectedObject.data;
@@ -438,11 +418,59 @@
     }
 
     window.resetView = function () {
-        scale = 1.0;
-        offsetX = canvas.width / 2;
-        offsetY = canvas.height / 2;
-        updatePopupPosition();
-        draw();
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        let hasData = false;
+
+        if (mapData.yards && mapData.yards.length > 0) {
+            mapData.yards.forEach(y => {
+                const hw = (y.w || 0) / 2;
+                const hh = (y.h || 0) / 2;
+                minX = Math.min(minX, y.x - hw);
+                maxX = Math.max(maxX, y.x + hw);
+                minY = Math.min(minY, y.y - hh);
+                maxY = Math.max(maxY, y.y + hh);
+                hasData = true;
+            });
+        }
+
+        if (mapData.tunnels && mapData.tunnels.length > 0) {
+            mapData.tunnels.forEach(t => {
+                minX = Math.min(minX, t.x1, t.x2);
+                maxX = Math.max(maxX, t.x1, t.x2);
+                minY = Math.min(minY, t.y1, t.y2);
+                maxY = Math.max(maxY, t.y1, t.y2);
+                hasData = true;
+            });
+        }
+        
+        if (mapData.devices && mapData.devices.length > 0) {
+            mapData.devices.forEach(d => {
+                minX = Math.min(minX, d.x);
+                maxX = Math.max(maxX, d.x);
+                minY = Math.min(minY, d.y);
+                maxY = Math.max(maxY, d.y);
+                hasData = true;
+            });
+        }
+
+        if (hasData) {
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+            
+            const scaleX = canvas.width / (rangeX * 10 + 200);
+            const scaleY = canvas.height / (rangeY * 10 + 200);
+            scale = (rangeX === 0 && rangeY === 0) ? 1.0 : Math.min(scaleX, scaleY, 2.0);
+            
+            focusOnPoint(centerX * 10, centerY * 10);
+        } else {
+            scale = 1.0;
+            offsetX = canvas.width / 2;
+            offsetY = canvas.height / 2;
+            updatePopupPosition();
+            draw();
+        }
     };
 
     // Sidebar toggle — підключається через addEventListener в initMap

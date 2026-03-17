@@ -23,7 +23,7 @@
       <i class="fas fa-clock"></i> Зафіксовано: {{ alert.created_at|date:"d.m.Y H:i:s" }}
 
       {% if alert.connected_repeater %}
-      <span class="ms-3 text-warning" style="font-weight: bold; font-size: 16px;">
+      <span class="ms-3 text-warning incident-repeater-text">
         <i class="fas fa-wifi"></i> Репітер: {{ alert.connected_repeater.uid }}
       </span>
       {% endif %}
@@ -55,8 +55,8 @@
         <div class="emp-no-photo"><i class="fas fa-user"></i></div>
         {% endif %}
         <div>
-          <h5 style="color: #fff; margin:0;">{{ alert.employee.last_name }} {{ alert.employee.first_name }}</h5>
-          <span style="color: #888; font-size: 14px;">{{ alert.employee.get_position_display }}</span>
+          <h5 class="emp-name-title">{{ alert.employee.last_name }} {{ alert.employee.first_name }}</h5>
+          <span class="emp-position-title">{{ alert.employee.get_position_display }}</span>
         </div>
       </div>
       <div class="data-row">
@@ -65,7 +65,7 @@
       </div>
       <div class="data-row">
         <span class="data-label">Пристрій (MAC):</span>
-        <span class="data-value" style="font-family: monospace;">{{ alert.device.mac_address }}</span>
+        <span class="data-value mac-address-value">{{ alert.device.mac_address }}</span>
       </div>
       <div class="data-row">
         <span class="data-label">Інв. номер:</span>
@@ -121,17 +121,15 @@
       {% if alert.connected_repeater.map_location %}
       <div class="mt-3 p-2 bg-dark rounded border border-secondary">
         <small class="text-muted d-block mb-1">Об'єкт на карті:</small>
-        <span class="text-white" style="font-size: 13px;">
+        <span class="text-white minimap-object-text">
           <i class="fas fa-layer-group text-primary"></i> {{ alert.connected_repeater.map_location.name }}
         </span>
       </div>
       {% endif %}
 
-      <div class="mt-3 p-0 bg-dark rounded border border-secondary overflow-hidden"
-        style="height: 180px; position: relative;">
-        <canvas id="miniMapCanvas" style="width: 100%; height: 100%;"></canvas>
-        <div
-          style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #4dabf7;">
+      <div class="mt-3 p-0 bg-dark rounded border border-secondary overflow-hidden minimap-container">
+        <canvas id="miniMapCanvas" class="minimap-canvas"></canvas>
+        <div class="minimap-badge">
           ЛОКАЦІЯ ІНЦИДЕНТУ
         </div>
       </div>

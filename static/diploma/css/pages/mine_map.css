@@ -276,6 +276,10 @@ canvas { display: block; width: 100%; height: 100%; }
 .popup-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .popup-label { color: #888; }
 
+.status-online {
+    color: #00ff00;
+}
+
 /* For Mine maps */
 .mine-map-page .last-edited {
     font-size: 0.9rem;
