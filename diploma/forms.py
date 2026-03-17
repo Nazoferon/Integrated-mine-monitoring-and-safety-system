@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import UserProfile
 from django.core.exceptions import ValidationError
+import re
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -39,3 +40,13 @@ class ProfileForm(forms.ModelForm):
             if photo.size > 5 * 1024 * 1024:  # 5 МБ
                 raise ValidationError('Файл занадто великий. Максимальний розмір: 5 МБ.')
         return photo
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get('phone_number')
+        if phone:
+            # Видаляємо всі пробіли, дужки та дефіси для гнучкості вводу
+            cleaned_phone = re.sub(r'[\s\-\(\)]', '', phone)
+            if not re.match(r'^\+380\d{9}$', cleaned_phone):
+                raise ValidationError('Введіть коректний номер телефону у форматі +380XXXXXXXXX.')
+            return cleaned_phone
+        return phone
