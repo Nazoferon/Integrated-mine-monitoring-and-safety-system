@@ -401,6 +401,12 @@ input[name="password"].error,
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
+/* Фарбуємо іконки в червоний колір, якщо поле має помилку валідації */
+.form-input.error ~ .input-icon,
+.form-input.error ~ .password-toggle {
+  color: #ef4444;
+}
+
 /* Input Icons */
 .input-icon {
   position: absolute;

@@ -8,8 +8,8 @@ class LoginApp {
         this.config = {
             animationDuration: 300,
             notificationTimeout: 4000,
-            minUsernameLength: 3,
-            minPasswordLength: 6
+            minUsernameLength: 1,
+            minPasswordLength: 1
         };
 
         this.elements = {};
@@ -86,8 +86,14 @@ class LoginApp {
                 if (icon) {
                     icon.classList.toggle('fa-eye', isText);
                     icon.classList.toggle('fa-eye-slash', !isText);
+                    
+                    // Анімуємо лише іконку, щоб не збивати позиціонування (transform: translateY) самої кнопки
+                    this.animateElement(icon, 'pulse 0.2s');
                 }
-                this.animateElement(this.elements.passwordToggle, 'pulse 0.2s');
+                
+                // Динамічно змінюємо текст підказки для кращого UX
+                this.elements.passwordToggle.title = isText ? 'Показати пароль' : 'Приховати пароль';
+                this.elements.passwordToggle.setAttribute('aria-label', isText ? 'Показати пароль' : 'Приховати пароль');
             });
         }
 
