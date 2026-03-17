@@ -73,7 +73,7 @@
                 <i class="fas fa-exclamation-circle"></i>
                 <div>
                     <strong>Помилка авторизації</strong>
-                    <p>Невірне ім'я користувача або пароль</p>
+                    <p>Невірний логін, Email або пароль</p>
                 </div>
             </div>
             {% endif %}
@@ -83,7 +83,7 @@
                 <div class="form-group">
                     <label for="username" class="form-label">
                         <i class="fas fa-user"></i>
-                        Логін
+                        Логін або Email
                     </label>
                     <div class="input-group">
                         {{ form.username|add_class:"form-input" }}

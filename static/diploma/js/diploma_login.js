@@ -154,10 +154,10 @@ class LoginApp {
 
         if (!this.elements.usernameInput.value.trim()) {
             isValid = false;
-            this.showFieldError(this.elements.usernameInput, 'Введіть імʼя користувача');
+            this.showFieldError(this.elements.usernameInput, 'Введіть логін або Email');
         } else if (this.elements.usernameInput.value.length < this.config.minUsernameLength) {
             isValid = false;
-            this.showFieldError(this.elements.usernameInput, `Логін має бути довше ${this.config.minUsernameLength} символів`);
+            this.showFieldError(this.elements.usernameInput, `Логін або Email має бути довше ${this.config.minUsernameLength} символів`);
         }
 
         if (!this.elements.passwordInput.value.trim()) {

@@ -62,6 +62,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'diploma.backends.EmailOrUsernameModelBackend', # Новий бекенд
+    'django.contrib.auth.backends.ModelBackend',    # Стандартний бекенд як резервний
+]
+
 ROOT_URLCONF = 'myproject.urls'
 
 TEMPLATES = [
