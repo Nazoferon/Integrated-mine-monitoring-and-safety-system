@@ -86,8 +86,11 @@
         const resetBtn = document.querySelector('[data-action="reset-view"]');
         if (resetBtn) resetBtn.addEventListener('click', () => window.resetView());
 
-        // Автоцентрування
-        window.resetView();
+        // Автоцентрування з невеликою затримкою, щоб CSS та Flexbox 
+        // встигли сформувати правильні розміри canvas.width перед прорахунком
+        setTimeout(() => {
+            window.resetView();
+        }, 50);
     }
 
     function resizeCanvas() {

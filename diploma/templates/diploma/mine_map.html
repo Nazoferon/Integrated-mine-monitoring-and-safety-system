@@ -5,7 +5,7 @@
 {% block body_class %}mine-map-page{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'diploma/css/pages/mine_map.css' %}">
+<link rel="stylesheet" href="{% static 'diploma/css/pages/mine_map.css' %}?v=1.1">
 {% endblock %}
 
 {% block content %}
@@ -39,5 +39,5 @@
 
 {% block extra_js %}
 {{ map_data | json_script:"mine-map-data" }}
-<script src="{% static 'diploma/js/mine_map.js' %}"></script>
+<script src="{% static 'diploma/js/mine_map.js' %}?v=1.1" data-cfasync="false"></script>
 {% endblock %}
