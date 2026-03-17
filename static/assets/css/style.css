@@ -1120,3 +1120,24 @@ footer {
         padding: 0.875rem 1.25rem;
     }
 }
+
+/* 404 Page Styles */
+.error-title {
+    font-size: 8rem;
+    margin-bottom: 0;
+}
+
+.error-subtitle {
+    font-size: 2rem;
+    color: #e0e0e0;
+}
+
+.error-text {
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+.error-buttons {
+    margin-top: 4rem;
+}

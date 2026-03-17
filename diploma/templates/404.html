@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сторінку не знайдено - 404</title>
+    <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-content">
+            <h1 class="error-title">404</h1>
+            <p class="subtitle error-subtitle">Ой! Сторінку не знайдено.</p>
+            <p class="error-text">Схоже, ви перейшли за неіснуючим посиланням, або ця сторінка була видалена.</p>
+            
+            <div class="cta-buttons error-buttons">
+                {% if '/diploma/' in request_path or '/login/' in request_path or '/password_reset/' in request_path %}
+                    <a href="{% url 'diploma_home' %}" class="btn btn-primary"><i class="fas fa-hard-hat"></i> У систему "Глибина 4.0"</a>
+                    <a href="/" class="btn btn-secondary"><i class="fas fa-home"></i> На головну (Портфоліо)</a>
+                {% else %}
+                    <a href="/" class="btn btn-primary"><i class="fas fa-home"></i> Повернутися на головну</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
