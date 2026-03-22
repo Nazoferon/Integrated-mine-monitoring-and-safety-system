@@ -203,6 +203,7 @@ CONTENT_SECURITY_POLICY = {
         'script-src': (
             "'self'",
             "'unsafe-eval'",
+            "'unsafe-inline'",
             'https://cdnjs.cloudflare.com',
             'https://cdn.jsdelivr.net',
             'https://static.cloudflareinsights.com'

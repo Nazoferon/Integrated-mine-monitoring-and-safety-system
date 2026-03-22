@@ -1,0 +1,25 @@
+/* Глобальний лоадер на всю сторінку */
+.global-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 35, 0.85);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #4dabf7;
+}
+.global-loader-overlay.active { 
+    display: flex; 
+}
+.global-loader-overlay .loader-content { 
+    text-align: center; 
+}
+.global-loader-overlay .loader-content h4 { 
+    color: #e0e0e0; font-weight: 500; font-size: 18px; margin-top: 15px; 
+}

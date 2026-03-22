@@ -19,6 +19,7 @@
 @import 'components/modal.css';
 @import 'components/alert_details.css';
 @import 'components/switch.css';
+@import 'components/loader.css';
 
 /* ===== 4. СТОРІНКИ (Специфічні стилі) ===== */
 @import 'pages/profile.css';
