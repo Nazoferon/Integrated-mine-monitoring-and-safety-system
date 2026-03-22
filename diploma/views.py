@@ -3,7 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Avg, Max
+from django.db.models import Avg, Max, Count
+from django.db.models.functions import TruncDate
+from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.utils import timezone
 import json
@@ -79,6 +81,12 @@ def equipment_list(request):
         'total_devices': lamps.count() + sensors.count() + repeaters.count()
     })
 
+
+@login_required
+def reports_view(request):
+    # Поки що просто рендеримо шаблон. 
+    # Пізніше сюди можна додати реальну вибірку з бази даних.
+    return render(request, 'diploma/reports.html')
 
 @login_required
 def mine_map(request):
@@ -204,6 +212,178 @@ def alert_telemetry_api(request, alert_id):
         'timestamp': latest.timestamp.strftime('%H:%M:%S'),
         'repeater': latest.connected_repeater.uid if latest.connected_repeater else "Втрачено"
     })
+
+
+@login_required
+def reports_data_api(request):
+    """API для генерації даних для сторінки звітів (графіки та таблиця)."""
+    report_type = request.GET.get('type', 'incidents')
+    start_date = parse_date(request.GET.get('start_date', ''))
+    end_date = parse_date(request.GET.get('end_date', ''))
+    
+    if not start_date or not end_date:
+        return JsonResponse({'error': 'Не вказані дати'}, status=400)
+
+    # --- ЗВІТ ПО ІНЦИДЕНТАХ (SOS) ---
+    if report_type == 'incidents':
+        # Фільтруємо реальні тривоги з БД за обраний період
+        alerts = SecurityAlert.objects.filter(
+            created_at__date__gte=start_date, 
+            created_at__date__lte=end_date
+        )
+        
+        # 1. Дані для лінійного графіка (згруповані по днях)
+        alerts_by_date = alerts.annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id')).order_by('date')
+        main_labels = [item['date'].strftime('%d.%m') for item in alerts_by_date]
+        main_values = [item['count'] for item in alerts_by_date]
+        
+        # 2. Дані для кругового графіка (згруповані за причиною)
+        alerts_by_reason = alerts.values('reason').annotate(count=Count('id'))
+        doughnut_labels = [item['reason'] for item in alerts_by_reason]
+        doughnut_values = [item['count'] for item in alerts_by_reason]
+        
+        colors = ['#ff4444', '#ff9800', '#ffd700', '#00c851', '#4dabf7']
+        doughnut_colors = colors[:len(doughnut_labels)]
+        
+        # 3. Рядки для таблиці
+        table_rows = []
+        for alert in alerts.order_by('-created_at')[:100]:
+            status_classes = {'RESOLVED': ('bg-success', 'Вирішено', 'text-muted'), 'IN_PROGRESS': ('bg-warning text-dark', 'В роботі', 'text-warning')}
+            s_badge, s_text, e_class = status_classes.get(alert.status, ('bg-danger', 'Нова', 'text-danger'))
+                
+            table_rows.append({
+                'date': alert.created_at.strftime('%Y-%m-%d %H:%M'),
+                'event_class': e_class,
+                'event_text': f'<i class="fas fa-exclamation-triangle"></i> {alert.reason}',
+                'location': alert.location_label or 'Невідомо',
+                'person': f"{alert.employee.last_name} {alert.employee.first_name[0]}. ({alert.device.inventory_number})" if alert.employee and alert.device else '---',
+                'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
+            })
+            
+        return JsonResponse({
+            'chart_main': {'labels': main_labels, 'values': main_values},
+            'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
+            'table_rows': table_rows
+        })
+        
+    # --- ЗВІТ ПО ТЕЛЕМЕТРІЇ (ГАЗ ТА МІКРОКЛІМАТ) ---
+    elif report_type == 'telemetry':
+        # Фільтруємо логі телеметрії за обраний період
+        logs = TelemetryLog.objects.filter(
+            timestamp__date__gte=start_date, 
+            timestamp__date__lte=end_date
+        )
+        
+        # 1. Дані для лінійного графіка (Максимальний рівень газу по днях)
+        logs_by_date = logs.annotate(date=TruncDate('timestamp')).values('date').annotate(max_gas=Max('gas_level')).order_by('date')
+        main_labels = [item['date'].strftime('%d.%m') for item in logs_by_date]
+        main_values = [item['max_gas'] for item in logs_by_date]
+        
+        # 2. Дані для кругового графіка (Розподіл показників газу за рівнем небезпеки)
+        safe_count = logs.filter(gas_level__lt=10).count()
+        warning_count = logs.filter(gas_level__gte=10, gas_level__lt=50).count()
+        danger_count = logs.filter(gas_level__gte=50).count()
+        
+        doughnut_labels = ['Норма (<10 ppm)', 'Увага (10-50 ppm)', 'Небезпека (>50 ppm)']
+        doughnut_values = [safe_count, warning_count, danger_count]
+        doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
+        
+        # 3. Рядки для таблиці (Топ-100 записів з найвищим показником газу)
+        table_rows = []
+        for log in logs.order_by('-gas_level', '-timestamp')[:100]:
+            if log.gas_level >= 50:
+                s_badge, s_text, e_class = 'bg-danger', 'Критично', 'text-danger'
+            elif log.gas_level >= 10:
+                s_badge, s_text, e_class = 'bg-warning text-dark', 'Увага', 'text-warning'
+            else:
+                s_badge, s_text, e_class = 'bg-success', 'Норма', 'text-muted'
+                
+            person_info = f"{log.device.assigned_to.last_name} {log.device.assigned_to.first_name[0]}. ({log.device.inventory_number})" if log.device.assigned_to else f"Датчик ({log.device.inventory_number})"
+            location = log.connected_repeater.uid if log.connected_repeater else 'Невідомо'
+                
+            table_rows.append({
+                'date': log.timestamp.strftime('%Y-%m-%d %H:%M'),
+                'event_class': e_class,
+                'event_text': f'<i class="fas fa-wind"></i> Газ: {log.gas_level} ppm | Темп: {log.temperature}°C',
+                'location': location,
+                'person': person_info,
+                'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
+            })
+            
+        return JsonResponse({
+            'chart_main': {'labels': main_labels, 'values': main_values},
+            'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
+            'table_rows': table_rows
+        })
+
+    # --- ЗВІТ ПО ОБЛАДНАННЮ (БАТАРЕЯ ТА МЕРЕЖА) ---
+    elif report_type == 'equipment':
+        logs = TelemetryLog.objects.filter(timestamp__date__gte=start_date, timestamp__date__lte=end_date)
+        
+        # 1. Графік: Кількість подій низького заряду (<20%) по днях
+        low_bat_logs = logs.filter(battery_level__lt=20).annotate(date=TruncDate('timestamp')).values('date').annotate(count=Count('id')).order_by('date')
+        main_labels = [item['date'].strftime('%d.%m') for item in low_bat_logs]
+        main_values = [item['count'] for item in low_bat_logs]
+        
+        # 2. Круговий графік: Розподіл типів обладнання в системі
+        doughnut_labels = ['Коногонки', 'Стаціонарні датчики', 'Репітери (Мережа)']
+        doughnut_values = [
+            MinerDevice.objects.filter(is_static=False).count(),
+            MinerDevice.objects.filter(is_static=True).count(),
+            InfrastructureDevice.objects.count()
+        ]
+        doughnut_colors = ['#4dabf7', '#00c851', '#ffd700']
+        
+        # 3. Таблиця: Топ-100 записів із найнижчим зарядом або поганим сигналом
+        table_rows = []
+        for log in logs.order_by('battery_level', '-timestamp')[:100]:
+            s_badge = 'bg-danger' if log.battery_level < 20 else ('bg-warning text-dark' if log.battery_level < 50 else 'bg-success')
+            e_class = 'text-danger' if log.battery_level < 20 else 'text-muted'
+            table_rows.append({
+                'date': log.timestamp.strftime('%Y-%m-%d %H:%M'),
+                'event_class': e_class,
+                'event_text': f'<i class="fas fa-battery-quarter"></i> Заряд: {log.battery_level}% | Сигнал: {log.wifi_signal_strength} dBm',
+                'location': log.connected_repeater.uid if log.connected_repeater else 'Зв\'язок втрачено',
+                'person': f"{log.device.inventory_number} [{log.device.mac_address}]",
+                'status_html': f'<span class="badge {s_badge}">{log.battery_level}%</span>'
+            })
+            
+        return JsonResponse({'chart_main': {'labels': main_labels, 'values': main_values}, 'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 'table_rows': table_rows})
+
+    # --- ЗВІТ ПО ПЕРСОНАЛУ ---
+    elif report_type == 'personnel':
+        logs = TelemetryLog.objects.filter(timestamp__date__gte=start_date, timestamp__date__lte=end_date, device__is_static=False)
+        
+        # 1. Графік: Кількість унікальних активних працівників по днях
+        active_by_date = logs.annotate(date=TruncDate('timestamp')).values('date').annotate(emp_count=Count('device__assigned_to', distinct=True)).order_by('date')
+        main_labels = [item['date'].strftime('%d.%m') for item in active_by_date]
+        main_values = [item['emp_count'] for item in active_by_date]
+        
+        # 2. Круговий графік: Розподіл персоналу за поточним статусом безпеки
+        status_counts = Employee.objects.values('safety_status').annotate(count=Count('id'))
+        status_map = dict(Employee.STATUS_CHOICES)
+        color_map = {'OK': '#00c851', 'WARNING': '#ff9800', 'SOS': '#ff4444', 'OFF_SHIFT': '#888888'}
+        
+        doughnut_labels = [status_map.get(item['safety_status'], item['safety_status']) for item in status_counts]
+        doughnut_values = [item['count'] for item in status_counts]
+        doughnut_colors = [color_map.get(item['safety_status'], '#4dabf7') for item in status_counts]
+        
+        # 3. Таблиця: Останні оновлення працівників
+        table_rows = []
+        for emp in Employee.objects.all().order_by('-last_update')[:100]:
+            s_badge = 'bg-success' if emp.safety_status == 'OK' else ('bg-danger' if emp.safety_status == 'SOS' else ('bg-warning text-dark' if emp.safety_status == 'WARNING' else 'bg-secondary'))
+            table_rows.append({
+                'date': emp.last_update.strftime('%Y-%m-%d %H:%M'), 
+                'event_class': 'text-info', 
+                'event_text': f'<i class="fas fa-user-clock"></i> Посада: {emp.get_position_display()}', 
+                'location': '---', 
+                'person': f"{emp.last_name} {emp.first_name[0]}. ({emp.badge_number})", 
+                'status_html': f'<span class="badge {s_badge}">{emp.get_safety_status_display()}</span>'
+            })
+            
+        return JsonResponse({'chart_main': {'labels': main_labels, 'values': main_values}, 'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 'table_rows': table_rows})
+
+    return JsonResponse({'error': 'Невідомий тип звіту'}, status=400)
 
 
 @csrf_exempt

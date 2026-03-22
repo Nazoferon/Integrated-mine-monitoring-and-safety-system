@@ -1141,3 +1141,252 @@ footer {
 .error-buttons {
     margin-top: 4rem;
 }
+
+/* Глобальний лоадер на всю сторінку */
+.global-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 35, 0.85);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #4dabf7;
+}
+.global-loader-overlay.active { display: flex; }
+.global-loader-overlay .loader-content { text-align: center; }
+.global-loader-overlay .loader-content h4 { color: #e0e0e0; font-weight: 500; font-size: 18px; margin-top: 15px; }
+
+/* =========================================
+   ГЛОБАЛЬНІ СТИЛІ ТАБЛИЦЬ (Обладнання, Звіти)
+   ========================================= */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(20, 20, 35, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.tech-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #e0e0e0;
+    table-layout: auto;
+    white-space: nowrap;
+}
+
+.tech-table th, .tech-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.tech-table th {
+    color: #9ca3af;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.tech-table th.sortable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.tech-table th.sortable:hover {
+    color: #8a63d2;
+    background: rgba(138, 99, 210, 0.1);
+}
+
+.tech-table th.sort-asc::after { content: ' \f0de'; font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free'; font-weight: 900; color: #8a63d2; margin-left: 5px; }
+.tech-table th.sort-desc::after { content: ' \f0dd'; font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free'; font-weight: 900; color: #8a63d2; margin-left: 5px; }
+
+.tech-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.tech-table tbody tr:hover { 
+    background: rgba(138, 99, 210, 0.08); 
+}
+
+.tech-table tbody tr:nth-child(even) { 
+    background: rgba(255, 255, 255, 0.01); 
+}
+
+.tech-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Додаткові бейджі для обладнання/статусів */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+.status-dot.active { background-color: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+.status-dot.inactive { background-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+
+/* =========================================
+   СУЧАСНІ КАРТКИ ПЕРСОНАЛУ
+   ========================================= */
+.personnel-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: rgba(20, 20, 35, 0.4);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-box {
+    position: relative;
+    flex-grow: 1;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i.fa-search {
+    position: absolute;
+    left: 15px;
+    color: #888;
+    pointer-events: none;
+}
+
+.search-box input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 25px;
+    padding: 10px 40px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    border-color: #8a63d2;
+    box-shadow: 0 0 15px rgba(138, 99, 210, 0.2);
+    outline: none;
+}
+
+.view-toggles { display: flex; gap: 10px; }
+.view-toggles .btn {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #888;
+    border-radius: 8px;
+    padding: 8px 15px;
+    transition: 0.3s;
+    cursor: pointer;
+}
+.view-toggles .btn.active, .view-toggles .btn:hover {
+    background: #8a63d2;
+    color: white;
+    border-color: #8a63d2;
+    box-shadow: 0 0 10px rgba(138, 99, 210, 0.3);
+}
+
+/* Картка співробітника */
+.employee-card {
+    background: rgba(30, 30, 45, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    position: relative;
+    backdrop-filter: blur(10px);
+}
+
+.employee-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    border-color: rgba(138, 99, 210, 0.4);
+    background: rgba(40, 40, 60, 0.8);
+}
+
+.emp-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    border: 3px solid rgba(138, 99, 210, 0.3);
+    padding: 3px;
+    background: rgba(0,0,0,0.2);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.emp-name { font-size: 18px; font-weight: 600; color: white; margin-bottom: 5px; }
+.emp-position { color: #9ca3af; font-size: 13px; margin-bottom: 15px; }
+
+.emp-details {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.detail-label { color: #888; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 3px;}
+.detail-value { color: #e0e0e0; font-weight: 500; }
+.emp-status { position: absolute; top: 15px; right: 15px; }
+
+/* List View (Список) для карток */
+.list-view .personnel-col {
+    width: 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 15px;
+}
+
+.list-view .employee-card {
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+    padding: 15px 20px;
+}
+
+.list-view .emp-avatar { width: 50px; height: 50px; margin-bottom: 0; margin-right: 20px; }
+.list-view .emp-info { flex-grow: 1; display: flex; flex-direction: column; }
+.list-view .emp-name { margin-bottom: 2px; font-size: 16px; }
+.list-view .emp-position { margin-bottom: 0; }
+
+.list-view .emp-details {
+    width: auto;
+    margin-bottom: 0;
+    gap: 30px;
+    background: transparent;
+    border: none;
+}
+
+.list-view .emp-status { position: relative; top: 0; right: 0; margin-left: 20px; }

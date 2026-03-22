@@ -23,12 +23,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 // Попередній перегляд
+                if (window.dashboardApp) window.dashboardApp.showLoader('Обробка фото...');
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     if (profileImg) {
                         profileImg.src = e.target.result;
                     }
                     showMessage('Фото оновлено! 📸', 'success');
+                    if (window.dashboardApp) window.dashboardApp.hideLoader();
                 };
                 reader.readAsDataURL(file);
             }
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form) {
         form.addEventListener('submit', function(e) {
             // Якщо є помилки, вони відобразяться через {{ form.errors }}
+            if (window.dashboardApp) window.dashboardApp.showLoader('Збереження змін...');
             showMessage('Зміни збережено! ✅', 'success');
         });
     }

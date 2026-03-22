@@ -78,6 +78,25 @@ class DashboardApp {
         if (!this.elements.sidebar || !this.elements.menuToggle) {
             throw new Error('Не знайдено обовʼязкові елементи DOM');
         }
+        
+        this.createGlobalLoader();
+    }
+
+    /**
+     * Створення глобального лоадера в DOM
+     */
+    createGlobalLoader() {
+        const loader = document.createElement('div');
+        loader.className = 'global-loader-overlay';
+        loader.innerHTML = `
+            <div class="loader-content">
+                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                <h4 class="mt-3 loader-text">Завантаження...</h4>
+            </div>
+        `;
+        document.body.appendChild(loader);
+        this.elements.globalLoader = loader;
+        this.elements.loaderText = loader.querySelector('.loader-text');
     }
 
     /**
@@ -849,6 +868,23 @@ class DashboardApp {
         `;
         
         document.body.appendChild(errorDiv);
+    }
+
+    /**
+     * Показати глобальний лоадер
+     */
+    showLoader(text = 'Завантаження...') {
+        if (this.elements.loaderText) this.elements.loaderText.innerText = text;
+        if (this.elements.globalLoader) this.elements.globalLoader.classList.add('active');
+    }
+
+    /**
+     * Приховати глобальний лоадер
+     */
+    hideLoader() {
+        if (this.elements.globalLoader) {
+            this.elements.globalLoader.classList.remove('active');
+        }
     }
 
     /**

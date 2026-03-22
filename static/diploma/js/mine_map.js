@@ -25,7 +25,12 @@
 
     // --- ІНІЦІАЛІЗАЦІЯ ---
     function initMap() {
-        if (!canvas || !ctx || !mapArea) return;
+        if (window.dashboardApp) window.dashboardApp.showLoader('Побудова карти шахти...');
+        
+        if (!canvas || !ctx || !mapArea) {
+            if (window.dashboardApp) window.dashboardApp.hideLoader();
+            return;
+        }
 
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
@@ -90,7 +95,8 @@
         // встигли сформувати правильні розміри canvas.width перед прорахунком
         setTimeout(() => {
             window.resetView();
-        }, 50);
+            if (window.dashboardApp) window.dashboardApp.hideLoader();
+        }, 150); // Трохи збільшена затримка для надійного рендеру
     }
 
     function resizeCanvas() {

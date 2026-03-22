@@ -1,0 +1,147 @@
+{% extends 'diploma/base.html' %}
+{% load static %}
+
+{% block title %}Аналітика та Звіти - Глибина 4.0{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'diploma/css/pages/reports.css' %}?v=2.0">
+{% endblock %}
+
+{% block content %}
+<!-- Шапка для друку офіційного документа (Прихована на екрані сайту) -->
+<div id="printHeader" class="print-only-block mb-4">
+    <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-3 print-header-border">
+        <div>
+            <h3 class="fw-bold mb-1 print-header-logo">❖ ГЛИБИНА 4.0</h3>
+            <p class="text-dark mb-0 fs-6">Підприємство / Шахтоуправління<br>Відділ моніторингу та ТБ</p>
+        </div>
+        <div class="text-end text-dark">
+            <p class="mb-0 fw-bold">ЗАТВЕРДЖУЮ</p>
+            <p class="mb-0">Головний інженер _____________</p>
+            <p class="mb-0 mt-1">"___" ____________ 202__ р.</p>
+        </div>
+    </div>
+    <h2 class="text-center text-dark fw-bold mb-2 text-uppercase">Офіційний звіт</h2>
+    <h5 class="text-center text-secondary mb-4" id="printReportTitle"></h5>
+</div>
+
+<div class="eq-header mt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+  <div class="eq-title">
+    <h2><i class="fas fa-chart-line text-info"></i> Аналітика та Звіти</h2>
+    <span>Генерація вибірок, статистика інцидентів та телеметрії</span>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn-export" id="exportCsvBtn" title="Завантажити таблицю з даними">
+        <i class="fas fa-file-csv"></i> Дані (CSV)
+    </button>
+    <button class="btn-export-pdf" id="exportPdfBtn" title="Сформувати офіційний документ">
+        <i class="fas fa-file-pdf"></i> PDF
+    </button>
+  </div>
+</div>
+
+<div class="report-card">
+    <div class="row align-items-end">
+        <div class="col-md-3 mb-3 mb-md-0">
+            <label class="filter-label">Тип звіту</label>
+            <select class="form-select custom-input" id="reportType">
+                <option value="incidents">Журнал інцидентів (SOS)</option>
+                <option value="telemetry">Телеметрія газу (CO, CH4)</option>
+                <option value="equipment">Стан обладнання (Батарея/Мережа)</option>
+                <option value="personnel">Робочий час персоналу</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-3 mb-md-0">
+            <label class="filter-label">Початкова дата</label>
+            <input type="date" class="form-control custom-input" id="startDate" value="2026-03-01">
+        </div>
+        <div class="col-md-3 mb-3 mb-md-0">
+            <label class="filter-label">Кінцева дата</label>
+            <input type="date" class="form-control custom-input" id="endDate" value="2026-03-22">
+        </div>
+        <div class="col-md-3">
+            <button class="btn-generate" id="generateBtn">
+                <i class="fas fa-sync-alt"></i> Згенерувати звіт
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="chartsRow">
+    <div class="col-md-8">
+        <div class="report-card">
+            <h5 class="text-white mb-3 card-title-lg">Динаміка інцидентів за вибраний період</h5>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="report-card">
+            <h5 class="text-white mb-3 card-title-lg">Причини тривог</h5>
+            <div class="chart-container">
+                <canvas id="doughnutChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="report-card">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="text-white m-0 card-title-lg">Детальні дані</h5>
+        
+        <div class="export-options">
+            <span class="text-muted d-block mb-1 export-options-title">Колонки для експорту:</span>
+            <div class="d-flex flex-wrap gap-2" id="columnSelector">
+                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="0" checked><span>Час</span></label>
+                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="1" checked><span>Подія</span></label>
+                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="2" checked><span>Локація</span></label>
+                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="3" checked><span>Працівник</span></label>
+                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="4" checked><span>Статус</span></label>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>Дата та Час</th>
+            <th>Подія / Значення</th>
+            <th>Локація</th>
+            <th>Працівник / Пристрій</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody id="reportTableBody">
+          <tr class="tech-row">
+            <td>2026-03-22 14:05</td>
+            <td class="text-danger"><i class="fas fa-exclamation-triangle"></i> Ручний виклик SOS</td>
+            <td>Штрек 1</td>
+            <td>Ганюк Назар (LAMP-0001)</td>
+            <td><span class="badge bg-success">Вирішено</span></td>
+          </tr>
+          <tr class="tech-row">
+            <td>2026-03-21 09:12</td>
+            <td class="text-warning"><i class="fas fa-battery-quarter"></i> Низький заряд (15%)</td>
+            <td>Руддвір</td>
+            <td>Щербань Р. (LAMP-0002)</td>
+            <td><span class="badge bg-warning text-dark">В роботі</span></td>
+          </tr>
+          <tr class="tech-row">
+            <td>2026-03-20 22:45</td>
+            <td class="text-danger"><i class="fas fa-wind"></i> Перевищення CO (55 ppm)</td>
+            <td>Штрек 2</td>
+            <td>Датчик SENS-08</td>
+            <td><span class="badge bg-success">Вирішено</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js" integrity="sha256-SERKgtTty1vsDxll+qzd4Y2cF9swY9BCq62i9wXJ9Uo=" crossorigin="anonymous"></script>
+<script src="{% static 'diploma/js/reports.js' %}?v=2.0"></script>
+{% endblock %}
