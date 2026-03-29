@@ -74,6 +74,11 @@ nav {
     padding: 1rem 0;
 }
 
+/* Зміщуємо логотип лівіше */
+.dashboard-nav {
+    padding-left: 0.5rem !important;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -82,6 +87,7 @@ nav {
     font-weight: 700;
     text-decoration: none;
     font-size: 1.5rem;
+    margin-left: -10px;
     transition: all 0.3s ease;
 }
 

@@ -1,274 +1,155 @@
-/* Profile Page Styles - Глибина 4.0 */
-.profile-page {
-    max-width: 100%;
-    margin: 2rem 1rem;
-    padding: 2rem;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    color: var(--text-light);
+/* КОМПАКТНИЙ ТА СУЧАСНИЙ ПРОФІЛЬ - Глибина 4.0 */
+
+.profile-card {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    height: 100%;
+}
+
+.profile-photo-wrapper {
     position: relative;
-    overflow: hidden;
+    width: 130px;
+    height: 130px;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    padding: 5px;
+    background: rgba(0,0,0,0.2);
+    border: 2px dashed #4dabf7;
 }
 
-.profile-page::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(77, 171, 247, 0.1), rgba(147, 197, 253, 0.05));
-    z-index: -1;
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
-.profile-page h2 {
-    text-align: center;
-    font-size: 2.2rem;
-    margin-bottom: 2rem;
-    color: var(--primary-blue);
-    text-shadow: 0 2px 10px rgba(77, 171, 247, 0.3);
+.profile-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #222;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    font-size: 50px;
+    color: #555;
 }
 
-/* Секції форми */
-.form-section {
-    margin-bottom: 2rem;
+.profile-stats {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.form-section h3 {
-    font-size: 1.5rem;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
-}
-
-/* Підказка про розмір файлу */
-.form-hint {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    margin-top: 0.5rem;
-    font-style: italic;
-    word-wrap: break-word;
-}
-
-/* Поля форми */
-.profile-page form {
-    width: 100%;
-}
-
-.profile-page form p {
+.stat-box {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
-    margin-bottom: 1.5rem;
-    width: 100%;
+    min-width: 90px;
 }
 
-.profile-page form p label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+.stat-val { font-size: 16px; font-weight: bold; color: #fff; }
+.stat-name { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 4px; }
 
-.profile-page form p label::before {
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    font-size: 0.9rem;
-    color: var(--primary-blue);
-}
-
-/* Селектори для іконок */
-.profile-page .form-section:nth-child(1) p:nth-child(1) label::before { content: '\f007'; } /* Ім’я */
-.profile-page .form-section:nth-child(1) p:nth-child(2) label::before { content: '\f007'; } /* Прізвище */
-.profile-page .form-section:nth-child(1) p:nth-child(3) label::before { content: '\f0e0'; } /* Email */
-.profile-page .form-section:nth-child(2) p:nth-child(1) label::before { content: '\f030'; } /* Фото */
-.profile-page .form-section:nth-child(2) p:nth-child(2) label::before { content: '\f095'; } /* Телефон */
-.profile-page .form-section:nth-child(2) p:nth-child(3) label::before { content: '\f075'; } /* Bio */
-
-.profile-page form p input,
-.profile-page form p textarea {
-    padding: 1rem;
-    background: var(--glass-bg);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--border-radius);
-    color: var(--text-light);
-    font-size: 1rem;
-    transition: all var(--animation-duration);
-    backdrop-filter: var(--glass-blur);
-    width: 100%;
-}
-
-.profile-page form p input:focus,
-.profile-page form p textarea:focus {
-    outline: none;
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.2);
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.profile-page form p input[type="file"] {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px dashed rgba(255, 255, 255, 0.3);
-    padding: 1rem;
-    cursor: pointer;
-    width: 100%;
-}
-
-.profile-page form p input[type="file"]:hover {
-    border-color: var(--primary-blue);
-    background: rgba(77, 171, 247, 0.1);
-}
-
-/* Кнопка */
-.profile-page button[type="submit"] {
-    width: 100%;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-    background-color: var(--accent-blue);
-    border: none;
-    border-radius: var(--border-radius);
-    color: var(--text-light);
+.section-title {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: #fff;
     font-size: 1.1rem;
     font-weight: 600;
-    cursor: pointer;
-    transition: all var(--animation-duration);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
 }
 
-.profile-page button[type="submit"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(77, 171, 247, 0.4);
-}
-
-/* Фото профілю */
-.profile-photo-container {
-    text-align: center;
-    margin-bottom: 2rem;
+/* СТИЛІЗАЦІЯ ПОЛІВ ФОРМИ */
+#profileForm input[type="text"],
+#profileForm input[type="email"],
+#profileForm input[type="password"],
+#profileForm textarea,
+#profileForm select {
+    background: rgba(15, 15, 15, 0.8) !important;
+    border: 1px solid #555 !important;
+    color: white !important;
+    border-radius: 8px;
+    padding: 10px 15px;
     width: 100%;
+    transition: 0.3s;
 }
 
-.profile-page img {
-    border-radius: 50%;
-    border: 3px solid var(--primary-blue);
-    box-shadow: 0 8px 25px rgba(77, 171, 247, 0.3);
-    transition: all var(--animation-duration);
-    background: var(--glass-bg);
-    padding: 4px;
-    max-width: 150px;
-    height: auto;
-    width: 100%;
-}
-
-.profile-avatar-img {
-    height: 150px !important;
-    object-fit: cover;
+#profileForm input:focus,
+#profileForm textarea:focus {
     border-color: #4dabf7 !important;
+    box-shadow: 0 0 10px rgba(77, 171, 247, 0.2) !important;
+    outline: none;
 }
 
-/* Повідомлення */
-.profile-messages {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 1000;
-    width: calc(100% - 20px);
-    max-width: 300px;
+#profileForm input[type="file"] {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed #555;
+    padding: 8px;
+    border-radius: 8px;
+    width: 100%;
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
 }
 
-.profile-message {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: var(--text-light);
-    padding: 0.8rem 1.2rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
+#profileForm input[type="file"]::file-selector-button {
+    background: #4dabf7;
+    color: #111;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+#profileForm input[type="file"]::file-selector-button:hover {
+    background: #3bc9db;
+}
+
+/* Кнопка збереження */
+.btn-save {
+    background-color: #4dabf7;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+.btn-save:hover {
+    background-color: #3bc9db;
+    transform: translateY(-2px);
+}
+
+/* Сповіщення та помилки */
+.custom-alert {
     display: flex;
+    gap: 15px;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    animation: slideInRight 0.3s ease;
-    font-size: 0.9rem;
-    word-wrap: break-word;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    color: #ff4d4d;
+    font-size: 13px;
+    border-radius: 8px;
 }
 
-.profile-message.success {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-}
-
-.profile-message.error {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-.profile-message.info {
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-}
-
-.profile-message.show {
-    display: flex;
-}
-
-/* Адаптивність для планшетів */
 @media (max-width: 768px) {
-    .profile-page {
-        margin: 1rem 0.5rem;
-        padding: 1.5rem;
-        max-width: 100%;
-    }
-    
-    .profile-page h2 {
-        font-size: 1.8rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-section h3 {
-        font-size: 1.3rem;
-        margin-bottom: 0.8rem;
-    }
-    
-    .profile-page form p {
-        margin-bottom: 1rem;
-    }
-    
-    .profile-page form p label {
-        font-size: 0.95rem;
-    }
-    
-    .profile-page form p input,
-    .profile-page form p textarea {
-        padding: 0.8rem;
-        font-size: 0.95rem;
-    }
-    
-    .profile-page button[type="submit"] {
-        padding: 0.8rem;
-        font-size: 1rem;
-    }
-    
-    .profile-photo-container {
-        margin-bottom: 1.5rem;
-    }
-    
-    .profile-page img {
-        max-width: 120px;
-        width: 100%;
-    }
-    
-    .form-hint {
-        font-size: 0.85rem;
-    }
-    
-    .profile-messages {
-        width: calc(100% - 20px);
-        max-width: 280px;
-    }
+    .profile-card { padding: 15px; }
+    .profile-photo-wrapper { width: 100px; height: 100px; }
+    .profile-actions { flex-direction: column; gap: 10px; }
+    .profile-actions button { width: 100%; margin: 0 !important; }
 }

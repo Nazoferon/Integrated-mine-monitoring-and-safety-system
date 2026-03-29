@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.profile-page form');
+    const form = document.getElementById('profileForm');
     const fileInput = document.querySelector('input[type="file"]');
-    const profileImg = document.querySelector('.profile-page img');
+    const profileImg = document.querySelector('.profile-avatar');
     const maxFileSize = 5 * 1024 * 1024; // 5 МБ
     const allowedFormats = ['image/png', 'image/jpeg', 'image/jpg'];
 
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Підсвічування активних полів
-    const inputs = document.querySelectorAll('.profile-page input, .profile-page textarea');
+    const inputs = document.querySelectorAll('#profileForm input, #profileForm textarea');
     inputs.forEach(input => {
         input.addEventListener('focus', function() {
             this.parentElement.style.transform = 'translateY(-2px)';

@@ -1,49 +1,96 @@
 {% extends 'diploma/base.html' %}
 {% load static %}
 
-{% block head %}
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block title %}Профіль користувача - Глибина 4.0{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'diploma/css/pages/profile.css' %}?v=3.0">
 {% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8">
-        <div class="profile-page">
-            <h2 class="text-center mb-4"><i class="fas fa-user-circle"></i> Профіль користувача</h2>
+<div class="eq-header mt-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div class="eq-title">
+        <h2><i class="fas fa-user-cog text-primary"></i> Налаштування профілю</h2>
+        <span>Керування особистими даними та обліковим записом</span>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Ліва колонка: Фото та статус -->
+    <div class="col-12 col-lg-4">
+        <div class="profile-card text-center">
+            <div class="profile-photo-wrapper">
+                {% if request.user.userprofile.profile_photo %}
+                    <img src="{{ request.user.userprofile.profile_photo.url }}" alt="Фото профілю" class="profile-avatar">
+                {% else %}
+                    <div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>
+                {% endif %}
+            </div>
+            <h4 class="mt-3 mb-1 text-white">{{ user.last_name }} {{ user.first_name }}</h4>
+            <p class="text-info mb-3"><i class="fas fa-id-badge"></i> Диспетчер системи</p>
             
-            {% if request.user.userprofile.profile_photo %}
-                <div class="profile-photo-container text-center mb-4">
-                    <img src="{{ request.user.userprofile.profile_photo.url }}" alt="Фото профілю" class="img-fluid rounded-circle profile-avatar-img">
+            <div class="profile-stats">
+                <div class="stat-box">
+                    <span class="stat-val text-success"><i class="fas fa-wifi"></i></span>
+                    <span class="stat-name">Мережа</span>
                 </div>
-            {% endif %}
-        
-            <form method="post" enctype="multipart/form-data" novalidate class="bg-dark p-4 rounded border border-secondary">
+                <div class="stat-box">
+                    <span class="stat-val text-primary"><i class="fas fa-shield-alt"></i></span>
+                    <span class="stat-name">Доступ</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Права колонка: Форма -->
+    <div class="col-12 col-lg-8">
+        <div class="profile-card">
+            <form method="post" enctype="multipart/form-data" novalidate id="profileForm">
                 {% csrf_token %}
+                
                 {% if user_form.errors or profile_form.errors %}
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span>
-                            {% for error in user_form.errors.values %}{{ error|join:" " }} {% endfor %}
-                            {% for error in profile_form.errors.values %}{{ error|join:" " }} {% endfor %}
-                        </span>
+                    <div class="alert alert-danger custom-alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            {% for field in user_form %}{% for error in field.errors %}<strong>{{ field.label }}:</strong> {{ error }}<br>{% endfor %}{% endfor %}
+                            {% for field in profile_form %}{% for error in field.errors %}<strong>{{ field.label }}:</strong> {{ error }}<br>{% endfor %}{% endfor %}
+                        </div>
                     </div>
                 {% endif %}
-                <div class="form-section mb-4">
-                    <h3 class="border-bottom pb-2 mb-3">Особисті дані</h3>
-                    {{ user_form.as_p }}
+
+                <h5 class="section-title"><i class="fas fa-address-card text-primary"></i> Особисті дані</h5>
+                <div class="row g-3 mb-4">
+                    {% for field in user_form %}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-muted small mb-1">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endfor %}
                 </div>
-                <div class="form-section mb-4">
-                    <h3 class="border-bottom pb-2 mb-3">Додаткові дані</h3>
-                    {{ profile_form.as_p }}
-                    <p class="form-hint text-muted small mt-2"><i class="fas fa-info-circle"></i> Фото профілю: до 5 МБ, лише PNG, JPG, JPEG</p>
+
+                <h5 class="section-title mt-2"><i class="fas fa-info-circle text-primary"></i> Додаткова інформація</h5>
+                <div class="row g-3 mb-4">
+                    {% for field in profile_form %}
+                    <div class="col-12 {% if field.name == 'bio' %}col-md-12{% else %}col-md-6{% endif %}">
+                        <label class="form-label text-muted small mb-1">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.name == 'profile_photo' %}
+                            <div class="form-text text-muted small mt-1"><i class="fas fa-file-image"></i> До 5 МБ (Формати: PNG, JPG)</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
-                <button type="submit" class="btn btn-primary w-100 py-2"><i class="fas fa-save"></i> Зберегти зміни</button>
+
+                <div class="d-flex justify-content-end border-top border-secondary pt-3 mt-2 profile-actions">
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="window.history.back()">Скасувати</button>
+                    <button type="submit" class="btn-save px-4"><i class="fas fa-save"></i> Зберегти зміни</button>
+                </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
+{% block extra_js %}
 <script src="{% static 'diploma/js/profile.js' %}"></script>
 {% endblock %}
