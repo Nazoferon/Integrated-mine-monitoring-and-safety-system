@@ -107,6 +107,79 @@
             canvas.style.cursor = 'grab';
         });
 
+        // --- ДОДАНО: Підтримка сенсорних екранів (Drag & Pinch-to-Zoom) ---
+        let initialPinchDistance = null;
+        let initialScale = 1;
+
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault(); // Запобігаємо скролу сторінки
+            const rect = canvas.getBoundingClientRect();
+            
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const mx = touch.clientX - rect.left;
+                const my = touch.clientY - rect.top;
+
+                checkHover(mx, my); // Перевіряємо, чи не тапнули на об'єкт
+
+                if (hoveredObject) {
+                    selectObject(hoveredObject.type, hoveredObject.data);
+                    isDragging = false;
+                } else {
+                    selectObject(null, null);
+                    isDragging = true;
+                    startX = mx - offsetX;
+                    startY = my - offsetY;
+                }
+                draw();
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                initialScale = scale;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            
+            if (e.touches.length === 1 && isDragging) {
+                const touch = e.touches[0];
+                const mx = touch.clientX - rect.left;
+                const my = touch.clientY - rect.top;
+                offsetX = mx - startX;
+                offsetY = my - startY;
+                updatePopupPosition();
+                draw();
+            } else if (e.touches.length === 2 && initialPinchDistance) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                const zoomFactor = currentDistance / initialPinchDistance;
+                
+                const cx = (t1.clientX + t2.clientX) / 2 - rect.left;
+                const cy = (t1.clientY + t2.clientY) / 2 - rect.top;
+                
+                const newScale = Math.max(0.1, Math.min(10.0, initialScale * zoomFactor));
+                const wx = (cx - offsetX) / scale;
+                const wy = (cy - offsetY) / scale;
+                
+                scale = newScale;
+                offsetX = cx - wx * scale;
+                offsetY = cy - wy * scale;
+                
+                updatePopupPosition();
+                draw();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', e => {
+            if (e.touches.length < 2) initialPinchDistance = null;
+            if (e.touches.length === 0) isDragging = false;
+        });
+
         // --- НОВЕ: Обробка кліків всередині спливаючого вікна (Popup) ---
         popup.addEventListener('click', (e) => {
             // 1. Якщо клікнули на конкретного шахтаря у списку
@@ -524,31 +597,31 @@
             let h = m.hum !== null ? m.hum : '--';
 
             html = `
-                <div class="card border-0" style="min-width: 260px; background: rgba(25, 25, 30, 0.95); box-shadow: 0 8px 25px rgba(0,0,0,0.7); border-radius: 8px; overflow: hidden;">
+                <div class="card border-0 miner-popup-card">
                     
-                    <div class="card-header ${headerClass} p-2 text-center" style="border-bottom: 2px solid rgba(0,0,0,0.5);">
-                        <h6 class="mb-0 fw-bold" style="font-size: 15px;"><i class="fas fa-user-hard-hat me-2"></i>${m.name}</h6>
-                        <small style="opacity: 0.9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">${m.position}</small>
+                    <div class="card-header ${headerClass} p-2 text-center miner-popup-header">
+                        <h6 class="mb-0 fw-bold miner-popup-title"><i class="fas fa-user-hard-hat me-2"></i>${m.name}</h6>
+                        <small class="miner-popup-subtitle">${m.position}</small>
                     </div>
                     
                     <div class="card-body p-0">
-                        <div class="text-center p-2" style="background: rgba(0,0,0,0.3); border-bottom: 1px solid #333;">
-                            <span class="badge ${isSOS ? 'bg-danger' : (isWarn ? 'bg-warning text-dark' : 'bg-success')} w-100 py-2" style="font-size: 12px; ${isSOS ? 'animation: pulseSOS 1s infinite;' : ''}">
+                        <div class="text-center p-2 miner-popup-status-wrap">
+                            <span class="badge ${isSOS ? 'bg-danger pulse-sos' : (isWarn ? 'bg-warning text-dark' : 'bg-success')} w-100 py-2 miner-popup-badge">
                                 ${isSOS ? '<i class="fas fa-exclamation-triangle"></i> ' : ''}${statusText}
                             </span>
                         </div>
                         
-                        <table class="table table-sm table-dark table-borderless mb-0" style="font-size: 13px; background: transparent;">
+                        <table class="table table-sm table-dark table-borderless mb-0 miner-popup-table">
                             <tbody>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                    <td class="text-secondary align-middle ps-3" style="width: 45%;"><small>ЛОКАЦІЯ</small></td>
+                                <tr class="miner-popup-row">
+                                    <td class="text-secondary align-middle ps-3 col-label"><small>ЛОКАЦІЯ</small></td>
                                     <td class="text-end pe-3 fw-bold text-info"><i class="fas fa-map-marker-alt"></i> ${m.ap_id}</td>
                                 </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <tr class="miner-popup-row">
                                     <td class="text-secondary align-middle ps-3"><small>ГАЗ (CO)</small></td>
                                     <td class="text-end pe-3 ${gasClass}"><i class="fas fa-wind"></i> ${m.gas} ppm</td>
                                 </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <tr class="miner-popup-row">
                                     <td class="text-secondary align-middle ps-3"><small>БАТАРЕЯ</small></td>
                                     <td class="text-end pe-3 ${batClass}"><i class="fas ${batIcon}"></i> ${m.battery}%</td>
                                 </tr>
@@ -563,22 +636,18 @@
                         </table>
                     </div>
                 </div>
-                
-                <style>
-                    @keyframes pulseSOS { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-                </style>
             `;
             
         } else if (selectedObject.type === 'cluster') {
             const c = selectedObject.data;
             html = `
-                <div class="card border-0 bg-dark text-white" style="min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                <div class="card border-0 bg-dark text-white cluster-popup-card">
                     <div class="card-header bg-info text-dark fw-bold text-center p-2">
                         <i class="fas fa-users"></i> Скупчення (${c.count} чол.)
                     </div>
                     <div class="card-body p-2 text-center">
                         <div class="mb-2 text-secondary"><small>ЛОКАЦІЯ:</small> <span class="text-info fw-bold">${c.ap_id}</span></div>
-                        <div class="text-warning" style="font-size: 11px;"><i class="fas fa-search-plus"></i> Наблизьте карту (скрол), щоб побачити кожного!</div>
+                        <div class="text-warning cluster-popup-hint"><i class="fas fa-search-plus"></i> Наблизьте карту (скрол), щоб побачити кожного!</div>
                     </div>
                 </div>
             `;

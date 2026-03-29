@@ -170,6 +170,12 @@
     width: 100%;
 }
 
+.profile-avatar-img {
+    height: 150px !important;
+    object-fit: cover;
+    border-color: #4dabf7 !important;
+}
+
 /* Повідомлення */
 .profile-messages {
     position: fixed;

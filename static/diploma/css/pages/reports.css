@@ -71,6 +71,29 @@
     font-weight: 600;
 }
 
+/* --- МОБІЛЬНА АДАПТИВНІСТЬ ДЛЯ ЗВІТІВ --- */
+@media (max-width: 768px) {
+    .eq-header .d-flex {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .btn-export, .btn-export-pdf {
+        width: 100%;
+        text-align: center;
+    }
+    .report-card .row > div {
+        margin-bottom: 15px;
+    }
+    .export-options {
+        width: 100%;
+    }
+    #columnSelector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 /* --- СТИЛІ ДЛЯ ДРУКУ ТА PDF --- */
 .print-only-block { display: none; }
 
@@ -109,7 +132,7 @@
         color: #000 !important;
         padding: 8px !important;
     }
-    .tech-table th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; }
+    .tech-table th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     
     /* Прибираємо бейджі, робимо просто текстом */
     .badge { border: 1px solid #000; color: #000 !important; background: transparent !important; }

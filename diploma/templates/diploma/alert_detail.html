@@ -23,13 +23,13 @@
       <i class="fas fa-clock"></i> Зафіксовано: {{ alert.created_at|date:"d.m.Y H:i:s" }}
 
       {% if alert.connected_repeater %}
-      <span class="ms-3 text-warning incident-repeater-text">
+      <span class="ms-0 ms-md-3 mt-2 mt-md-0 text-warning incident-repeater-text d-block d-md-inline">
         <i class="fas fa-wifi"></i> Репітер: {{ alert.connected_repeater.uid }}
       </span>
       {% endif %}
 
       {% if alert.location_label %}
-      <span class="ms-3"><i class="fas fa-map-marker-alt"></i> Опис локації: {{ alert.location_label }}</span>
+      <span class="ms-0 ms-md-3 mt-2 mt-md-0 d-block d-md-inline"><i class="fas fa-map-marker-alt"></i> Опис локації: {{ alert.location_label }}</span>
       {% endif %}
     </div>
   </div>
@@ -45,7 +45,7 @@
 </div>
 
 <div class="row g-4">
-  <div class="col-lg-4">
+  <div class="col-12 col-lg-4">
     <div class="info-card">
       <h4><i class="fas fa-user-injured"></i> Об'єкт порятунку</h4>
       <div class="emp-summary">
@@ -74,7 +74,7 @@
     </div>
   </div>
 
-  <div class="col-lg-4">
+  <div class="col-12 col-lg-4">
     <div class="info-card">
       <h4><i class="fas fa-broadcast-tower"></i> Локація та Зв'язок</h4>
 
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <div class="col-lg-4">
+  <div class="col-12 col-lg-4">
     <div class="info-card control-panel">
       <h4><i class="fas fa-tasks"></i> Дії диспетчера</h4>
       <form method="POST">

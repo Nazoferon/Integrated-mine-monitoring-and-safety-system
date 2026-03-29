@@ -525,13 +525,9 @@ class DashboardApp {
             const updateValueWithAnimation = (element, newValue) => {
                 if (element.textContent !== String(newValue)) {
                     element.textContent = newValue;
-                    // Легкий візуальний ефект оновлення
-                    element.style.transform = 'scale(1.1)';
-                    element.style.color = '#4dabf7';
-                    element.style.transition = 'all 0.3s ease';
+                    element.classList.add('metric-updated');
                     setTimeout(() => {
-                        element.style.transform = '';
-                        element.style.color = '';
+                        element.classList.remove('metric-updated');
                     }, 300);
                 }
             };
@@ -702,26 +698,6 @@ class DashboardApp {
             </button>
         `;
         
-        // Стилізація
-        Object.assign(notification.style, {
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: this.getNotificationColor(type),
-            color: 'white',
-            padding: '15px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            zIndex: '10000',
-            maxWidth: '350px',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-            transform: 'translateX(100%)',
-            opacity: '0',
-            transition: 'all 0.3s ease'
-        });
-        
         // Обробник закриття
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => {
@@ -739,8 +715,8 @@ class DashboardApp {
             clearTimeout(notification._timeout);
         }
         
-        notification.style.transform = 'translateX(100%)';
-        notification.style.opacity = '0';
+        notification.classList.remove('show');
+        notification.classList.add('hide');
         
         setTimeout(() => {
             if (notification.parentNode) {
@@ -834,37 +810,13 @@ class DashboardApp {
      */
     showFatalError(message) {
         const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 20px;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        `;
+        errorDiv.className = 'fatal-error-overlay';
         
         errorDiv.innerHTML = `
-            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-            <h2 style="color: #ef4444; margin-bottom: 10px;">Помилка системи</h2>
-            <p style="margin-bottom: 20px; font-size: 16px;">${message}</p>
-            <button onclick="location.reload()" style="
-                background: #4dabf7;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 14px;
-            ">Перезавантажити</button>
+            <div class="fatal-error-icon">⚠️</div>
+            <h2 class="fatal-error-title">Помилка системи</h2>
+            <p class="fatal-error-text">${message}</p>
+            <button class="fatal-error-btn" onclick="location.reload()">Перезавантажити</button>
         `;
         
         document.body.appendChild(errorDiv);

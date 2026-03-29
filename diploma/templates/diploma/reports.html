@@ -42,7 +42,7 @@
 
 <div class="report-card">
     <div class="row align-items-end">
-        <div class="col-md-3 mb-3 mb-md-0">
+        <div class="col-12 col-md-3 mb-3 mb-md-0">
             <label class="filter-label">Тип звіту</label>
             <select class="form-select custom-input" id="reportType">
                 <option value="incidents">Журнал інцидентів (SOS)</option>
@@ -51,15 +51,15 @@
                 <option value="personnel">Робочий час персоналу</option>
             </select>
         </div>
-        <div class="col-md-3 mb-3 mb-md-0">
+        <div class="col-12 col-md-3 mb-3 mb-md-0">
             <label class="filter-label">Початкова дата</label>
-            <input type="date" class="form-control custom-input" id="startDate" value="2026-03-01">
+            <input type="date" class="form-control custom-input" id="startDate">
         </div>
-        <div class="col-md-3 mb-3 mb-md-0">
+        <div class="col-12 col-md-3 mb-3 mb-md-0">
             <label class="filter-label">Кінцева дата</label>
-            <input type="date" class="form-control custom-input" id="endDate" value="2026-03-22">
+            <input type="date" class="form-control custom-input" id="endDate">
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-3 mt-3 mt-md-0">
             <button class="btn-generate" id="generateBtn">
                 <i class="fas fa-sync-alt"></i> Згенерувати звіт
             </button>
@@ -68,7 +68,7 @@
 </div>
 
 <div class="row" id="chartsRow">
-    <div class="col-md-8">
+    <div class="col-12 col-md-8 mb-4 mb-md-0">
         <div class="report-card">
             <h5 class="text-white mb-3 card-title-lg">Динаміка інцидентів за вибраний період</h5>
             <div class="chart-container">
@@ -76,7 +76,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-12 col-md-4">
         <div class="report-card">
             <h5 class="text-white mb-3 card-title-lg">Причини тривог</h5>
             <div class="chart-container">

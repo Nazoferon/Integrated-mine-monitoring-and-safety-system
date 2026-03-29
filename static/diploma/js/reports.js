@@ -1,6 +1,26 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log("✅ Скрипт звітів та графіків завантажено");
 
+    // --- АВТОМАТИЧНЕ ВСТАНОВЛЕННЯ ДАТ (Сьогодні та 30 днів тому) ---
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput && endDateInput) {
+        const today = new Date();
+        const pastDate = new Date();
+        pastDate.setDate(today.getDate() - 30); // За останні 30 днів
+        
+        const formatDate = (date) => {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        if (!endDateInput.value) endDateInput.value = formatDate(today);
+        if (!startDateInput.value) startDateInput.value = formatDate(pastDate);
+    }
+
     // Налаштування кольорів для темної теми Chart.js
     Chart.defaults.color = '#888';
     Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
@@ -105,8 +125,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 clearTimeout(timeoutId);
                 
-                // Спочатку парсимо JSON, щоб отримати текст помилки з бекенду (якщо є)
-                const data = await response.json();
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    if (!response.ok) {
+                        throw new Error(`Помилка сервера: ${response.status} ${response.statusText}`);
+                    }
+                    throw new Error('Помилка обробки даних (невірний формат)');
+                }
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'Помилка отримання даних з сервера');
@@ -115,6 +142,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.chart_main) {
                     mainChart.data.labels = data.chart_main.labels || [];
                     mainChart.data.datasets[0].data = data.chart_main.values || [];
+                    
+                    // Якщо на графіку лише один запис (одна крапка) — робимо її великою і помітною
+                    if (mainChart.data.datasets[0].data.length === 1) {
+                        mainChart.data.datasets[0].pointRadius = 8;
+                        mainChart.data.datasets[0].pointBorderWidth = 3;
+                    } else {
+                        mainChart.data.datasets[0].pointRadius = 4;
+                        mainChart.data.datasets[0].pointBorderWidth = 1;
+                    }
+                    
                     mainChart.update();
                 }
                 
@@ -131,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tbody) {
                     tbody.innerHTML = '';
                     if (!data.table_rows || data.table_rows.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 20px;">За обраний період даних не знайдено</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">За обраний період даних не знайдено</td></tr>';
                     } else {
                         data.table_rows.forEach(row => {
                             const tr = document.createElement('tr');

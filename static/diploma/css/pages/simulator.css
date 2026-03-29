@@ -31,3 +31,11 @@
     color: #4dabf7; 
     font-weight: bold; 
 }
+
+.sim-divider {
+    border-color: #444;
+    margin: 25px 0;
+}
+.sim-status-text {
+    font-size: 14px;
+}

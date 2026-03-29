@@ -237,14 +237,14 @@ def reports_data_api(request):
         main_labels = [item['date'].strftime('%d.%m') for item in alerts_by_date]
         main_values = [item['count'] for item in alerts_by_date]
         
-        # 2. Дані для кругового графіка (Розподіл показників газу за рівнем небезпеки)
-        safe_count = logs.filter(gas_level__lte=17).count() # До 17 включно
-        warning_count = logs.filter(gas_level__gt=17, gas_level__lt=50).count() # Від 18 до 49
-        danger_count = logs.filter(gas_level__gte=50).count() # 50 і більше
+        # 2. Дані для кругового графіка (Розподіл причин тривог)
+        sos_count = alerts.filter(reason__icontains='SOS').count()
+        gas_count = alerts.filter(reason__icontains='CO').count()
+        other_count = alerts.exclude(reason__icontains='SOS').exclude(reason__icontains='CO').count()
         
-        doughnut_labels = ['Норма (≤17 ppm)', 'Перевищення ГДК (18-49 ppm)', 'Небезпека (≥50 ppm)']
-        doughnut_values = [safe_count, warning_count, danger_count]
-        doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
+        doughnut_labels = ['Кнопка SOS', 'Газ (CO)', 'Інше']
+        doughnut_values = [sos_count, gas_count, other_count]
+        doughnut_colors = ['#ff4444', '#ff9800', '#ffd700']
         
         # 3. Рядки для таблиці
         table_rows = []

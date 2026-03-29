@@ -282,7 +282,7 @@ canvas { display: block; width: 100%; height: 100%; }
     font-size: 13px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.8);
     min-width: 160px;
-    pointer-events: none;
+    pointer-events: auto; /* Дозволяємо клікати по об'єктах у спливаючому вікні */
     transform: translate(-50%, -120%);
 }
 #map-popup::after {
@@ -296,6 +296,25 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .popup-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .popup-label { color: #888; }
+
+/* ================================================
+   POPUP КАРТКИ: Шахтарі та Скупчення
+   ================================================ */
+.miner-popup-card { min-width: 260px; background: rgba(25, 25, 30, 0.95); box-shadow: 0 8px 25px rgba(0,0,0,0.7); border-radius: 8px; overflow: hidden; }
+.miner-popup-header { border-bottom: 2px solid rgba(0,0,0,0.5); }
+.miner-popup-title { font-size: 15px; }
+.miner-popup-subtitle { opacity: 0.9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.miner-popup-status-wrap { background: rgba(0,0,0,0.3); border-bottom: 1px solid #333; }
+.miner-popup-badge { font-size: 12px; }
+.pulse-sos { animation: pulseSOS 1s infinite; }
+.miner-popup-table { font-size: 13px; background: transparent; }
+.miner-popup-row { border-bottom: 1px solid rgba(255,255,255,0.05); }
+.miner-popup-row .col-label { width: 45%; }
+
+.cluster-popup-card { min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.cluster-popup-hint { font-size: 11px; }
+
+@keyframes pulseSOS { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
 .status-online {
     color: #00ff00;

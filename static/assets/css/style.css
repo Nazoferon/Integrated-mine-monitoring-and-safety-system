@@ -1163,10 +1163,61 @@ footer {
 .global-loader-overlay .loader-content h4 { color: #e0e0e0; font-weight: 500; font-size: 18px; margin-top: 15px; }
 
 /* =========================================
+   ДИНАМІЧНІ КЛАСИ З JS (NOTIFICATIONS & ERRORS)
+   ========================================= */
+.metric-updated {
+    transform: scale(1.1);
+    color: #4dabf7 !important;
+    transition: all 0.3s ease;
+}
+
+.notification-toast {
+    position: fixed; top: 20px; right: 20px; color: white;
+    padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 12px;
+    z-index: 10000; max-width: 350px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transform: translateX(100%); opacity: 0; transition: all 0.3s ease;
+}
+.notification-toast.show { transform: translateX(0); opacity: 1; }
+.notification-toast.hide { transform: translateX(100%); opacity: 0; }
+.notification-toast.info { background: #4dabf7; }
+.notification-toast.warning { background: #f59e0b; }
+.notification-toast.critical { background: #ef4444; }
+.notification-toast.success { background: #22c55e; }
+.notification-icon { font-size: 20px; }
+.notification-content { flex-grow: 1; }
+.notification-content p { margin: 0; font-size: 14px; font-weight: 500; }
+.notification-content span { font-size: 11px; opacity: 0.8; }
+.notification-close { background: none; border: none; color: white; cursor: pointer; opacity: 0.7; transition: 0.2s; }
+.notification-close:hover { opacity: 1; }
+
+.fatal-error-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.9); color: white;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10000; padding: 20px; text-align: center;
+}
+.fatal-error-icon { font-size: 48px; margin-bottom: 20px; }
+.fatal-error-title { color: #ef4444; margin-bottom: 10px; }
+.fatal-error-text { margin-bottom: 20px; font-size: 16px; }
+.fatal-error-btn { background: #4dabf7; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+.fatal-error-btn:hover { background: #3bc9db; }
+
+/* =========================================
+   ФІКС ДЛЯ КАРТИ НА МОБІЛЬНИХ (TOUCH SUPPORT)
+   ========================================= */
+/* Запобігає скролінгу всієї сторінки браузера під час переміщення карти пальцем */
+.konvajs-content, #map-container, #mine-map, #map-canvas, .map-canvas-area {
+    touch-action: none !important;
+}
+
+/* =========================================
    ГЛОБАЛЬНІ СТИЛІ ТАБЛИЦЬ (Обладнання, Звіти)
    ========================================= */
 .table-responsive {
     overflow-x: auto;
+    display: block;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(20, 20, 35, 0.4);
@@ -1390,3 +1441,88 @@ footer {
 }
 
 .list-view .emp-status { position: relative; top: 0; right: 0; margin-left: 20px; }
+
+/* =========================================
+   АДАПТИВНІСТЬ ДЛЯ ДАШБОРДУ ТА ТЕЛЕФОНІВ
+   ========================================= */
+@media (max-width: 768px) {
+    /* Персонал та Обладнання: Шапки та пошук */
+    .personnel-header, .eq-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .controls-wrapper, .search-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .custom-search, .eq-search, #searchInput, #eqSearchInput {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .view-toggles {
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Фікс для списку співробітників на мобільному (List View) */
+    .list-view .employee-card {
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: 20px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+    .list-view .emp-avatar { margin-right: 0 !important; margin-bottom: 15px !important; width: 60px !important; height: 60px !important; }
+    .list-view .emp-details { flex-direction: column !important; gap: 10px !important; align-items: center !important; width: 100% !important; }
+    .list-view .emp-status { position: relative !important; top: 0 !important; right: 0 !important; margin-top: 15px !important; margin-left: 0 !important; }
+    
+    /* Зменшення відступів у таблицях для екранів телефонів */
+    .tech-table th, .tech-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    
+    /* Перенесено з base.html (Глобальна оптимізація) */
+    body { font-size: 13px !important; overflow-wrap: break-word; }
+    html, body { max-width: 100vw; overflow-x: hidden; }
+    h2 { font-size: 1.3rem !important; }
+    h3 { font-size: 1.1rem !important; }
+    h4, .card-title { font-size: 1rem !important; }
+    .dashboard-main { padding: 10px !important; }
+    .card-header, .card-body, .info-card, .report-card, .sim-card { padding: 12px !important; }
+    .table-responsive { border-radius: 8px !important; display: block !important; width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; margin-bottom: 15px; }
+    .tech-table th, .tech-table td { padding: 8px 6px !important; font-size: 11px !important; white-space: nowrap; }
+    .btn, .btn-action, .custom-tab-btn, .btn-generate, .form-control, .form-select { padding: 8px 10px !important; font-size: 12px !important; }
+    .status-card, .stat-card { padding: 10px !important; gap: 10px !important; }
+    .status-icon, .stat-icon { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+    .status-info h3, .stat-info h3 { font-size: 16px !important; margin-bottom: 0 !important;}
+    .status-info p, .stat-info p { font-size: 11px !important; }
+    .search-wrapper input { padding: 8px 10px 8px 30px !important; font-size: 12px !important; }
+    .search-wrapper i { font-size: 12px !important; }
+    .data-label { font-size: 11px !important; }
+    .data-value { font-size: 12px !important; }
+    
+    /* Деталі інциденту (Alert Detail) */
+    .incident-header { flex-direction: column; align-items: stretch; text-align: left; gap: 15px; }
+    .incident-meta { display: flex; flex-direction: column; gap: 8px; }
+    .incident-meta span { margin-left: 0 !important; }
+    
+    .control-panel .btn-action, .control-panel .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    /* Симулятор */
+    .sim-card .d-flex.gap-3 {
+        flex-direction: column;
+    }
+    .sim-card .btn { width: 100%; }
+}

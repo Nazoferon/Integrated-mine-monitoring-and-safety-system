@@ -6,41 +6,41 @@
 {% endblock %}
 
 {% block content %}
-<div class="profile-page">
-    <h2><i class="fas fa-user-circle"></i> Профіль користувача</h2>
-    
-    {% if request.user.userprofile.profile_photo %}
-        <div class="profile-photo-container">
-            <img src="{{ request.user.userprofile.profile_photo.url }}" alt="Фото профілю">
+<div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+        <div class="profile-page">
+            <h2 class="text-center mb-4"><i class="fas fa-user-circle"></i> Профіль користувача</h2>
+            
+            {% if request.user.userprofile.profile_photo %}
+                <div class="profile-photo-container text-center mb-4">
+                    <img src="{{ request.user.userprofile.profile_photo.url }}" alt="Фото профілю" class="img-fluid rounded-circle profile-avatar-img">
+                </div>
+            {% endif %}
+        
+            <form method="post" enctype="multipart/form-data" novalidate class="bg-dark p-4 rounded border border-secondary">
+                {% csrf_token %}
+                {% if user_form.errors or profile_form.errors %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>
+                            {% for error in user_form.errors.values %}{{ error|join:" " }} {% endfor %}
+                            {% for error in profile_form.errors.values %}{{ error|join:" " }} {% endfor %}
+                        </span>
+                    </div>
+                {% endif %}
+                <div class="form-section mb-4">
+                    <h3 class="border-bottom pb-2 mb-3">Особисті дані</h3>
+                    {{ user_form.as_p }}
+                </div>
+                <div class="form-section mb-4">
+                    <h3 class="border-bottom pb-2 mb-3">Додаткові дані</h3>
+                    {{ profile_form.as_p }}
+                    <p class="form-hint text-muted small mt-2"><i class="fas fa-info-circle"></i> Фото профілю: до 5 МБ, лише PNG, JPG, JPEG</p>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2"><i class="fas fa-save"></i> Зберегти зміни</button>
+            </form>
         </div>
-    {% endif %}
-
-    <form method="post" enctype="multipart/form-data" novalidate>
-        {% csrf_token %}
-        {% if user_form.errors or profile_form.errors %}
-            <div class="profile-message error">
-                <i class="fas fa-exclamation-circle"></i>
-                <span>
-                    {% for error in user_form.errors.values %}
-                        {{ error|join:" " }}
-                    {% endfor %}
-                    {% for error in profile_form.errors.values %}
-                        {{ error|join:" " }}
-                    {% endfor %}
-                </span>
-            </div>
-        {% endif %}
-        <div class="form-section">
-            <h3>Особисті дані</h3>
-            {{ user_form.as_p }}
-        </div>
-        <div class="form-section">
-            <h3>Додаткові дані</h3>
-            {{ profile_form.as_p }}
-            <p class="form-hint">Фото профілю: до 5 МБ, лише PNG, JPG, JPEG</p>
-        </div>
-        <button type="submit"><i class="fas fa-save"></i> Зберегти</button>
-    </form>
+    </div>
 </div>
 
 <!-- Font Awesome -->
