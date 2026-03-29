@@ -133,6 +133,12 @@
     overflow: hidden;
 }
 
+/* Підтримка Fullscreen режиму */
+:fullscreen .mine-map-page .dashboard-main .container-fluid,
+:fullscreen .mine-map-wrapper {
+    height: 100vh !important;
+}
+
 .mine-map-wrapper {
     display: flex;
     width: 100%;

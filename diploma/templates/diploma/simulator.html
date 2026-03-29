@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="row justify-content-center mt-4">
-    <div class="col-12 col-md-8 col-lg-6">
+    <div class="col-12 col-lg-10 col-xl-8">
         <div class="eq-header mb-4">
             <div class="eq-title">
                 <h2><i class="fas fa-terminal text-info"></i> Апаратний Симулятор</h2>
@@ -54,7 +54,7 @@
                             <label class="form-label m-0 fw-bold text-light"><i class="fas fa-battery-half text-success me-1"></i> Рівень заряду</label>
                             <div class="sim-value-display" id="valBattery">100%</div>
                         </div>
-                        <input type="range" class="form-range" id="simBattery" min="1" max="100" value="100" oninput="document.getElementById('valBattery').innerText = this.value + '%'">
+                        <input type="range" class="form-range" id="simBattery" min="1" max="100" value="100" oninput="document.getElementById('valBattery').innerText = this.value + '%'; let v=parseInt(this.value); let c=v<=20?'#ff4444':(v<=50?'#ffbb33':'#e0e0e0'); let b=v<=20?'rgba(255,68,68,0.5)':(v<=50?'rgba(255,187,51,0.5)':'rgba(255,255,255,0.1)'); document.getElementById('valBattery').style.color=c; document.getElementById('valBattery').style.borderColor=b;">
                     </div>
 
                     <div class="sensor-control">

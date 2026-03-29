@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import os
 from uuid import uuid4
-from PIL import Image
+import math
 
 # --- ДОПОМІЖНІ ФУНКЦІЇ ---
 def user_profile_photo_path(instance, filename):
@@ -15,6 +15,15 @@ def employee_photo_path(instance, filename):
     ext = filename.split('.')[-1]
     filename = f"{uuid4().hex}.{ext}"
     return os.path.join('employees', filename)
+
+def dist_to_segment(px, py, x1, y1, x2, y2):
+    """Обчислює найкоротшу відстань від точки (px, py) до відрізка [(x1, y1), (x2, y2)]."""
+    l2 = (x1 - x2)**2 + (y1 - y2)**2
+    if l2 == 0:
+        return math.hypot(px - x1, py - y1)
+    t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2
+    t = max(0, min(1, t))
+    return math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)))
 
 # --- АДМІН ---
 class UserProfile(models.Model):
@@ -38,6 +47,34 @@ class InfrastructureDevice(models.Model):
     x = models.FloatField(verbose_name="X")
     y = models.FloatField(verbose_name="Y")
     is_active = models.BooleanField(default=True, verbose_name="Активний")
+
+    @property
+    def location_in_mine(self):
+        """Повертає назву штреку або 'Руддвір', де знаходиться пристрій."""
+        if self.map_location and self.map_location.map_data:
+            # 1. Перевірка на явну вкладеність у JSON (швидкий та надійний спосіб)
+            for t in self.map_location.map_data.get('tunnels', []):
+                if isinstance(t.get('devices'), list) and any(str(d.get('id')) == str(self.uid) for d in t.get('devices')):
+                    return t.get('name')
+
+            # 2. Якщо не знайдено, перевірка за геометричною близькістю до лінії штреку
+            # (для пристроїв, що не вкладені в JSON, а розміщені за координатами)
+            closest_tunnel = None
+            min_dist = float('inf')
+            dev_x, dev_y = self.x, self.y
+
+            for t in self.map_location.map_data.get('tunnels', []):
+                dist = dist_to_segment(dev_x, dev_y, t.get('x1', 0), t.get('y1', 0), t.get('x2', 0), t.get('y2', 0))
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_tunnel = t
+
+            # Якщо пристрій знаходиться дуже близько до лінії (напр. < 2 одиниць на карті)
+            if closest_tunnel and min_dist < 2:
+                return closest_tunnel.get('name')
+
+        return "Руддвір / База"
+
     def __str__(self): return f"{self.uid} [{self.wifi_bssid or 'NO MAC'}]"
 
 # --- 2. ПЕРСОНАЛ ---
@@ -102,21 +139,6 @@ class Employee(models.Model):
             self.badge_number = f"{pos_code}-{initials}-{count:03d}" 
         
         super().save(*args, **kwargs)
-
-    # ЛОГІКА СТИСНЕННЯ ФОТО
-        if self.photo:
-            try:
-                img_path = self.photo.path
-                img = Image.open(img_path)
-                
-                # Якщо картинка занадто велика (більше 800px по висоті чи ширині)
-                if img.height > 800 or img.width > 800:
-                    output_size = (800, 800)
-                    img.thumbnail(output_size) # Зменшуємо пропорційно
-                    img.save(img_path, quality=85, optimize=True) # Перезберігаємо стиснутою
-            except Exception as e:
-                # Якщо файл не є картинкою або сталася помилка - ігноруємо, щоб не ламати збереження
-                print(f"Помилка обробки фото: {e}")
 
     def __str__(self):
         return f"{self.last_name} {self.first_name} (#{self.badge_number})"

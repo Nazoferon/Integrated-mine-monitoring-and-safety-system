@@ -8,9 +8,25 @@
 {% endblock %}
 
 {% block content %}
-<a href="{% url 'diploma_home' %}" class="btn btn-outline-secondary mb-3">
-  <i class="fas fa-arrow-left"></i> Назад до дашборду
-</a>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <a href="{% url 'diploma_home' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left"></i> Назад до дашборду
+  </a>
+  
+  {% if alert.status == 'NEW' %}
+      <button class="btn btn-outline-warning" disabled title="Спочатку візьміть поточний інцидент в роботу">
+          Наступний інцидент <i class="fas fa-arrow-right"></i>
+      </button>
+  {% elif next_alert %}
+      <a href="{% url 'alert_detail' next_alert.id %}" class="btn btn-warning text-dark fw-bold" style="box-shadow: 0 0 15px rgba(255, 193, 7, 0.4);" title="Перейти до наступного необробленого інциденту">
+          Наступний інцидент <i class="fas fa-arrow-right"></i>
+      </a>
+  {% else %}
+      <button class="btn btn-outline-success" disabled>
+          <i class="fas fa-check"></i> Немає активних тривог
+      </button>
+  {% endif %}
+</div>
 
 <div class="incident-header 
     {% if alert.status == 'NEW' %}status-new
@@ -24,7 +40,7 @@
 
       {% if alert.connected_repeater %}
       <span class="ms-0 ms-md-3 mt-2 mt-md-0 text-warning incident-repeater-text d-block d-md-inline">
-        <i class="fas fa-wifi"></i> Репітер: {{ alert.connected_repeater.uid }}
+        <i class="fas fa-wifi"></i> Репітер: {{ alert.connected_repeater.uid }} <span class="text-white">({{ alert.connected_repeater.location_in_mine }})</span>
       </span>
       {% endif %}
 
@@ -82,7 +98,7 @@
         <span class="data-label">Точка виклику:</span>
         <span class="data-value text-info">
           {% if alert.connected_repeater %}
-          <i class="fas fa-map-marker-alt"></i> {{ alert.connected_repeater.uid }}
+          <i class="fas fa-map-marker-alt"></i> {{ alert.connected_repeater.uid }} <span class="text-white">({{ alert.connected_repeater.location_in_mine }})</span>
           {% else %}Невизначено{% endif %}
         </span>
       </div>
@@ -127,12 +143,22 @@
       </div>
       {% endif %}
 
-      <div class="mt-3 p-0 bg-dark rounded border border-secondary overflow-hidden minimap-container">
-        <canvas id="miniMapCanvas" class="minimap-canvas"></canvas>
-        <div class="minimap-badge">
-          ЛОКАЦІЯ ІНЦИДЕНТУ
+      {% if alert.connected_repeater %}
+      <a href="{% url 'mine_map' %}?focus_ap={{ alert.connected_repeater.uid }}" class="d-block mt-3 text-decoration-none">
+      {% else %}
+      <div class="mt-3">
+      {% endif %}
+        <div class="p-0 bg-dark rounded border border-secondary overflow-hidden minimap-container position-relative">
+          <canvas id="miniMapCanvas" class="minimap-canvas"></canvas>
+          <div class="minimap-badge w-100 text-center py-2 text-white fw-bold" style="position: absolute; bottom: 0; background: rgba(77, 171, 247, 0.9); transition: background 0.3s;" onmouseover="this.style.background='#3bc9db'" onmouseout="this.style.background='rgba(77, 171, 247, 0.9)'">
+            <i class="fas fa-map-marked-alt"></i> ПОКАЗАТИ НА КАРТІ ШАХТИ
+          </div>
         </div>
+      {% if alert.connected_repeater %}
+      </a>
+      {% else %}
       </div>
+      {% endif %}
     </div>
   </div>
 

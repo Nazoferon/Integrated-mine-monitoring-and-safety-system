@@ -7,6 +7,7 @@ from django.db.models import Avg, Max, Count
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from django.db import transaction
+from django.template.loader import render_to_string
 from django.utils import timezone
 import json
 
@@ -125,7 +126,10 @@ def alert_detail(request, alert_id):
 
     latest_telemetry = TelemetryLog.objects.filter(
         device=alert.device).order_by('-timestamp').first()
-    return render(request, 'diploma/alert_detail.html', {'alert': alert, 'telemetry': latest_telemetry})
+        
+    next_alert = SecurityAlert.objects.filter(is_resolved=False).exclude(id=alert.id).order_by('created_at').first()
+    
+    return render(request, 'diploma/alert_detail.html', {'alert': alert, 'telemetry': latest_telemetry, 'next_alert': next_alert})
 
 # --- API ЕНДПОІНТИ (ДЛЯ JS ТА ЗОВНІШНІХ ПРОГРАМ) ---
 
@@ -141,6 +145,14 @@ def dashboard_stats_api(request):
     
     online_count = Employee.objects.exclude(safety_status='OFF_SHIFT').count()
     warning_count = SecurityAlert.objects.filter(is_resolved=False).count()
+    new_alerts_count = SecurityAlert.objects.filter(status='NEW').count()
+    
+    # --- НОВЕ: Рендеримо HTML для списку сповіщень ---
+    active_alerts = SecurityAlert.objects.filter(is_resolved=False).order_by('-created_at')[:5]
+    alerts_html = render_to_string('diploma/_alert_list.html', {
+        'active_alerts': active_alerts,
+        'request': request  # Передаємо request для роботи `url` тега
+    })
 
     return JsonResponse({
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
@@ -148,56 +160,9 @@ def dashboard_stats_api(request):
         'gas_level': stats['max_gas'] if stats['max_gas'] is not None else 0,
         'online_count': online_count,
         'warning_count': warning_count,
+        'new_alerts_count': new_alerts_count,
+        'alerts_html': alerts_html, # Додаємо HTML до відповіді
     })
-
-def active_alerts_api(request):
-    try:
-        # 1. Отримуємо всі активні тривоги
-        alerts = SecurityAlert.objects.filter(
-            is_resolved=False).order_by('-created_at')
-
-        # Створюємо список ID працівників, у яких зараз ТРИВОГА
-        # Це допоможе нам швидко перевіряти статус під час циклу
-        employees_with_sos = alerts.values_list('employee_id', flat=True)
-
-        alerts_list = []
-        for a in alerts:
-            alerts_list.append({
-                'id': a.id,
-                'reason': a.get_reason_display() if hasattr(a, 'get_reason_display') else str(a.reason),
-                'employee': a.employee.last_name if a.employee else "---",
-                'location': a.location_label or "Шахта",
-                'time': a.created_at.strftime('%H:%M'),
-                'is_critical': True
-            })
-
-        # 2. Отримуємо персонал
-        staff = Employee.objects.exclude(
-            safety_status='OFF_SHIFT').order_by('-last_update')[:4]
-        staff_list = []
-
-        for s in staff:
-            # ДИНАМІЧНА ПЕРЕВІРКА СТАТУСУ:
-            # Якщо ID працівника є в списку активних тривог — ставимо SOS
-            current_status = s.safety_status
-            if s.id in employees_with_sos:
-                current_status = 'SOS'
-
-            staff_list.append({
-                'full_name': f"{s.first_name} {s.last_name}",
-                'position': s.get_position_display(),
-                'status': current_status,  # Тепер тут буде актуальний статус!
-                'photo_url': s.photo.url if s.photo else None
-            })
-
-        return JsonResponse({
-            'count': alerts.count(),
-            'alerts': alerts_list,
-            'staff': staff_list
-        })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
 
 def alert_telemetry_api(request, alert_id):
     """Повертає свіжу телеметрію для конкретної тривоги."""

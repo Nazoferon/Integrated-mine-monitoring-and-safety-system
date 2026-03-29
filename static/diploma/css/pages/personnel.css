@@ -201,3 +201,14 @@
 .clear-search-btn.visible {
     display: block;
 }
+
+#btnSortAlpha {
+    border-radius: 25px; 
+    background: #0B1E31; 
+    border: 1px solid #1D3446; 
+    color: #e0e0e0; 
+    font-weight: 500; 
+    height: 44px; 
+    white-space: nowrap; 
+    transition: 0.3s;
+}

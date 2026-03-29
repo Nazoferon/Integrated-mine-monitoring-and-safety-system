@@ -15,13 +15,18 @@
     <span>Загальна кількість співробітників: {{ employees.count }}</span>
   </div>
 
-  <div class="controls-wrapper">
-    <div class="search-wrapper">
-      <input type="text" id="searchInput" class="custom-search" placeholder="ПІБ, Жетон або Посада...">
-      <i class="fas fa-search search-icon"></i>
-      <button type="button" id="clearSearchBtn" class="clear-search-btn" aria-label="Очистити пошук">
-        <i class="fas fa-times-circle"></i>
-      </button>
+  <div class="controls-wrapper d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div class="d-flex flex-grow-1 gap-2 align-items-center"">
+        <div class="search-wrapper flex-grow-1 m-0 w-100">
+          <input type="text" id="searchInput" class="custom-search w-100" placeholder="ПІБ, Жетон або Посада...">
+          <i class="fas fa-search search-icon"></i>
+          <button type="button" id="clearSearchBtn" class="clear-search-btn" aria-label="Очистити пошук">
+            <i class="fas fa-times-circle"></i>
+          </button>
+        </div>
+        <button class="btn d-flex align-items-center justify-content-center px-3" id="btnSortAlpha" title="Сортувати за алфавітом">
+          <i class="fas fa-sort-alpha-down me-2"></i> <span>Сортування</span>
+        </button>
     </div>
 
     <div class="view-toggles">
@@ -89,5 +94,26 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sortBtn = document.getElementById('btnSortAlpha');
+    let asc = false;
+    if (sortBtn) {
+      sortBtn.addEventListener('click', function() {
+        asc = !asc;
+        this.classList.add('active');
+        this.querySelector('i').className = asc ? 'fas fa-sort-alpha-down me-2' : 'fas fa-sort-alpha-up-alt me-2';
+        const grid = document.getElementById('personnelGrid');
+        const cards = Array.from(grid.querySelectorAll('.personnel-col'));
+        cards.sort((a, b) => {
+          const nameA = a.querySelector('.emp-name').innerText.trim();
+          const nameB = b.querySelector('.emp-name').innerText.trim();
+          return asc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+        cards.forEach(card => grid.appendChild(card));
+      });
+    }
+  });
+</script>
 <script src="{% static 'diploma/js/personnel.js' %}?v=1"></script>
 {% endblock %}

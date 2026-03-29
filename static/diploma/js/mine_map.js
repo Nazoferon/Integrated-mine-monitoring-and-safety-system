@@ -55,9 +55,27 @@
                     }
 
                     draw(); // Перемальовуємо карту з новими координатами/статусами
+                    
+                    // --- НОВЕ: Запуск анімації мигання, якщо є тривога ---
+                    let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING');
+                    if (needsAnimation && !isAnimating) {
+                        animateAlerts();
+                    }
                 }
             })
             .catch(err => console.error("Помилка завантаження телеметрії:", err));
+    }
+
+    let isAnimating = false;
+    function animateAlerts() {
+        let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING');
+        if (needsAnimation) {
+            isAnimating = true;
+            draw();
+            requestAnimationFrame(animateAlerts);
+        } else {
+            isAnimating = false;
+        }
     }
 
     // --- ІНІЦІАЛІЗАЦІЯ ---
@@ -229,6 +247,22 @@
         const resetBtn = document.querySelector('[data-action="reset-view"]');
         if (resetBtn) resetBtn.addEventListener('click', () => window.resetView());
 
+        // Кнопки масштабування
+        const zoomInBtn = document.querySelector('[data-action="zoom-in"]');
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => zoomAtPoint(canvas.width / 2, canvas.height / 2, 0.2));
+
+        const zoomOutBtn = document.querySelector('[data-action="zoom-out"]');
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => zoomAtPoint(canvas.width / 2, canvas.height / 2, -0.2));
+
+        // Кнопка на весь екран
+        const fullscreenBtn = document.querySelector('[data-action="fullscreen"]');
+        if (fullscreenBtn) fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        });
 
         // --- НОВЕ: Запускаємо цикл реального часу ---
         fetchActiveMiners(); // Перший запит одразу при завантаженні
@@ -237,7 +271,34 @@
         // Автоцентрування з невеликою затримкою, щоб CSS та Flexbox 
         // встигли сформувати правильні розміри canvas.width перед прорахунком
         setTimeout(() => {
-            window.resetView();
+            const urlParams = new URLSearchParams(window.location.search);
+            const focusAp = urlParams.get('focus_ap');
+            let focused = false;
+
+            if (focusAp) {
+                let targetAp = null;
+                if (mapData.devices) targetAp = mapData.devices.find(d => d.id === focusAp);
+                if (!targetAp && mapData.tunnels) {
+                    for (let t of mapData.tunnels) {
+                        if (t.devices) {
+                            targetAp = t.devices.find(d => d.id === focusAp);
+                            if (targetAp) break;
+                        }
+                    }
+                }
+
+                if (targetAp) {
+                    scale = 2.5; // Сильно наближаємо до зони інциденту
+                    focusOnPoint(targetAp.x * 10, targetAp.y * 10);
+                    selectObject('device', targetAp);
+                    focused = true;
+                }
+            }
+
+            if (!focused) {
+                window.resetView();
+            }
+            
             if (window.dashboardApp) window.dashboardApp.hideLoader();
         }, 150); // Трохи збільшена затримка для надійного рендеру
     }
@@ -378,6 +439,8 @@
     function drawMiners() {
         clickableMiners = []; // Очищаємо масив
         const ZOOM_THRESHOLD = 1.5;
+        const time = Date.now();
+        const pulse = (Math.sin(time / 150) + 1) / 2; // Від 0 до 1, для пульсації
         
         let clusters = {};
         activeMiners.forEach(m => {
@@ -409,6 +472,10 @@
                 if (minersArray.some(m => m.status === 'WARNING')) clusterColor = '#ffbb33'; 
                 if (minersArray.some(m => m.status === 'SOS')) clusterColor = '#ff4444'; 
 
+                let hasSOS = minersArray.some(m => m.status === 'SOS');
+                let hasWarn = minersArray.some(m => m.status === 'WARNING');
+                let cRadius = hasSOS ? 50 : (hasWarn ? 40 : (count > 1 ? 12 : 10));
+
                 // НОВЕ: Зберігаємо координати прямо в DATA (як у репітерів)
                 if (count === 1) {
                     minersArray[0].map_x = cx;
@@ -421,8 +488,18 @@
                     });
                 }
 
+                if (hasSOS || hasWarn) {
+                    ctx.beginPath();
+                    let auraR = hasSOS ? 70 : 60;
+                    auraR += 15 * pulse; // Анімація розширення аури
+                    let alpha = 0.2 + 0.4 * pulse; // Анімація мигання (прозорість)
+                    ctx.arc(cx, cy, auraR, 0, Math.PI * 2);
+                    ctx.fillStyle = hasSOS ? `rgba(255, 68, 68, ${alpha})` : `rgba(255, 187, 51, ${alpha})`;
+                    ctx.fill();
+                }
+
                 ctx.beginPath();
-                ctx.arc(cx, cy, count > 1 ? 12 : 10, 0, Math.PI * 2);
+                ctx.arc(cx, cy, cRadius, 0, Math.PI * 2);
                 ctx.fillStyle = clusterColor;
                 ctx.fill();
                 
@@ -450,13 +527,27 @@
 
                     let mColor = m.status === 'SOS' ? '#ff4444' : (m.status === 'WARNING' ? '#ffbb33' : '#00c851');
 
+                    let isSOS = m.status === 'SOS';
+                    let isWarn = m.status === 'WARNING';
+                    let mRadius = isSOS ? 40 : (isWarn ? 30 : 8);
+
                     // НОВЕ: Зберігаємо координати прямо в DATA
                     m.map_x = mx;
                     m.map_y = my;
                     clickableMiners.push({ type: 'miner', data: m });
 
+                    if (isSOS || isWarn) {
+                        ctx.beginPath();
+                        let auraR = isSOS ? 60 : 45;
+                        auraR += 15 * pulse; // Анімація розширення
+                        let alpha = 0.2 + 0.4 * pulse; // Анімація мигання
+                        ctx.arc(mx, my, auraR, 0, Math.PI * 2);
+                        ctx.fillStyle = isSOS ? `rgba(255, 68, 68, ${alpha})` : `rgba(255, 187, 51, ${alpha})`;
+                        ctx.fill();
+                    }
+
                     ctx.beginPath();
-                    ctx.arc(mx, my, 8, 0, Math.PI * 2);
+                    ctx.arc(mx, my, mRadius, 0, Math.PI * 2);
                     ctx.fillStyle = mColor;
                     ctx.fill();
                     

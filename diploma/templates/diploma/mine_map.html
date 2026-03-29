@@ -26,6 +26,9 @@
 
     <div class="map-canvas-area" id="map-area" data-api-url="{% url 'api_miners' %}">
         <div class="map-controls-floating">
+            <button class="map-btn" data-action="zoom-in" title="Збільшити"><i class="fas fa-plus"></i></button>
+            <button class="map-btn" data-action="zoom-out" title="Зменшити"><i class="fas fa-minus"></i></button>
+            <button class="map-btn" data-action="fullscreen" title="На весь екран"><i class="fas fa-expand"></i></button>
             <button class="map-btn" data-action="reset-view" title="Центрувати"><i class="fas fa-compress-arrows-alt"></i></button>
             <a href="{% url 'download_map' %}" class="map-btn" title="Скачати JSON"><i class="fas fa-file-download"></i></a>
         </div>

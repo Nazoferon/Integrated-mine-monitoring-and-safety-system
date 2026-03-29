@@ -567,6 +567,50 @@ class DashboardApp {
                     }
                 }
             });
+
+            // --- НОВЕ: Оновлення списку активних сповіщень ---
+            if (data.alerts_html) {
+                const alertsContainer = document.getElementById('active-alerts-container');
+                if (alertsContainer) alertsContainer.innerHTML = data.alerts_html;
+            }
+
+            // --- ГЛОБАЛЬНА СИСТЕМА ТРИВОГИ (SOS) ---
+            if (data.new_alerts_count > 0) {
+                // Якщо банер ще не створено
+                if (!document.getElementById('global-sos-banner')) {
+                    const banner = document.createElement('div');
+                    banner.id = 'global-sos-banner';
+                    banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> УВАГА! Є НЕОБРОБЛЕНА КРИТИЧНА ТРИВОГА! НАТИСНІТЬ ТУТ ДЛЯ ПЕРЕХОДУ НА ГОЛОВНУ <i class="fas fa-exclamation-triangle"></i>';
+                    banner.onclick = () => window.location.href = '/diploma/home/';
+                    document.body.appendChild(banner);
+                }
+                
+                // Звуковий сигнал (Сирена)
+                if (!window.globalAlarmInterval) {
+                    window.globalAlarmInterval = setInterval(() => {
+                        if(!window.audioCtx) window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        if(window.audioCtx.state === 'suspended') window.audioCtx.resume();
+                        const osc = window.audioCtx.createOscillator();
+                        const gain = window.audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(window.audioCtx.destination);
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(800, window.audioCtx.currentTime);
+                        osc.frequency.setValueAtTime(600, window.audioCtx.currentTime + 0.2);
+                        gain.gain.setValueAtTime(0.1, window.audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, window.audioCtx.currentTime + 0.5);
+                        osc.start();
+                        osc.stop(window.audioCtx.currentTime + 0.5);
+                    }, 1500);
+                }
+            } else {
+                const banner = document.getElementById('global-sos-banner');
+                if(banner) banner.remove();
+                if(window.globalAlarmInterval) {
+                    clearInterval(window.globalAlarmInterval);
+                    window.globalAlarmInterval = null;
+                }
+            }
         } catch (error) {
             console.error('Помилка автоматичного оновлення показників:', error);
         }
@@ -762,15 +806,17 @@ class DashboardApp {
      * Оновлення статусу системи
      */
     updateSystemStatus() {
-        const statusIndicator = document.querySelector('.status-indicator');
-        const statusText = document.querySelector('.footer-status span');
+        const statusIndicator = document.querySelector('.footer-status .status-indicator');
+        const statusText = document.querySelector('.footer-status span:last-child');
         
         if (statusIndicator && statusText) {
             if (this.state.isOnline) {
-                statusIndicator.style.background = '#22c55e';
+                statusIndicator.classList.add('online');
+                statusIndicator.classList.remove('offline');
                 statusText.textContent = 'Система активна';
             } else {
-                statusIndicator.style.background = '#ef4444';
+                statusIndicator.classList.remove('online');
+                statusIndicator.classList.add('offline');
                 statusText.textContent = 'Зʼєднання втрачено';
             }
         }
@@ -926,5 +972,11 @@ window.addEventListener('beforeunload', () => {
         window.dashboardApp.destroy();
     }
 });
+
+// Дозвіл на звук від браузера (Браузери блокують звук без кліку користувача)
+document.body.addEventListener('click', () => {
+    if(!window.audioCtx) window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(window.audioCtx.state === 'suspended') window.audioCtx.resume();
+}, {once: true});
 
 console.log('📄 JavaScript система Глибина 4.0 завантажена');

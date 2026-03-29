@@ -51,38 +51,14 @@
         <span class="badge badge-safe">Все спокійно</span>
         {% endif %}
       </div>
-      <div class="card-body">
-        {% for alert in active_alerts %}
-        <a href="{% url 'alert_detail' alert.id %}" class="alert-link-wrapper">
-          <div class="alert-item {% if alert.reason == 'MAN_DOWN' or alert.reason == 'SOS' %}critical{% else %}warning{% endif %}">
-            <div class="alert-icon">
-              {% if alert.reason == 'SOS' %}<i class="fas fa-skull-crossbones"></i>
-              {% elif alert.reason == 'MAN_DOWN' %}<i class="fas fa-user-injured"></i>
-              {% else %}<i class="fas fa-exclamation-circle"></i>{% endif %}
-            </div>
-            <div class="alert-content">
-              <h4>{{ alert.get_reason_display|default:alert.reason }}</h4>
-              <p>{{ alert.location_label }} - Працівник: {{ alert.employee.last_name }}</p>
-              <span class="alert-time">{{ alert.created_at|timesince }} тому</span>
-            </div>
-            <div class="alert-action"><i class="fas fa-chevron-right"></i></div>
-          </div>
-        </a>
-        {% empty %}
-        <div class="text-center py-4 text-muted">
-          <i class="fas fa-check-circle fa-3x mb-3 icon-success"></i>
-          <p>Наразі активних інцидентів немає.</p>
-        </div>
-        {% endfor %}
+      <div class="card-body" id="active-alerts-container">
+        {% include 'diploma/_alert_list.html' %}
       </div>
     </div>
 
     <div class="card dashboard-card map-card">
       <div class="card-header">
         <h2 class="card-title"><i class="fas fa-map-marked-alt"></i> Інтерактивна Карта Шахти</h2>
-        <div class="map-controls">
-          <a href="{% url 'mine_map' %}" class="btn-control active">Відкрити карту</a>
-        </div>
       </div>
       <div class="card-body">
         <div class="map-container">

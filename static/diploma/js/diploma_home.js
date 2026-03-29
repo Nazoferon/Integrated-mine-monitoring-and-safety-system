@@ -2,72 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log("✅ Скрипт diploma_home.js успішно завантажено!");
 
     // ==========================================
-    // 1. СИСТЕМА ТРИВОГ
-    // ==========================================
-    function updateAlerts() {
-        fetch('/diploma/api/active-alerts/')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.querySelector('.card.alert-card .card-body');
-                const badge = document.querySelector('.badge-critical');
-                const staffContainer = document.querySelector('.staff-list');
-
-                if (data.count > 0) document.title = `🚨 (${data.count}) Тривога! - Глибина 4.0`;
-                else document.title = "Головна панель - Глибина 4.0";
-
-                if (badge) {
-                    badge.textContent = data.count > 0 ? `${data.count} критичних` : 'Все спокійно';
-                    badge.classList.toggle('badge-danger', data.count > 0);
-                    badge.classList.toggle('badge-safe', data.count === 0);
-                }
-
-                if (staffContainer && data.staff) {
-                    let staffHtml = '';
-                    data.staff.forEach(emp => {
-                        let statusHtml = '';
-                        if (emp.status === 'OK') statusHtml = '<span class="staff-status online">Норма</span>';
-                        else if (emp.status === 'WARNING') statusHtml = '<span class="staff-status status-warning">Увага</span>';
-                        else if (emp.status === 'SOS') statusHtml = '<span class="staff-status status-sos">ТРИВОГА</span>';
-
-                        const avatarHtml = emp.photo_url
-                            ? `<img src="${emp.photo_url}" class="staff-avatar-img" alt="avatar">`
-                            : `<i class="fas fa-hard-hat"></i>`;
-
-                        staffHtml += `<div class="staff-item"><div class="staff-avatar">${avatarHtml}</div><div class="staff-info"><h4>${emp.full_name}</h4><p>${emp.position}</p>${statusHtml}</div></div>`;
-                    });
-                    staffContainer.innerHTML = staffHtml;
-                }
-
-                if (container) {
-                    if (data.count > 0) {
-                        let html = '';
-                        data.alerts.forEach(alert => {
-                            const alertClass = alert.is_critical ? 'critical' : 'warning';
-                            const icon = alert.is_critical ? 'fa-skull-crossbones' : 'fa-exclamation-circle';
-                            html += `<a href="/diploma/alert/${alert.id}/" class="alert-link-wrapper">
-                                <div class="alert-item ${alertClass}">
-                                    <div class="alert-icon"><i class="fas ${icon}"></i></div>
-                                    <div class="alert-content">
-                                        <h4>${alert.reason}</h4><p>${alert.location} - Працівник: ${alert.employee}</p><span class="alert-time">${alert.time}</span>
-                                    </div>
-                                    <div class="alert-action"><i class="fas fa-chevron-right"></i></div>
-                                </div></a>`;
-                        });
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = `<div class="text-center py-4 text-muted"><i class="fas fa-check-circle fa-3x mb-3 icon-success"></i><p>Наразі активних інцидентів немає.</p></div>`;
-                    }
-                }
-            })
-            .catch(err => console.error("Помилка оновлення тривог:", err));
-    }
-
-    updateAlerts();
-    setInterval(updateAlerts, 5000);
-
-
-    // ==========================================
-    // 2. ІНТЕРАКТИВНА КАРТА
+    // 1. ІНТЕРАКТИВНА КАРТА
     // ==========================================
     const rawData = document.getElementById('mine-map-data');
     let mapData = { tunnels: [], yards: [], devices: [] };

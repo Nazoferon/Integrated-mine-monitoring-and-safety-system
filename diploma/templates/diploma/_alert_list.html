@@ -1,0 +1,27 @@
+{% for alert in active_alerts %}
+<a href="{% url 'alert_detail' alert.id %}" class="alert-link-wrapper">
+  <div class="alert-item {% if alert.status == 'NEW' %}critical{% elif alert.status == 'IN_PROGRESS' %}in-progress{% endif %}">
+    <div class="alert-icon">
+      {% if alert.reason == 'SOS' %}<i class="fas fa-skull-crossbones"></i>
+      {% elif alert.reason == 'MAN_DOWN' %}<i class="fas fa-user-injured"></i>
+      {% elif 'CO' in alert.reason %}<i class="fas fa-wind"></i>
+      {% else %}<i class="fas fa-exclamation-circle"></i>{% endif %}
+    </div>
+    <div class="alert-content">
+      <h4>{{ alert.get_reason_display|default:alert.reason }}</h4>
+      <div class="alert-details">
+        <span><i class="fas fa-user"></i> {{ alert.employee.last_name }} {{ alert.employee.first_name.0 }}.</span>
+        <span><i class="fas fa-map-marker-alt"></i> {% if alert.connected_repeater %}{{ alert.connected_repeater.uid }} ({{ alert.connected_repeater.location_in_mine }}){% else %}{{ alert.location_label|default:"Невідомо" }}{% endif %}</span>
+      </div>
+      <span class="alert-time">{{ alert.created_at|timesince }} тому</span>
+    </div>
+    {% if alert.status == 'IN_PROGRESS' %}<div class="alert-status-tag">В РОБОТІ</div>{% endif %}
+    <div class="alert-action"><i class="fas fa-chevron-right"></i></div>
+  </div>
+</a>
+{% empty %}
+<div class="text-center py-4 text-muted">
+  <i class="fas fa-check-circle fa-3x icon-success"></i>
+  <p>Наразі активних інцидентів немає.</p>
+</div>
+{% endfor %}

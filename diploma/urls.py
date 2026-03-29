@@ -22,7 +22,6 @@ urlpatterns = [
     path('alert/<int:alert_id>/', views.alert_detail, name='alert_detail'),
     
     # API ендпоінти
-    path('api/active-alerts/', views.active_alerts_api, name='active_alerts_api'),
     path('api/dashboard-stats/', views.dashboard_stats_api, name='dashboard_stats_api'),
     path('api/upload-map/', views.upload_map_api, name='upload_map_api'),
     path('api/reports-data/', views.reports_data_api, name='reports_data_api'),
