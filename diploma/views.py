@@ -237,13 +237,14 @@ def reports_data_api(request):
         main_labels = [item['date'].strftime('%d.%m') for item in alerts_by_date]
         main_values = [item['count'] for item in alerts_by_date]
         
-        # 2. Дані для кругового графіка (згруповані за причиною)
-        alerts_by_reason = alerts.values('reason').annotate(count=Count('id'))
-        doughnut_labels = [item['reason'] for item in alerts_by_reason]
-        doughnut_values = [item['count'] for item in alerts_by_reason]
+        # 2. Дані для кругового графіка (Розподіл показників газу за рівнем небезпеки)
+        safe_count = logs.filter(gas_level__lte=17).count() # До 17 включно
+        warning_count = logs.filter(gas_level__gt=17, gas_level__lt=50).count() # Від 18 до 49
+        danger_count = logs.filter(gas_level__gte=50).count() # 50 і більше
         
-        colors = ['#ff4444', '#ff9800', '#ffd700', '#00c851', '#4dabf7']
-        doughnut_colors = colors[:len(doughnut_labels)]
+        doughnut_labels = ['Норма (≤17 ppm)', 'Перевищення ГДК (18-49 ppm)', 'Небезпека (≥50 ppm)']
+        doughnut_values = [safe_count, warning_count, danger_count]
+        doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
         
         # 3. Рядки для таблиці
         table_rows = []
@@ -292,9 +293,9 @@ def reports_data_api(request):
         table_rows = []
         for log in logs.order_by('-gas_level', '-timestamp')[:100]:
             if log.gas_level >= 50:
-                s_badge, s_text, e_class = 'bg-danger', 'Критично', 'text-danger'
-            elif log.gas_level >= 10:
-                s_badge, s_text, e_class = 'bg-warning text-dark', 'Увага', 'text-warning'
+                s_badge, s_text, e_class = 'bg-danger', 'Евакуація', 'text-danger'
+            elif log.gas_level > 17:
+                s_badge, s_text, e_class = 'bg-warning text-dark', 'Перевищення', 'text-warning'
             else:
                 s_badge, s_text, e_class = 'bg-success', 'Норма', 'text-muted'
                 
@@ -448,3 +449,94 @@ def download_map(request):
         mine_map.map_data, indent=2), content_type='application/json')
     response['Content-Disposition'] = 'attachment; filename="mine_map.json"'
     return response
+
+# --- СИМУЛЯТОР ТА API (ДЛЯ ДИПЛОМНОГО ЗАХИСТУ) ---
+
+@login_required
+def simulator_view(request):
+    """Прихована сторінка пульта керування для генерації даних."""
+    employees = Employee.objects.filter(device__isnull=False)
+    aps = InfrastructureDevice.objects.filter(is_active=True).order_by('uid')
+    return render(request, 'diploma/simulator.html', {'employees': employees, 'aps': aps})
+
+@csrf_exempt
+def api_receive_telemetry(request):
+    """API для прийому POST-запитів від 'ESP32' (або симулятора)."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            badge_number = data.get('badge_number')
+            ap_uid = data.get('ap_uid')
+            battery = int(data.get('battery', 100))
+            gas_co = float(data.get('gas_co', 0))
+            is_sos = data.get('is_sos', False)
+
+            # Знаходимо працівника
+            employee = Employee.objects.filter(badge_number=badge_number).first()
+            if not employee:
+                return JsonResponse({'status': 'error', 'message': 'Працівника не знайдено'})
+
+            device = employee.device
+            ap = InfrastructureDevice.objects.filter(uid=ap_uid).first()
+
+            # Створюємо лог телеметрії
+            TelemetryLog.objects.create(
+                device=device,
+                connected_repeater=ap,
+                battery_level=battery,
+                gas_level=gas_co,
+                is_sos=is_sos,
+                temperature=24.5, # Дефолтні значення для симуляції мікроклімату
+                humidity=65.0
+            )
+
+            # Оновлюємо статус та створюємо Тривогу
+            if is_sos:
+                employee.safety_status = 'SOS'
+                SecurityAlert.objects.create(
+                    employee=employee, device=device, connected_repeater=ap,
+                    reason='Ручний виклик SOS'
+                )
+            elif gas_co >= 50:  # НОВЕ: Критичний рівень - автоматичний SOS!
+                employee.safety_status = 'SOS'
+                SecurityAlert.objects.create(
+                    employee=employee, device=device, connected_repeater=ap,
+                    reason=f'КРИТИЧНИЙ рівень CO: {gas_co} ppm (Негайна евакуація!)'
+                )
+            elif gas_co > 17:   # НОВЕ: Перевищення норми ГДК (WARNING)
+                employee.safety_status = 'WARNING'
+                SecurityAlert.objects.create(
+                    employee=employee, device=device, connected_repeater=ap,
+                    reason=f'Перевищення ГДК CO: {gas_co} ppm'
+                )
+            elif battery < 20:
+                employee.safety_status = 'WARNING'
+            else:
+                employee.safety_status = 'OK'
+
+            employee.save()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'invalid_method'}, status=405)
+
+def api_active_miners(request):
+    """API для віддачі координат активних шахтарів на Карту (mine_map.js)."""
+    miners = Employee.objects.exclude(safety_status='OFF_SHIFT').filter(device__isnull=False)
+    data = []
+    for m in miners:
+        last_log = TelemetryLog.objects.filter(device=m.device).order_by('-timestamp').first()
+        if last_log and last_log.connected_repeater:
+            data.append({
+                'id': m.id,
+                'name': f"{m.last_name} {m.first_name[0]}.",
+                'position': m.get_position_display(),
+                'ap_id': last_log.connected_repeater.uid,
+                'status': m.safety_status,
+                'battery': last_log.battery_level,
+                # --- НОВІ ПОЛЯ ---
+                'gas': last_log.gas_level,
+                'temp': last_log.temperature,
+                'hum': last_log.humidity
+            })
+    return JsonResponse({'miners': data})

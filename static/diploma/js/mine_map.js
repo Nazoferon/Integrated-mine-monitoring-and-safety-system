@@ -16,12 +16,49 @@
     } catch(e) {
         mapData = { tunnels: [], yards: [], devices: [] };
     }
+
+    // --- НОВЕ: Масив працівників у шахті ---
+    let activeMiners = [];
+    let clickableMiners = [];
+
     let scale = 1.0;
     let offsetX = 0, offsetY = 0;
     let isDragging = false, startX, startY;
 
     let hoveredObject = null;
     let selectedObject = null;
+
+    // --- НОВЕ: Отримання даних з сервера в реальному часі ---
+    function fetchActiveMiners() {
+        const mapAreaEl = document.getElementById('map-area');
+        if (!mapAreaEl || !mapAreaEl.dataset.apiUrl) return;
+
+        const apiUrl = mapAreaEl.dataset.apiUrl;
+
+        fetch(apiUrl)
+            .then(res => res.json())
+            .then(data => {
+                if (data.miners) {
+                    activeMiners = data.miners; // Оновлюємо глобальний масив
+
+                    // СУПЕР ФІШКА: Якщо у диспетчера зараз відкрито віконце конкретного працівника,
+                    // ми оновлюємо дані прямо у відкритому віконці (щоб він бачив падіння заряду онлайн!)
+                    if (selectedObject && selectedObject.type === 'miner') {
+                        const updatedMiner = activeMiners.find(m => m.id === selectedObject.data.id);
+                        if (updatedMiner) {
+                            selectedObject.data = updatedMiner;
+                            showPopup(); // Перемальовуємо віконце новими даними
+                        } else {
+                            // Якщо працівника більше немає в шахті - знімаємо виділення
+                            selectObject(null, null); 
+                        }
+                    }
+
+                    draw(); // Перемальовуємо карту з новими координатами/статусами
+                }
+            })
+            .catch(err => console.error("Помилка завантаження телеметрії:", err));
+    }
 
     // --- ІНІЦІАЛІЗАЦІЯ ---
     function initMap() {
@@ -70,6 +107,34 @@
             canvas.style.cursor = 'grab';
         });
 
+        // --- НОВЕ: Обробка кліків всередині спливаючого вікна (Popup) ---
+        popup.addEventListener('click', (e) => {
+            // 1. Якщо клікнули на конкретного шахтаря у списку
+            const minerItem = e.target.closest('.cluster-miner-item');
+            if (minerItem) {
+                const minerId = parseInt(minerItem.dataset.minerId);
+                const miner = activeMiners.find(m => m.id === minerId);
+                const cluster = currentClusters.find(c => c.ap_id === miner.ap_id);
+                
+                if (miner && cluster) {
+                    // Змінюємо тип вибраного об'єкта на 'miner'
+                    selectedObject = { type: 'miner', data: { miner: miner, cluster: cluster } };
+                    showPopup(); // Перемальовуємо віконце
+                }
+                return;
+            }
+
+            // 2. Якщо клікнули на кнопку "Назад до групи"
+            const backBtn = e.target.closest('.back-to-cluster');
+            if (backBtn) {
+                // Повертаємо тип вибраного об'єкта назад на 'cluster'
+                const cluster = selectedObject.data.cluster;
+                selectedObject = { type: 'cluster', data: cluster };
+                showPopup(); // Перемальовуємо віконце
+                return;
+            }
+        });
+
         // Зум до курсора
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
@@ -91,6 +156,11 @@
         const resetBtn = document.querySelector('[data-action="reset-view"]');
         if (resetBtn) resetBtn.addEventListener('click', () => window.resetView());
 
+
+        // --- НОВЕ: Запускаємо цикл реального часу ---
+        fetchActiveMiners(); // Перший запит одразу при завантаженні
+        setInterval(fetchActiveMiners, 3000); // Потім кожні 3 секунди
+        
         // Автоцентрування з невеликою затримкою, щоб CSS та Flexbox 
         // встигли сформувати правильні розміри canvas.width перед прорахунком
         setTimeout(() => {
@@ -190,8 +260,11 @@
             });
         }
 
-        // 3. ОКРЕМІ ПРИСТРОЇ
+        // 3. ОКРЕМІ ПРИСТРОЇ (Репітери)
         if (mapData.devices) mapData.devices.forEach(d => drawDevice(d.x * 10, d.y * 10, d));
+
+        // --- НОВЕ: Малюємо працівників (Кластери) ---
+        drawMiners();
 
         ctx.restore();
     }
@@ -228,6 +301,107 @@
         }
     }
 
+    // --- НОВЕ: Логіка групування та малювання працівників ---
+    function drawMiners() {
+        clickableMiners = []; // Очищаємо масив
+        const ZOOM_THRESHOLD = 1.5;
+        
+        let clusters = {};
+        activeMiners.forEach(m => {
+            if (!clusters[m.ap_id]) clusters[m.ap_id] = [];
+            clusters[m.ap_id].push(m);
+        });
+
+        for (const [ap_id, minersArray] of Object.entries(clusters)) {
+            let apCoords = null;
+            const findAP = (list) => list.find(d => d.id === ap_id);
+            
+            if (mapData.devices) apCoords = findAP(mapData.devices);
+            if (!apCoords && mapData.tunnels) {
+                for (let t of mapData.tunnels) {
+                    if (t.devices) {
+                        apCoords = findAP(t.devices);
+                        if (apCoords) break;
+                    }
+                }
+            }
+            if (!apCoords) continue;
+
+            const cx = apCoords.x * 10;
+            const cy = apCoords.y * 10 - 15; 
+            const count = minersArray.length;
+
+            if (count === 1 || scale < ZOOM_THRESHOLD) {
+                let clusterColor = '#00c851'; 
+                if (minersArray.some(m => m.status === 'WARNING')) clusterColor = '#ffbb33'; 
+                if (minersArray.some(m => m.status === 'SOS')) clusterColor = '#ff4444'; 
+
+                // НОВЕ: Зберігаємо координати прямо в DATA (як у репітерів)
+                if (count === 1) {
+                    minersArray[0].map_x = cx;
+                    minersArray[0].map_y = cy;
+                    clickableMiners.push({ type: 'miner', data: minersArray[0] });
+                } else {
+                    clickableMiners.push({ 
+                        type: 'cluster', 
+                        data: { count: count, ap_id: ap_id, map_x: cx, map_y: cy } 
+                    });
+                }
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, count > 1 ? 12 : 10, 0, Math.PI * 2);
+                ctx.fillStyle = clusterColor;
+                ctx.fill();
+                
+                const isSelected = selectedObject && (
+                    (count === 1 && selectedObject.data === minersArray[0]) ||
+                    (count > 1 && selectedObject.data.ap_id === ap_id)
+                );
+                
+                ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = isSelected ? 3 : 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(count > 1 ? count.toString() : 'P', cx, cy);
+            } 
+            else {
+                const spreadRadius = 14; 
+                minersArray.forEach((m, index) => {
+                    const angle = index * (Math.PI * 2 / count);
+                    const mx = cx + spreadRadius * Math.cos(angle);
+                    const my = cy + spreadRadius * Math.sin(angle);
+
+                    let mColor = m.status === 'SOS' ? '#ff4444' : (m.status === 'WARNING' ? '#ffbb33' : '#00c851');
+
+                    // НОВЕ: Зберігаємо координати прямо в DATA
+                    m.map_x = mx;
+                    m.map_y = my;
+                    clickableMiners.push({ type: 'miner', data: m });
+
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = mColor;
+                    ctx.fill();
+                    
+                    const isSelected = selectedObject && selectedObject.data === m;
+                    ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.5)';
+                    ctx.lineWidth = isSelected ? 2 : 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('P', mx, my);
+                });
+            }
+        }
+    }
+
     function drawGrid() {
         const step = 50 * scale;
         if (step < 10) return;
@@ -246,6 +420,18 @@
         const wy = (my - offsetY) / scale;
         hoveredObject = null;
         canvas.style.cursor = 'grab';
+
+        //  NEW --- Перевіряємо, чи мишка не над шахтарем або кластером ---
+        // --- Перевіряємо кластери та шахтарів ---
+        clickableMiners.forEach(item => {
+            const dist = Math.hypot(item.data.map_x - wx, item.data.map_y - wy);
+            if (dist < 15 / scale + 5) { // Формула радіусу як у репітерів!
+                hoveredObject = item;
+                canvas.style.cursor = 'pointer';
+            }
+        });
+        
+        if (hoveredObject) return;
 
         const checkDevs = (list) => {
             list.forEach(d => {
@@ -312,29 +498,123 @@
         if (!selectedObject) return;
 
         let html = '';
-        if (selectedObject.type === 'device') {
+        
+        // --- НОВЕ: Вмикаємо/вимикаємо старий дизайн залежно від об'єкта ---
+        if (selectedObject.type === 'miner' || selectedObject.type === 'cluster') {
+            popup.classList.add('miner-mode');
+        } else {
+            popup.classList.remove('miner-mode');
+        }
+        
+        // --- ТАБЛИЧНО-БЛОЧНИЙ ДИЗАЙН ДЛЯ ПРАЦІВНИКА ---
+        if (selectedObject.type === 'miner') {
+            const m = selectedObject.data;
+            
+            let isSOS = m.status === 'SOS';
+            let isWarn = m.status === 'WARNING';
+            
+            let headerClass = isSOS ? 'bg-danger text-white' : (isWarn ? 'bg-warning text-dark' : 'bg-success text-white');
+            let statusText = isSOS ? 'КРИТИЧНА ТРИВОГА' : (isWarn ? 'ПЕРЕВИЩЕННЯ НОРМ' : 'У ШАХТІ (НОРМА)');
+            
+            let gasClass = m.gas >= 50 ? 'text-danger fw-bold' : (m.gas > 17 ? 'text-warning fw-bold' : 'text-success');
+            let batClass = m.battery < 20 ? 'text-danger fw-bold' : (m.battery < 50 ? 'text-warning' : 'text-light');
+            let batIcon = m.battery < 20 ? 'fa-battery-empty' : (m.battery < 50 ? 'fa-battery-quarter' : (m.battery < 85 ? 'fa-battery-half' : 'fa-battery-full'));
+            
+            let t = m.temp !== null ? m.temp : '--';
+            let h = m.hum !== null ? m.hum : '--';
+
+            html = `
+                <div class="card border-0" style="min-width: 260px; background: rgba(25, 25, 30, 0.95); box-shadow: 0 8px 25px rgba(0,0,0,0.7); border-radius: 8px; overflow: hidden;">
+                    
+                    <div class="card-header ${headerClass} p-2 text-center" style="border-bottom: 2px solid rgba(0,0,0,0.5);">
+                        <h6 class="mb-0 fw-bold" style="font-size: 15px;"><i class="fas fa-user-hard-hat me-2"></i>${m.name}</h6>
+                        <small style="opacity: 0.9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">${m.position}</small>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <div class="text-center p-2" style="background: rgba(0,0,0,0.3); border-bottom: 1px solid #333;">
+                            <span class="badge ${isSOS ? 'bg-danger' : (isWarn ? 'bg-warning text-dark' : 'bg-success')} w-100 py-2" style="font-size: 12px; ${isSOS ? 'animation: pulseSOS 1s infinite;' : ''}">
+                                ${isSOS ? '<i class="fas fa-exclamation-triangle"></i> ' : ''}${statusText}
+                            </span>
+                        </div>
+                        
+                        <table class="table table-sm table-dark table-borderless mb-0" style="font-size: 13px; background: transparent;">
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td class="text-secondary align-middle ps-3" style="width: 45%;"><small>ЛОКАЦІЯ</small></td>
+                                    <td class="text-end pe-3 fw-bold text-info"><i class="fas fa-map-marker-alt"></i> ${m.ap_id}</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td class="text-secondary align-middle ps-3"><small>ГАЗ (CO)</small></td>
+                                    <td class="text-end pe-3 ${gasClass}"><i class="fas fa-wind"></i> ${m.gas} ppm</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td class="text-secondary align-middle ps-3"><small>БАТАРЕЯ</small></td>
+                                    <td class="text-end pe-3 ${batClass}"><i class="fas ${batIcon}"></i> ${m.battery}%</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-secondary align-middle ps-3 py-2"><small>КЛІМАТ</small></td>
+                                    <td class="text-end pe-3 py-2">
+                                        <span class="text-warning me-2"><i class="fas fa-temperature-half"></i> ${t}°C</span>
+                                        <span class="text-primary"><i class="fas fa-droplet"></i> ${h}%</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes pulseSOS { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+                </style>
+            `;
+            
+        } else if (selectedObject.type === 'cluster') {
+            const c = selectedObject.data;
+            html = `
+                <div class="card border-0 bg-dark text-white" style="min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                    <div class="card-header bg-info text-dark fw-bold text-center p-2">
+                        <i class="fas fa-users"></i> Скупчення (${c.count} чол.)
+                    </div>
+                    <div class="card-body p-2 text-center">
+                        <div class="mb-2 text-secondary"><small>ЛОКАЦІЯ:</small> <span class="text-info fw-bold">${c.ap_id}</span></div>
+                        <div class="text-warning" style="font-size: 11px;"><i class="fas fa-search-plus"></i> Наблизьте карту (скрол), щоб побачити кожного!</div>
+                    </div>
+                </div>
+            `;
+                    
+        } else if (selectedObject.type === 'device') {
             const d = selectedObject.data;
-            html = `<div class="popup-title"><i class="fas fa-wifi"></i> ${d.id}</div>
+            html = `<div class="popup-title"><i class="fas fa-wifi text-info"></i> ${d.id}</div>
                     <div class="popup-row"><span class="popup-label">Тип:</span> WiFi Repeater</div>
-                    <div class="popup-row"><span class="popup-label">Статус:</span> <span class="status-online">Online</span></div>
-                    <div class="popup-row"><span class="popup-label">Коорд:</span> ${d.x}, ${d.y}</div>`;
+                    <div class="popup-row"><span class="popup-label">Статус:</span> <span class="badge bg-success">Online</span></div>`;
         } else if (selectedObject.type === 'tunnel') {
             const t = selectedObject.data;
-            const len = Math.hypot(t.x2 - t.x1, t.y2 - t.y1).toFixed(1);
-            html = `<div class="popup-title"><i class="fas fa-road"></i> ${t.name}</div>
-                    <div class="popup-row"><span class="popup-label">Довжина:</span> ${len} м</div>
-                    <div class="popup-row"><span class="popup-label">Пристроїв:</span> ${t.devices ? t.devices.length : 0}</div>`;
+            html = `<div class="popup-title"><i class="fas fa-road text-warning"></i> ${t.name}</div>`;
         }
+
+        // --- ВИДАЛЕНО старі inline стилі (popup.style.padding = '0'), щоб не ламати репітери ---
+        popup.style.padding = '';
+        popup.style.background = '';
+        popup.style.border = '';
+        popup.style.boxShadow = '';
+
         popup.innerHTML = html;
         popup.style.display = 'block';
+        
         updatePopupPosition();
     }
 
+    // --- РОЗУМНЕ ПОЗИЦІОНУВАННЯ (ЩОБ НЕ ВИЛАЗИЛО ЗА ЕКРАН) ---
     function updatePopupPosition() {
-        if (!selectedObject) return;
+        if (!selectedObject || popup.style.display === 'none') return;
 
         let wx, wy;
-        if (selectedObject.type === 'device') {
+        
+        if (selectedObject.type === 'miner' || selectedObject.type === 'cluster') {
+            wx = selectedObject.data.map_x;
+            wy = selectedObject.data.map_y;
+        } else if (selectedObject.type === 'device') {
             wx = selectedObject.data.x * 10;
             wy = selectedObject.data.y * 10;
         } else {
@@ -343,8 +623,43 @@
             wy = (t.y1 + t.y2) / 2 * 10;
         }
 
-        popup.style.left = (wx * scale + offsetX) + 'px';
-        popup.style.top = (wy * scale + offsetY) + 'px';
+        // Базові координати (центр об'єкта)
+        let px = wx * scale + offsetX;
+        let py = wy * scale + offsetY;
+
+        // Даємо браузеру координати, щоб він прорахував ширину/висоту віконця
+        popup.style.left = px + 'px';
+        popup.style.top = py + 'px';
+
+        // Вимірюємо розміри екрану та віконця
+        const mapAreaEl = document.getElementById('map-area');
+        const mapWidth = mapAreaEl.clientWidth;
+        const mapHeight = mapAreaEl.clientHeight;
+        const pWidth = popup.offsetWidth;
+        const pHeight = popup.offsetHeight;
+        
+        const padding = 15; // Безпечний відступ від країв екрану
+
+        // Коригуємо по горизонталі (щоб не вилазило за правий/лівий край)
+        let leftEdge = px - pWidth / 2;
+        let rightEdge = px + pWidth / 2;
+
+        if (leftEdge < padding) {
+            px = pWidth / 2 + padding; 
+        } else if (rightEdge > mapWidth - padding) {
+            px = mapWidth - pWidth / 2 - padding; 
+        }
+
+        // Коригуємо по вертикалі (якщо вилазить за верх екрану — кидаємо ПІД курсор)
+        let topEdge = py - pHeight - 15; 
+        
+        if (topEdge < padding) {
+            py = py + pHeight + 30; // Віконце з'явиться знизу від працівника
+        }
+
+        // Застосовуємо фінальні безпечні координати
+        popup.style.left = px + 'px';
+        popup.style.top = py + 'px';
     }
 
     // --- UI ДЕРЕВО ---

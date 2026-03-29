@@ -11,6 +11,8 @@ urlpatterns = [
     path('personnel/', views.personnel_list, name='personnel'),
     path('equipment/', views.equipment_list, name='equipment'),
     path('reports/', views.reports_view, name='reports'),
+    # Симулятор для тестування руху працівників на карті
+    path('simulator/', views.simulator_view, name='simulator'),
     
     # Карта та інструменти
     path('mine_map/', views.mine_map, name='mine_map'),
@@ -25,6 +27,10 @@ urlpatterns = [
     path('api/upload-map/', views.upload_map_api, name='upload_map_api'),
     path('api/reports-data/', views.reports_data_api, name='reports_data_api'),
     path('alert/<int:alert_id>/api/', views.alert_telemetry_api, name='alert_telemetry_api'),
+    
+    # API для симулятора
+    path('api/telemetry/', views.api_receive_telemetry, name='api_telemetry'),
+    path('api/miners/', views.api_active_miners, name='api_miners'),
 
     # Скидання пароля (стандартні Django views)
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'), name='password_reset'),

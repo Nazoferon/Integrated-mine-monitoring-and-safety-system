@@ -1,0 +1,73 @@
+{% extends 'diploma/base.html' %}
+{% load static %}
+
+{% block title %}Симулятор ESP32 - Глибина 4.0{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'diploma/css/pages/simulator.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="eq-header mb-4">
+            <div class="eq-title">
+                <h2><i class="fas fa-gamepad text-info"></i> Пульт Симулятора (ESP32)</h2>
+                <span>Генерація даних для демонстрації системи на захисті</span>
+            </div>
+        </div>
+
+        <div class="sim-card">
+            <form id="simulatorForm" data-url="{% url 'api_telemetry' %}">
+                <div class="mb-4">
+                    <label class="sim-label">Працівник (з пристроєм)</label>
+                    <select class="form-select sim-input" id="simEmployee" required>
+                        <option value="">-- Оберіть працівника --</option>
+                        {% for emp in employees %}
+                            <option value="{{ emp.badge_number }}">{{ emp.last_name }} {{ emp.first_name }} ({{ emp.badge_number }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="sim-label">Підключений Репітер (Локація на карті)</label>
+                    <select class="form-select sim-input" id="simAP" required>
+                        <option value="">-- Оберіть AP --</option>
+                        {% for ap in aps %}
+                            <option value="{{ ap.uid }}">{{ ap.uid }} ({{ ap.map_location.name }})</option>
+                        {% empty %}
+                            <option value="AP-45">AP-45 (Тестовий)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="sim-label">Заряд батареї <span class="range-value" id="valBattery">100%</span></label>
+                    <input type="range" class="form-range" id="simBattery" min="1" max="100" value="100" oninput="document.getElementById('valBattery').innerText = this.value + '%'">
+                </div>
+
+                <div class="mb-4">
+                    <label class="sim-label">Рівень газу CO (ppm) <span class="range-value" id="valGas">0 ppm</span></label>
+                    <input type="range" class="form-range" id="simGas" min="0" max="100" value="0" oninput="document.getElementById('valGas').innerText = this.value + ' ppm'">
+                </div>
+
+                <hr style="border-color: #444; margin: 25px 0;">
+
+                <div class="d-flex gap-3">
+                    <button type="button" class="btn btn-success flex-grow-1 py-2" onclick="sendData(false)">
+                        <i class="fas fa-wifi"></i> Відправити ЛОГ
+                    </button>
+                    <button type="button" class="btn btn-danger flex-grow-1 py-2" onclick="sendData(true)">
+                        <i class="fas fa-exclamation-triangle"></i> Згенерувати SOS!
+                    </button>
+                </div>
+                <div id="simStatus" class="mt-3 text-center" style="font-size: 14px;"></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'diploma/js/simulator.js' %}"></script>
+{% endblock %}
