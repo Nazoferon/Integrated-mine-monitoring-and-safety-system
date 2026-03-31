@@ -581,7 +581,7 @@ class DashboardApp {
                     const banner = document.createElement('div');
                     banner.id = 'global-sos-banner';
                     banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> УВАГА! Є НЕОБРОБЛЕНА КРИТИЧНА ТРИВОГА! НАТИСНІТЬ ТУТ ДЛЯ ПЕРЕХОДУ НА ГОЛОВНУ <i class="fas fa-exclamation-triangle"></i>';
-                    banner.onclick = () => window.location.href = '/diploma/home/';
+                    banner.onclick = () => window.location.href = '/diploma/';
                     document.body.appendChild(banner);
                 }
                 

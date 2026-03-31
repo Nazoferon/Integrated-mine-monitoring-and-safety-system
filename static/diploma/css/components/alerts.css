@@ -108,3 +108,25 @@
         text-align: center;
     }
 }
+
+/* =========================================
+   ГЛОБАЛЬНИЙ БАНЕР ТРИВОГИ (SOS)
+   ========================================= */
+#global-sos-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #ef4444;
+    color: white;
+    text-align: center;
+    padding: 12px;
+    z-index: 99999;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+    letter-spacing: 1px;
+    font-size: 15px;
+    animation: pulseSosGlobal 1s infinite;
+}
+@keyframes pulseSosGlobal { 0% {background:#ef4444;} 50% {background:#991b1b;} 100% {background:#ef4444;} }
