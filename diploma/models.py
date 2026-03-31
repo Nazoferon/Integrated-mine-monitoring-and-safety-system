@@ -42,7 +42,9 @@ class MineMap(models.Model):
 
 class InfrastructureDevice(models.Model):
     uid = models.CharField(max_length=50, unique=True, verbose_name="ID на карті")
+    wifi_ssid = models.CharField(max_length=32, db_index=True, verbose_name="Назва мережі (SSID)", help_text="Саме цю назву шукатиме пристрій в ефірі.", default="", blank=True)
     wifi_bssid = models.CharField(max_length=17, unique=True, null=True, blank=True, verbose_name="MAC (BSSID)")
+    wifi_password = models.CharField(max_length=64, blank=True, verbose_name="Пароль мережі (якщо є)")
     map_location = models.ForeignKey(MineMap, on_delete=models.CASCADE, verbose_name="Карта")
     x = models.FloatField(verbose_name="X")
     y = models.FloatField(verbose_name="Y")
@@ -127,17 +129,26 @@ class Employee(models.Model):
     last_update = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # АВТОМАТИЧНА ГЕНЕРАЦІЯ ЖЕТОНА
         if not self.badge_number:
-            # 1. Ініціали (Прізвище + Ім'я)
-            initials = f"{self.last_name[0]}{self.first_name[0]}".upper()
-            # 2. Код посади
-            pos_code = self.position 
-            # 3. Порядковий номер
-            count = Employee.objects.count() + 1
-            # Результат: GOV-PI-001
-            self.badge_number = f"{pos_code}-{initials}-{count:03d}" 
-        
+            # Словник для транслітерації ініціалів
+            translit = {'А':'A', 'Б':'B', 'В':'V', 'Г':'G', 'Ґ':'G', 'Д':'D', 'Е':'E', 'Є':'YE', 
+                        'Ж':'ZH', 'З':'Z', 'И':'Y', 'І':'I', 'Ї':'YI', 'Й':'Y', 'К':'K', 'Л':'L', 
+                        'М':'M', 'Н':'N', 'О':'O', 'П':'P', 'Р':'R', 'С':'S', 'Т':'T', 'У':'U', 
+                        'Ф':'F', 'Х':'KH', 'Ц':'TS', 'Ч':'CH', 'Ш':'SH', 'Щ':'SHCH', 'Ю':'YU', 'Я':'YA'}
+            
+            last_initial = self.last_name[0].upper() if self.last_name else ''
+            first_initial = self.first_name[0].upper() if self.first_name else ''
+            
+            # Переводимо в латиницю
+            lat_last = translit.get(last_initial, last_initial)
+            lat_first = translit.get(first_initial, first_initial)
+            
+            # Отримуємо наступний ID (спрощений варіант)
+            next_id = Employee.objects.count() + 1
+            
+            # Формуємо жетон: EXPLODER-GN-001
+            self.badge_number = f"{self.position}-{lat_last}{lat_first}-{next_id:03d}"
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -202,7 +213,7 @@ class TelemetryLog(models.Model):
     battery_level = models.IntegerField(default=100)
     is_moving = models.BooleanField(default=True)
     is_sos = models.BooleanField(default=False)
-    sos_reason = models.CharField(max_length=50, default='NONE')
+    sos_reason = models.CharField(max_length=255, default='NONE')
 
     class Meta:
         ordering = ['-timestamp']
@@ -230,7 +241,7 @@ class SecurityAlert(models.Model):
     )
     
     location_label = models.CharField(max_length=100, verbose_name="Місце", blank=True)
-    reason = models.CharField(max_length=50, verbose_name="Причина")
+    reason = models.CharField(max_length=255, verbose_name="Причина")
     
     status = models.CharField(max_length=20, choices=ALERT_STATUS_CHOICES, default='NEW', verbose_name="Статус обробки")
     rescue_notes = models.TextField(blank=True, verbose_name="Нотатки диспетчера / Вжиті заходи")

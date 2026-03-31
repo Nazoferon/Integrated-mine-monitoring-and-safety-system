@@ -179,7 +179,7 @@ DEFAULT_FROM_EMAIL = 'Глибина 4.0 <nazar.haniuk.dev@gmail.com>' # Від 
 
 # Вказуємо Django, що ми за Cloudflare/Nginx, який вже обробляє HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 
 # Забороняємо передавати кукі через незахищений HTTP
 SESSION_COOKIE_SECURE = True

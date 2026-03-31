@@ -30,6 +30,7 @@ urlpatterns = [
     # API для симулятора
     path('api/telemetry/', views.api_receive_telemetry, name='api_telemetry'),
     path('api/miners/', views.api_active_miners, name='api_miners'),
+    path('api/wifi-networks/', views.api_get_wifi_networks, name='api_wifi_networks'),
 
     # Скидання пароля (стандартні Django views)
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'), name='password_reset'),

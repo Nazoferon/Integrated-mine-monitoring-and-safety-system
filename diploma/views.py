@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Avg, Max, Count
+from django.db.models import Avg, Max, Count, Q
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from django.db import transaction
@@ -426,63 +426,83 @@ def simulator_view(request):
 
 @csrf_exempt
 def api_receive_telemetry(request):
-    """API для прийому POST-запитів від 'ESP32' (або симулятора)."""
+    """API для прийому POST-запитів від ESP32 з дедуплікацією тривог."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             badge_number = data.get('badge_number')
-            ap_uid = data.get('ap_uid')
+            ap_uid = data.get('ap_uid', '')
             battery = int(data.get('battery', 100))
             gas_co = float(data.get('gas_co', 0))
             is_sos = data.get('is_sos', False)
 
-            # Знаходимо працівника
+            # 1. Знаходимо працівника
             employee = Employee.objects.filter(badge_number=badge_number).first()
             if not employee:
                 return JsonResponse({'status': 'error', 'message': 'Працівника не знайдено'})
 
             device = employee.device
-            ap = InfrastructureDevice.objects.filter(uid=ap_uid).first()
+            ap = InfrastructureDevice.objects.filter(wifi_bssid__iexact=ap_uid).first()
 
-            # Створюємо лог телеметрії
+            # 2. Завжди створюємо лог (диспетчеру потрібна історія вимірювань)
             TelemetryLog.objects.create(
                 device=device,
                 connected_repeater=ap,
                 battery_level=battery,
                 gas_level=gas_co,
                 is_sos=is_sos,
-                temperature=24.5, # Дефолтні значення для симуляції мікроклімату
+                temperature=24.5, 
                 humidity=65.0
             )
 
-            # Оновлюємо статус та створюємо Тривогу
+            # 3. ЛОГІКА ТРИВОГ (SecurityAlert)
+            alert_reason = None
             if is_sos:
-                employee.safety_status = 'SOS'
-                SecurityAlert.objects.create(
-                    employee=employee, device=device, connected_repeater=ap,
-                    reason='Ручний виклик SOS'
-                )
-            elif gas_co >= 50:  # НОВЕ: Критичний рівень - автоматичний SOS!
-                employee.safety_status = 'SOS'
-                SecurityAlert.objects.create(
-                    employee=employee, device=device, connected_repeater=ap,
-                    reason=f'КРИТИЧНИЙ рівень CO: {gas_co} ppm (Негайна евакуація!)'
-                )
-            elif gas_co > 17:   # НОВЕ: Перевищення норми ГДК (WARNING)
-                employee.safety_status = 'WARNING'
-                SecurityAlert.objects.create(
-                    employee=employee, device=device, connected_repeater=ap,
-                    reason=f'Перевищення ГДК CO: {gas_co} ppm'
-                )
-            elif battery < 20:
-                employee.safety_status = 'WARNING'
+                alert_reason = 'Ручний виклик SOS'
+            elif gas_co >= 50:
+                alert_reason = f'КРИТИЧНИЙ рівень CO: {gas_co} ppm (Негайна евакуація!)'
+            elif gas_co > 17:
+                alert_reason = f'Перевищення ГДК CO: {gas_co} ppm'
+
+            if alert_reason:
+                # Перевіряємо, чи вже є ВІДКРИТА тривога для цього працівника
+                # Відкритою вважається та, де is_resolved=False
+                active_alert = SecurityAlert.objects.filter(
+                    employee=employee, 
+                    is_resolved=False
+                ).first()
+
+                if not active_alert:
+                    # Якщо активної немає — створюємо НОВУ
+                    SecurityAlert.objects.create(
+                        employee=employee,
+                        device=device,
+                        connected_repeater=ap,
+                        reason=alert_reason,
+                        status='NEW'
+                    )
+                else:
+                    # Якщо активна вже є — просто оновлюємо дані в ній (щоб диспетчер бачив актуальне місце)
+                    active_alert.connected_repeater = ap
+                    # Якщо нова причина серйозніша за попередню, можемо оновити текст
+                    if "КРИТИЧНИЙ" in alert_reason and "ГДК" in active_alert.reason:
+                        active_alert.reason = alert_reason
+                    active_alert.save()
+                
+                # Ставимо візуальний статус працівнику
+                employee.safety_status = 'SOS' if (is_sos or gas_co >= 50) else 'WARNING'
             else:
-                employee.safety_status = 'OK'
+                # Якщо все в нормі — ставимо статус OK (але не закриваємо тривоги автоматично!)
+                # Тривогу має закрити ЛЮДИНА (диспетчер), щоб переконатися, що все добре.
+                if employee.safety_status != 'OFF_SHIFT':
+                    employee.safety_status = 'OK'
 
             employee.save()
             return JsonResponse({'status': 'success'})
+
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+            
     return JsonResponse({'status': 'invalid_method'}, status=405)
 
 def api_active_miners(request):
@@ -505,3 +525,25 @@ def api_active_miners(request):
                 'hum': last_log.humidity
             })
     return JsonResponse({'miners': data})
+
+from django.db.models import Q
+
+@csrf_exempt
+def api_get_wifi_networks(request):
+    """
+    API для отримання списку відомих Wi-Fi мереж.
+    Повертає тільки ті пристрої, де SSID не порожній.
+    """
+    if request.method == 'GET':
+        # Фільтруємо: активні ТА (ssid не null ТА ssid не порожній рядок)
+        networks = InfrastructureDevice.objects.filter(
+            is_active=True, 
+            wifi_ssid__isnull=False
+        ).exclude(wifi_ssid__exact='')
+        
+        # Перейменовуємо ключі для ESP32
+        network_list = [{'ssid': n.wifi_ssid, 'password': n.wifi_password} for n in networks]
+        
+        return JsonResponse(network_list, safe=False)
+        
+    return JsonResponse({'error': 'Only GET method is allowed'}, status=405)
