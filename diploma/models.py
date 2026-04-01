@@ -217,7 +217,10 @@ class TelemetryLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
-    def __str__(self): return f"Log {self.timestamp}"
+        
+    def __str__(self): 
+        # Відформатований час: "Лог 2026-04-01 11:58:54"
+        return f"Лог {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
 # --- 5. ТРИВОГИ ---
 class SecurityAlert(models.Model):

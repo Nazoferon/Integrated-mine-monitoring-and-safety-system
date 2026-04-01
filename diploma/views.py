@@ -435,6 +435,10 @@ def api_receive_telemetry(request):
             battery = int(data.get('battery', 100))
             gas_co = float(data.get('gas_co', 0))
             is_sos = data.get('is_sos', False)
+            reason_text = data.get('reason', 'Normal')
+            rssi = int(data.get('rssi', 0))  # Зчитуємо RSSI з JSON
+            temperature = float(data.get('temperature', 0.0))
+            humidity = float(data.get('humidity', 0.0))
 
             # 1. Знаходимо пристрій по MAC-адресі, а потім працівника
             if not mac_address:
@@ -455,9 +459,10 @@ def api_receive_telemetry(request):
                         connected_repeater=ap,
                         battery_level=battery,
                         gas_level=gas_co,
+                        wifi_signal_strength=rssi,
                         is_sos=is_sos,
-                        temperature=24.5,
-                        humidity=65.0
+                        temperature=temperature,
+                        humidity=humidity
                     )
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
@@ -470,12 +475,29 @@ def api_receive_telemetry(request):
                 connected_repeater=ap,
                 battery_level=battery,
                 gas_level=gas_co,
+                wifi_signal_strength=rssi,
                 is_sos=is_sos,
-                temperature=24.5, 
-                humidity=65.0
+                temperature=temperature,
+                humidity=humidity
             )
+            
+            # 3. ЛОГІКА СКАСУВАННЯ ТРИВОГИ З ПРИСТРОЮ
+            if reason_text == 'SOS_CANCELLED':
+                active_alert = SecurityAlert.objects.filter(employee=employee, is_resolved=False).first()
+                if active_alert:
+                    active_alert.status = 'RESOLVED'
+                    active_alert.is_resolved = True
+                    active_alert.resolved_at = timezone.now()
+                    active_alert.rescue_notes = "Автоматично: Тривогу скасовано з пристрою працівником."
+                    active_alert.save()
+                
+                if employee.safety_status != 'OFF_SHIFT':
+                    employee.safety_status = 'OK'
+                employee.save()
+                
+                return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device'})
 
-            # 3. ЛОГІКА ТРИВОГ (SecurityAlert)
+            # 4. ЛОГІКА СТВОРЕННЯ ТРИВОГ (SecurityAlert)
             alert_reason = None
             if is_sos:
                 alert_reason = 'Ручний виклик SOS'
