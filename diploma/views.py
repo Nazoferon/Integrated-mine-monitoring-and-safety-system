@@ -430,18 +430,38 @@ def api_receive_telemetry(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            badge_number = data.get('badge_number')
+            mac_address = data.get('mac_address')
             ap_uid = data.get('ap_uid', '')
             battery = int(data.get('battery', 100))
             gas_co = float(data.get('gas_co', 0))
             is_sos = data.get('is_sos', False)
 
-            # 1. Знаходимо працівника
-            employee = Employee.objects.filter(badge_number=badge_number).first()
-            if not employee:
-                return JsonResponse({'status': 'error', 'message': 'Працівника не знайдено'})
+            # 1. Знаходимо пристрій по MAC-адресі, а потім працівника
+            if not mac_address:
+                return JsonResponse({'status': 'error', 'message': 'MAC-адреса пристрою не надана'}, status=400)
 
-            device = employee.device
+            device = MinerDevice.objects.select_related('assigned_to').filter(mac_address__iexact=mac_address).first()
+
+            if not device:
+                return JsonResponse({'status': 'error', 'message': f'Пристрій з MAC {mac_address} не зареєстровано'}, status=404)
+
+            employee = device.assigned_to
+            if not employee:
+                # Стаціонарні датчики не мають працівника, але можуть надсилати телеметрію.
+                if device.is_static:
+                    ap = InfrastructureDevice.objects.filter(wifi_bssid__iexact=ap_uid).first()
+                    TelemetryLog.objects.create(
+                        device=device,
+                        connected_repeater=ap,
+                        battery_level=battery,
+                        gas_level=gas_co,
+                        is_sos=is_sos,
+                        temperature=24.5,
+                        humidity=65.0
+                    )
+                    return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
+                return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
+
             ap = InfrastructureDevice.objects.filter(wifi_bssid__iexact=ap_uid).first()
 
             # 2. Завжди створюємо лог (диспетчеру потрібна історія вимірювань)
@@ -501,7 +521,7 @@ def api_receive_telemetry(request):
             return JsonResponse({'status': 'success'})
 
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
     return JsonResponse({'status': 'invalid_method'}, status=405)
 
