@@ -254,3 +254,35 @@ class SecurityAlert(models.Model):
     resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self): return f"SOS: {self.employee.last_name} ({self.status})"
+
+# --- 6. OTA ОНОВЛЕННЯ ПРОШИВКИ ---
+class FirmwareUpdate(models.Model):
+    version = models.CharField(max_length=20, unique=True, verbose_name="Версія прошивки (напр. 1.0.1)")
+    binary_file = models.FileField(upload_to='firmwares_esp/', verbose_name="Файл прошивки (.bin)")
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата завантаження")
+    is_active = models.BooleanField(default=True, verbose_name="Активна (роздавати пристроям)")
+    target_devices = models.ManyToManyField(MinerDevice, blank=True, verbose_name="Цільові пристрої", help_text="Якщо вибрано пристрої, оновлення отримають ТІЛЬКИ вони. Якщо пусто — отримають усі.")
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = "Оновлення прошивки"
+        verbose_name_plural = "Оновлення прошивок"
+
+    def __str__(self):
+        return f"Прошивка v{self.version}"
+
+# --- 7. ЛОГУВАННЯ OTA ОНОВЛЕНЬ ---
+class OTALog(models.Model):
+    device = models.ForeignKey(MinerDevice, on_delete=models.CASCADE, related_name='ota_logs', verbose_name="Пристрій")
+    version = models.CharField(max_length=20, verbose_name="Версія, що встановлювалась")
+    status = models.CharField(max_length=20, verbose_name="Статус")  # SUCCESS або FAILED
+    message = models.TextField(blank=True, verbose_name="Помилка/Деталі")
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Час спроби")
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Лог оновлення (OTA)"
+        verbose_name_plural = "Логи оновлень (OTA)"
+
+    def __str__(self):
+        return f"{self.device.inventory_number} -> v{self.version} [{self.status}]"

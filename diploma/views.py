@@ -12,7 +12,7 @@ from django.utils import timezone
 import json
 
 from .forms import UserForm, ProfileForm
-from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog
+from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog, FirmwareUpdate, OTALog
 
 # --- ДОПОМІЖНА ФУНКЦІЯ ---
 
@@ -439,6 +439,7 @@ def api_receive_telemetry(request):
             rssi = int(data.get('rssi', 0))  # Зчитуємо RSSI з JSON
             temperature = float(data.get('temperature', 0.0))
             humidity = float(data.get('humidity', 0.0))
+            fw_version = data.get('fw_version') # Зчитуємо версію прошивки
 
             # 1. Знаходимо пристрій по MAC-адресі, а потім працівника
             if not mac_address:
@@ -448,6 +449,17 @@ def api_receive_telemetry(request):
 
             if not device:
                 return JsonResponse({'status': 'error', 'message': f'Пристрій з MAC {mac_address} не зареєстровано'}, status=404)
+
+            # --- МИТТЄВА ПЕРЕВІРКА ТА ЛОГУВАННЯ ОНОВЛЕННЯ ПРОШИВКИ ---
+            if fw_version and device.firmware_version != fw_version:
+                device.firmware_version = fw_version
+                device.save()
+                OTALog.objects.create(
+                    device=device,
+                    version=fw_version,
+                    status="SUCCESS",
+                    message="Оновлення успішно встановлено (підтверджено телеметрією)"
+                )
 
             employee = device.assigned_to
             if not employee:
@@ -595,3 +607,62 @@ def api_get_wifi_networks(request):
         return JsonResponse(network_list, safe=False)
         
     return JsonResponse({'error': 'Only GET method is allowed'}, status=405)
+
+@csrf_exempt
+def api_ota_check(request):
+    """API для перевірки наявності OTA-оновлень для ESP32."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Only GET method is allowed'}, status=405)
+        
+    mac_address = request.GET.get('mac')
+    current_version = request.GET.get('version', '1.0.0')
+    
+    device = None
+    if mac_address:
+        # Оновлюємо інформацію про поточну версію пристрою в БД
+        device = MinerDevice.objects.filter(mac_address__iexact=mac_address).first()
+        if device and device.firmware_version != current_version:
+            device.firmware_version = current_version
+            device.save()
+            # Якщо версія відрізняється, значить пристрій успішно прошився та перезавантажився
+            OTALog.objects.create(
+                device=device,
+                version=current_version,
+                status="SUCCESS",
+                message="Пристрій успішно оновлено та вийшов на зв'язок"
+            )
+            
+    # Шукаємо останню активну прошивку
+    latest_firmware = FirmwareUpdate.objects.filter(is_active=True).order_by('-uploaded_at').first()
+    
+    if latest_firmware and latest_firmware.version != current_version:
+        # --- ЛОГІКА ПОСТУПОВОГО РОЗГОРТАННЯ (STAGED ROLLOUT) ---
+        if latest_firmware.target_devices.exists():
+            # Якщо список не пустий, але пристрій не розпізнано або його немає у списку дозволених -> відмовляємо
+            if not device or not latest_firmware.target_devices.filter(id=device.id).exists():
+                return JsonResponse({'status': 'up_to_date', 'current_version': current_version, 'message': 'Not in targeted rollout group'})
+
+        # Формуємо абсолютний URL для завантаження (http://91.98.171.31/media/firmwares_esp/...)
+        file_url = request.build_absolute_uri(latest_firmware.binary_file.url)
+        return JsonResponse({'version': latest_firmware.version, 'url': file_url})
+        
+    return JsonResponse({'status': 'up_to_date', 'current_version': current_version})
+
+@csrf_exempt
+def api_ota_log(request):
+    """API для отримання інформації про помилки OTA з ESP32."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            device = MinerDevice.objects.filter(mac_address__iexact=data.get('mac_address')).first()
+            if device:
+                OTALog.objects.create(
+                    device=device,
+                    version=data.get('version', 'unknown'),
+                    status=data.get('status', 'FAILED'),
+                    message=data.get('message', 'Невідома помилка завантаження')
+                )
+            return JsonResponse({'status': 'logged'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'POST only'}, status=405)

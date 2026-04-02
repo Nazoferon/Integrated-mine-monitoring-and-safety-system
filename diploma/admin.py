@@ -56,3 +56,27 @@ class TelemetryLogAdmin(admin.ModelAdmin):
 class SecurityAlertAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'employee', 'reason', 'is_resolved')
     list_filter = ('is_resolved', 'reason')
+
+@admin.register(FirmwareUpdate)
+class FirmwareUpdateAdmin(admin.ModelAdmin):
+    list_display = ('version', 'uploaded_at', 'is_active', 'binary_file')
+    list_filter = ('is_active', 'uploaded_at')
+    search_fields = ('version',)
+    readonly_fields = ('uploaded_at',)
+    filter_horizontal = ('target_devices',)
+
+    def save_model(self, request, obj, form, change):
+        if obj.is_active:
+            # Якщо ця прошивка позначається як активна, автоматично деактивуємо всі інші
+            FirmwareUpdate.objects.exclude(pk=obj.pk).update(is_active=False)
+        super().save_model(request, obj, form, change)
+
+@admin.register(OTALog)
+class OTALogAdmin(admin.ModelAdmin):
+    list_display = ('timestamp', 'device', 'version', 'status')
+    list_filter = ('status', 'timestamp')
+    search_fields = ('device__mac_address', 'device__inventory_number')
+    readonly_fields = ('timestamp', 'device', 'version', 'status', 'message')
+    # Логи не можна створювати або змінювати вручну
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
