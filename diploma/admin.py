@@ -59,9 +59,9 @@ class SecurityAlertAdmin(admin.ModelAdmin):
 
 @admin.register(FirmwareUpdate)
 class FirmwareUpdateAdmin(admin.ModelAdmin):
-    list_display = ('version', 'uploaded_at', 'is_active', 'binary_file')
+    list_display = ('version', 'uploaded_at', 'is_active', 'description', 'binary_file')
     list_filter = ('is_active', 'uploaded_at')
-    search_fields = ('version',)
+    search_fields = ('version', 'description')
     readonly_fields = ('uploaded_at',)
     filter_horizontal = ('target_devices',)
 

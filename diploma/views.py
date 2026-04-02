@@ -440,6 +440,7 @@ def api_receive_telemetry(request):
             temperature = float(data.get('temperature', 0.0))
             humidity = float(data.get('humidity', 0.0))
             fw_version = data.get('fw_version') # Зчитуємо версію прошивки
+            is_moving = data.get('is_moving', True) # Зчитуємо стан руху
 
             # 1. Знаходимо пристрій по MAC-адресі, а потім працівника
             if not mac_address:
@@ -474,7 +475,8 @@ def api_receive_telemetry(request):
                         wifi_signal_strength=rssi,
                         is_sos=is_sos,
                         temperature=temperature,
-                        humidity=humidity
+                        humidity=humidity,
+                        is_moving=is_moving
                     )
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
@@ -490,7 +492,8 @@ def api_receive_telemetry(request):
                 wifi_signal_strength=rssi,
                 is_sos=is_sos,
                 temperature=temperature,
-                humidity=humidity
+                humidity=humidity,
+                is_moving=is_moving
             )
             
             # 3. ЛОГІКА СКАСУВАННЯ ТРИВОГИ З ПРИСТРОЮ
@@ -519,7 +522,12 @@ def api_receive_telemetry(request):
                 alert_reason = f'Перевищення ГДК CO: {gas_co} ppm'
             # 2. Якщо газ в нормі, але є сигнал is_sos, значить це дійсно ручний виклик
             elif is_sos:
-                alert_reason = 'Ручний виклик SOS'
+                if 'MANUAL' in reason_text.upper():
+                    alert_reason = 'Ручний виклик SOS'
+                elif not is_moving or reason_text in ['MAN_DOWN', 'NO_MOVEMENT', 'NO_MOTION', 'Worker immobile', 'FALL']:
+                    alert_reason = 'Бездіяльність (Немає руху / Можливе падіння)'
+                else:
+                    alert_reason = 'Ручний виклик SOS'
 
             if alert_reason:
                 # Перевіряємо, чи вже є ВІДКРИТА тривога для цього працівника

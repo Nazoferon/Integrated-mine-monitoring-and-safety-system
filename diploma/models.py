@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import os
+from django.core.validators import RegexValidator
 from uuid import uuid4
 import math
 
@@ -257,10 +258,18 @@ class SecurityAlert(models.Model):
 
 # --- 6. OTA ОНОВЛЕННЯ ПРОШИВКИ ---
 class FirmwareUpdate(models.Model):
-    version = models.CharField(max_length=20, unique=True, verbose_name="Версія прошивки (напр. 1.0.1)")
+    version = models.CharField(
+        max_length=20, 
+        unique=True, 
+        verbose_name="Версія прошивки (напр. 1.0.1)",
+        validators=[
+            RegexValidator(regex=r'^\d+\.\d+\.\d+$', message='Версія має бути у форматі X.Y.Z (тільки цифри та крапки, наприклад: 1.0.0 або 2.1.15)')
+        ]
+    )
     binary_file = models.FileField(upload_to='firmwares_esp/', verbose_name="Файл прошивки (.bin)")
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата завантаження")
     is_active = models.BooleanField(default=True, verbose_name="Активна (роздавати пристроям)")
+    description = models.TextField(blank=True, verbose_name="Опис / Причина оновлення")
     target_devices = models.ManyToManyField(MinerDevice, blank=True, verbose_name="Цільові пристрої", help_text="Якщо вибрано пристрої, оновлення отримають ТІЛЬКИ вони. Якщо пусто — отримають усі.")
 
     class Meta:
