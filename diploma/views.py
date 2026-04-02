@@ -499,16 +499,18 @@ def api_receive_telemetry(request):
 
             # 4. ЛОГІКА СТВОРЕННЯ ТРИВОГ (SecurityAlert)
             alert_reason = None
-            if is_sos:
-                alert_reason = 'Ручний виклик SOS'
-            elif gas_co >= 50:
+            
+            # 1. СПОЧАТКУ перевіряємо об'єктивні сенсори (Газ)
+            if gas_co >= 50:
                 alert_reason = f'КРИТИЧНИЙ рівень CO: {gas_co} ppm (Негайна евакуація!)'
             elif gas_co > 17:
                 alert_reason = f'Перевищення ГДК CO: {gas_co} ppm'
+            # 2. Якщо газ в нормі, але є сигнал is_sos, значить це дійсно ручний виклик
+            elif is_sos:
+                alert_reason = 'Ручний виклик SOS'
 
             if alert_reason:
                 # Перевіряємо, чи вже є ВІДКРИТА тривога для цього працівника
-                # Відкритою вважається та, де is_resolved=False
                 active_alert = SecurityAlert.objects.filter(
                     employee=employee, 
                     is_resolved=False
@@ -524,18 +526,22 @@ def api_receive_telemetry(request):
                         status='NEW'
                     )
                 else:
-                    # Якщо активна вже є — просто оновлюємо дані в ній (щоб диспетчер бачив актуальне місце)
+                    # Якщо активна вже є — оновлюємо дані
                     active_alert.connected_repeater = ap
-                    # Якщо нова причина серйозніша за попередню, можемо оновити текст
-                    if "КРИТИЧНИЙ" in alert_reason and "ГДК" in active_alert.reason:
+                    
+                    # Оновлюємо текст причини, якщо нова причина серйозніша 
+                    # (Наприклад, газ виріс з "ГДК" до "КРИТИЧНИЙ", або після кнопки SOS піднявся газ)
+                    if "КРИТИЧНИЙ" in alert_reason:
                         active_alert.reason = alert_reason
+                    elif "ГДК" in alert_reason and "КРИТИЧНИЙ" not in active_alert.reason:
+                        active_alert.reason = alert_reason
+                        
                     active_alert.save()
                 
                 # Ставимо візуальний статус працівнику
                 employee.safety_status = 'SOS' if (is_sos or gas_co >= 50) else 'WARNING'
             else:
-                # Якщо все в нормі — ставимо статус OK (але не закриваємо тривоги автоматично!)
-                # Тривогу має закрити ЛЮДИНА (диспетчер), щоб переконатися, що все добре.
+                # Якщо все в нормі — ставимо статус OK
                 if employee.safety_status != 'OFF_SHIFT':
                     employee.safety_status = 'OK'
 
