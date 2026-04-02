@@ -24,8 +24,11 @@
             <i class="fas fa-times-circle"></i>
           </button>
         </div>
+        <button class="btn d-flex align-items-center justify-content-center px-3" id="btnSortStatus" title="Сортувати за статусом">
+          <i class="fas fa-sort-amount-down me-2"></i> <span>За статусом</span>
+        </button>
         <button class="btn d-flex align-items-center justify-content-center px-3" id="btnSortAlpha" title="Сортувати за алфавітом">
-          <i class="fas fa-sort-alpha-down me-2"></i> <span>Сортування</span>
+          <i class="fas fa-sort-alpha-down me-2"></i> <span>За іменем</span>
         </button>
     </div>
 
@@ -45,7 +48,7 @@
 <div class="row g-4 mb-5" id="personnelGrid">
   {% for emp in employees %}
   <div class="col-12 col-md-6 col-lg-4 col-xl-3 personnel-col">
-    <div class="employee-card">
+    <div class="employee-card" {% if emp.device %}data-mac-address="{{ emp.device.mac_address }}"{% endif %}>
       <div class="card-top-line"></div>
 
       <div class="emp-photo-wrapper">

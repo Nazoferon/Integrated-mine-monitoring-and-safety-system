@@ -77,16 +77,20 @@
             <th id="sort-battery" class="sortable" title="Сортувати по заряду" data-sort-by="battery">
               Батарея <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
             </th>
-            <th>Прошивка</th>
-            <th>Статус</th>
+            <th class="sortable" title="Сортувати по прошивці" data-sort-by="firmware">
+              Прошивка <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
+            <th class="sortable" title="Сортувати по статусу" data-sort-by="status">
+              Статус <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
           </tr>
         </thead>
         <tbody>
           {% for item in lamps %}
           {% comment %} Визначаємо статус батареї та числове значення для сортування {% endcomment %}
           {% cycle 'high' 'med' 'low' 'high' as bat_status silent %}
-          <tr class="tech-row"
-            data-battery="{% if bat_status == 'high' %}3{% elif bat_status == 'med' %}2{% else %}1{% endif %}">
+          <tr class="tech-row" data-battery="{% if bat_status == 'high' %}3{% elif bat_status == 'med' %}2{% else %}1{% endif %}"
+            data-status="{% if item.is_active %}1{% else %}0{% endif %}" data-firmware="{{ item.firmware_version }}">
             <td class="search-target font-weight-bold text-primary">
               <i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number|default:"Без номера" }}
             </td>
@@ -135,13 +139,18 @@
             <th>Інв. Номер</th>
             <th>MAC Адреса</th>
             <th>Координати (X, Y)</th>
-            <th>Прошивка</th>
-            <th>Статус</th>
+            <th class="sortable" title="Сортувати по прошивці" data-sort-by="firmware">
+              Прошивка <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
+            <th class="sortable" title="Сортувати по статусу" data-sort-by="status">
+              Статус <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
           </tr>
         </thead>
         <tbody>
           {% for item in sensors %}
-          <tr class="tech-row">
+          <tr class="tech-row" data-status="{% if item.is_active %}1{% else %}0{% endif %}"
+            data-firmware="{{ item.firmware_version }}">
             <td class="search-target font-weight-bold text-primary">
               <i class="fas fa-box text-secondary mr-2"></i> {{item.inventory_number }}
             </td>
@@ -179,12 +188,14 @@
             <th>BSSID (MAC)</th>
             <th>Локація (Карта)</th>
             <th>Координати</th>
-            <th>Статус мережі</th>
+            <th class="sortable" title="Сортувати по статусу" data-sort-by="status">
+              Статус мережі <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
           </tr>
         </thead>
         <tbody>
           {% for item in repeaters %}
-          <tr class="tech-row">
+          <tr class="tech-row" data-status="{% if item.is_active %}1{% else %}0{% endif %}">
             <td class="search-target font-weight-bold text-success">
               <i class="fas fa-broadcast-tower mr-2"></i> {{ item.uid|default:"Без ID" }}
             </td>

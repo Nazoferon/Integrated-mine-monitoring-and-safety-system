@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Avg, Max, Count, Q
+from django.views.decorators.csrf import csrf_exempt 
+from django.db.models import Avg, Max, Count, Q, Case, When, Value, IntegerField
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from django.db import transaction
@@ -62,7 +62,14 @@ def diploma_home(request):
 @login_required
 def personnel_list(request):
     """Список персоналу."""
-    employees = Employee.objects.all_with_device_status().order_by('last_name', 'first_name') # Сортування за замовчуванням
+    employees = Employee.objects.all_with_device_status().annotate(
+        status_order=Case(
+            When(device__is_active=True, then=Value(1)),
+            When(device__is_active=False, then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField()
+        )
+    ).order_by('status_order', 'last_name', 'first_name')
     return render(request, 'diploma/personnel.html', {
         'employees': employees,
         'total_employees': employees.count()

@@ -104,9 +104,15 @@ class EquipmentPage {
     }
 
     getSortValue(row, sortBy) {
-        // data-sort-by="name" -> row.dataset.name
-        const value = row.dataset[sortBy.toLowerCase()];
-        // Пробуємо перетворити на число для правильного числового сортування
+        const value = row.dataset[sortBy.toLowerCase()] || '';
+
+        // Для прошивки повертаємо рядок, який можна сортувати лексикографічно,
+        // перетворивши версію "1.2.10" на "001.002.010" для коректного порівняння.
+        if (sortBy === 'firmware' && value) {
+            return value.split('.').map(part => part.padStart(3, '0')).join('.');
+        }
+
+        // Для інших значень (батарея, статус) пробуємо перетворити на число.
         const numValue = parseFloat(value);
         return isNaN(numValue) ? value : numValue;
     }

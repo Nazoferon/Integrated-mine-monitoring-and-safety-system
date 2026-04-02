@@ -122,6 +122,9 @@ document.addEventListener('DOMContentLoaded', function() {
             currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
         } else {
             currentSort.field = field;
+            // ЗАВЖДИ починаємо з 'asc' при першому кліку на нове поле,
+            // оскільки 'desc' для статусу є сортуванням за замовчуванням.
+            // Це дасть миттєвий візуальний відгук.
             currentSort.order = 'asc';
         }
 
@@ -133,8 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 valB = b.querySelector('.emp-name').textContent.trim();
                 return currentSort.order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else if (field === 'status') {
-                // Призначаємо вагу для сортування за статусом:
-                // SOS > WARNING > ACTIVE > INACTIVE > UNASSIGNED
+                // Призначаємо вагу для сортування за статусом: Active > Inactive > Unassigned
                 const getStatusWeight = (cardEl) => {
                     const statusDiv = cardEl.querySelector('.device-status');
                     if (!statusDiv) return 0; // Без пристрою (найнижчий пріоритет)
@@ -171,7 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (field === 'name') {
                     icon.className = currentSort.order === 'asc' ? 'fas fa-sort-alpha-down me-2' : 'fas fa-sort-alpha-up-alt me-2';
                 } else if (field === 'status') {
-                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-amount-down me-2' : 'fas fa-sort-amount-up-alt me-2';
+                    // Використовуємо правильні іконки для висхідного/низхідного сортування
+                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-amount-up me-2' : 'fas fa-sort-amount-down me-2';
                 }
             }
         }
@@ -184,4 +187,64 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sortStatusBtn) {
         sortStatusBtn.addEventListener('click', () => sortPersonnel('status'));
     }
+
+    // --- 4. АВТОМАТИЧНЕ ОНОВЛЕННЯ СТАТУСІВ ---
+    const API_URL = '/diploma/personnel-status-api/';
+    const UPDATE_INTERVAL = 7000; // Оновлюємо кожні 7 секунд
+
+    async function updateDeviceStatuses() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) {
+                // Не виводимо помилку в консоль, щоб не засмічувати її при обриві з'єднання
+                return;
+            }
+            const data = await response.json();
+            const statuses = data.device_statuses;
+
+            if (!statuses) return;
+
+            // Проходимо по всіх картках співробітників, які мають MAC
+            document.querySelectorAll('.employee-card[data-mac-address]').forEach(card => {
+                const mac = card.dataset.macAddress;
+                const statusInfo = statuses[mac];
+                
+                if (!statusInfo) return; // Немає даних для цього MAC
+
+                const statusDiv = card.querySelector('.device-status');
+                const statusSpan = statusDiv.querySelector('span');
+                const statusDot = statusDiv.querySelector('.status-dot');
+
+                const isCurrentlyActive = statusDiv.classList.contains('status-active');
+                const shouldBeActive = statusInfo.is_active;
+
+                // Оновлюємо тільки якщо статус змінився
+                if (isCurrentlyActive !== shouldBeActive) {
+                    statusDiv.classList.add('updating'); // Додаємо клас для анімації
+
+                    // Через невеликий проміжок часу оновлюємо класи та текст
+                    setTimeout(() => {
+                        if (shouldBeActive) {
+                            statusDiv.className = 'device-status status-active';
+                            statusDot.className = 'status-dot dot-active';
+                            statusSpan.textContent = statusInfo.inventory_number;
+                            statusDiv.title = '';
+                        } else {
+                            statusDiv.className = 'device-status status-device-inactive';
+                            statusDot.className = 'status-dot dot-device-inactive';
+                            statusSpan.textContent = `${statusInfo.inventory_number} (Неактивний)`;
+                            statusDiv.title = 'Пристрій неактивний';
+                        }
+                        statusDiv.classList.remove('updating');
+                    }, 500);
+                }
+            });
+
+        } catch (error) {
+            // Ігноруємо помилки fetch, щоб не засмічувати консоль при обриві з'єднання
+        }
+    }
+
+    // Запускаємо періодичне оновлення
+    setInterval(updateDeviceStatuses, UPDATE_INTERVAL);
 });
