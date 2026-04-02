@@ -36,7 +36,7 @@
     flex-shrink: 0;
 }
 
-.status-indicator {
+.footer-status .status-indicator {
     width: 6px;
     height: 6px;
     border-radius: 50%;

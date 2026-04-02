@@ -62,7 +62,7 @@ def diploma_home(request):
 @login_required
 def personnel_list(request):
     """Список персоналу."""
-    employees = Employee.objects.all().select_related('device')
+    employees = Employee.objects.all_with_device_status().order_by('last_name', 'first_name') # Сортування за замовчуванням
     return render(request, 'diploma/personnel.html', {
         'employees': employees,
         'total_employees': employees.count()
@@ -451,6 +451,12 @@ def api_receive_telemetry(request):
             if not device:
                 return JsonResponse({'status': 'error', 'message': f'Пристрій з MAC {mac_address} не зареєстровано'}, status=404)
 
+            # --- ОНОВЛЕННЯ СТАТУСУ АКТИВНОСТІ ПРИСТРОЮ ---
+            # Якщо пристрій вийшов на зв'язок і був неактивним, робимо його активним.
+            if not device.is_active:
+                device.is_active = True
+                device.save()
+
             # --- МИТТЄВА ПЕРЕВІРКА ТА ЛОГУВАННЯ ОНОВЛЕННЯ ПРОШИВКИ ---
             if fw_version and device.firmware_version != fw_version:
                 device.firmware_version = fw_version
@@ -561,8 +567,11 @@ def api_receive_telemetry(request):
                 # Ставимо візуальний статус працівнику
                 employee.safety_status = 'SOS' if (is_sos or gas_co >= 50) else 'WARNING'
             else:
-                # Якщо все в нормі — ставимо статус OK
-                if employee.safety_status != 'OFF_SHIFT':
+                # Якщо все в нормі, перевіряємо, чи це не початок зміни
+                if reason_text == 'CHECKPOINT_ENTRY' and employee.safety_status == 'OFF_SHIFT':
+                    employee.safety_status = 'OK'
+                # Якщо працівник вже на зміні і все добре, залишаємо статус ОК
+                elif employee.safety_status != 'OFF_SHIFT':
                     employee.safety_status = 'OK'
 
             employee.save()
@@ -674,3 +683,23 @@ def api_ota_log(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'POST only'}, status=405)
+
+def personnel_status_api(request):
+    """
+    API для отримання поточного статусу пристроїв для сторінки персоналу.
+    Повертає MAC-адреси пристроїв та їх статус active/inactive.
+    """
+    if request.method == 'GET':
+        statuses = {}
+        # Отримуємо всі мобільні пристрої, прив'язані до працівників
+        devices = MinerDevice.objects.filter(is_static=False, assigned_to__isnull=False)
+        
+        for device in devices:
+            statuses[device.mac_address] = {
+                'is_active': device.is_active,
+                'inventory_number': device.inventory_number
+            }
+            
+        return JsonResponse({'device_statuses': statuses})
+
+    return JsonResponse({'error': 'GET method required'}, status=405)

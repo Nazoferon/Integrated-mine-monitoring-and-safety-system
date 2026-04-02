@@ -57,12 +57,19 @@
 }
 .fw-badge { background: #333; color: #aaa; font-size: 11px; padding: 3px 6px; border-radius: 4px; border: 1px solid #555; }
 
-.status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold; }
-.status-indicator.on { color: #00ff88; }
+.status-indicator { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.status-indicator.on { color: #00D68A; }
 .status-indicator.off { color: #ff4444; }
+
+/* Базові стилі для крапки */
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-.status-indicator.on .status-dot { background: #00ff88; box-shadow: 0 0 8px #00ff88; animation: pulse 2s infinite; }
-.status-indicator.off .status-dot { background: #ff4444; }
+
+/* Статус Онлайн: зелена крапка з легким світінням, без анімації */
+/* Використовуємо !important, щоб гарантовано перевизначити глобальні стилі */
+.status-indicator.on .status-dot { background-color: #00D68A !important; }
+
+/* Статус Офлайн: червона крапка */
+.status-indicator.off .status-dot { background-color: #ff4444 !important; }
 
 /* --- БАТАРЕЯ --- */
 .battery-wrapper {

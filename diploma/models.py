@@ -89,6 +89,15 @@ def validate_image_size(image):
     if file_size > limit_mb * 1024 * 1024:
         raise ValidationError(f"Максимальний розмір файлу {limit_mb} MB")
 
+# Manager для Employee з оптимізацією запитів для personnel_list
+class EmployeeManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related('device')
+
+    def all_with_device_status(self):
+        # Оптимізація для вибірки device та його is_active
+        return self.get_queryset().select_related('device')
+
 class Employee(models.Model):
     # Тільки основні ролі для диплому
     POSITION_CHOICES = [
@@ -114,6 +123,8 @@ class Employee(models.Model):
     # Номер жетона (генерується автоматично)
     badge_number = models.CharField(max_length=30, unique=True, blank=True, verbose_name="№ Жетона")
     
+    objects = EmployeeManager()
+
     # ДОДАЄМО ВАЛІДАТОР І HELP TEXT
     photo = models.ImageField(
         upload_to=employee_photo_path, 

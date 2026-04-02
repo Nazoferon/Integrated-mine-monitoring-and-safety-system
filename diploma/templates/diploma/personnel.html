@@ -71,13 +71,20 @@
       </div>
 
       {% if emp.device %}
-      <div class="device-status status-active">
-        <div class="status-dot dot-active"></div>
-        <span>{{ emp.device.inventory_number }}</span>
-      </div>
+        {% if emp.device.is_active %}
+        <div class="device-status status-active">
+          <div class="status-dot dot-active"></div>
+          <span>{{ emp.device.inventory_number }}</span>
+        </div>
+        {% else %}
+        <div class="device-status status-device-inactive" title="Пристрій неактивний">
+          <div class="status-dot dot-device-inactive"></div>
+          <span>{{ emp.device.inventory_number }} (Неактивний)</span>
+        </div>
+        {% endif %}
       {% else %}
-      <div class="device-status status-inactive" title="Пристрій не видано">
-        <div class="status-dot dot-inactive"></div>
+      <div class="device-status status-unassigned" title="Пристрій не видано">
+        <div class="status-dot dot-unassigned"></div>
         <span>Без пристрою</span>
       </div>
       {% endif %}
@@ -94,26 +101,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const sortBtn = document.getElementById('btnSortAlpha');
-    let asc = false;
-    if (sortBtn) {
-      sortBtn.addEventListener('click', function() {
-        asc = !asc;
-        this.classList.add('active');
-        this.querySelector('i').className = asc ? 'fas fa-sort-alpha-down me-2' : 'fas fa-sort-alpha-up-alt me-2';
-        const grid = document.getElementById('personnelGrid');
-        const cards = Array.from(grid.querySelectorAll('.personnel-col'));
-        cards.sort((a, b) => {
-          const nameA = a.querySelector('.emp-name').innerText.trim();
-          const nameB = b.querySelector('.emp-name').innerText.trim();
-          return asc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        });
-        cards.forEach(card => grid.appendChild(card));
-      });
-    }
-  });
-</script>
 <script src="{% static 'diploma/js/personnel.js' %}?v=1"></script>
 {% endblock %}

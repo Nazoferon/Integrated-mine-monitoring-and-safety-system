@@ -5,11 +5,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
     const cards = document.querySelectorAll('.employee-card');
+    const personnelCols = document.querySelectorAll('.personnel-col'); // Отримуємо колонки для сортування
     const noResultsMsg = document.getElementById('noResultsMsg');
 
     function filterEmployees() {
         const searchTerm = searchInput.value.toLowerCase().trim();
         let visibleCards = 0;
+
+        // Скидаємо будь-які активні сортування при пошуку
+        resetSortButtons();
 
         // Показуємо/ховаємо кнопку очищення
         if (clearSearchBtn) {
@@ -23,15 +27,15 @@ document.addEventListener('DOMContentLoaded', function() {
         cards.forEach(card => {
             const name = card.querySelector('.emp-name').textContent.toLowerCase();
             const badge = card.querySelector('.detail-value').textContent.toLowerCase();
-            const position = card.querySelector('.emp-position').textContent.toLowerCase();
-            
-            const column = card.closest('.personnel-col');
+            const position = card.querySelector('.emp-position').textContent.toLowerCase(); // Посада
+            const device = card.querySelector('.device-status span')?.textContent.toLowerCase() || ''; // Пристрій
+            const column = card.closest('.personnel-col'); // Отримуємо батьківську колонку
 
-            if (name.includes(searchTerm) || badge.includes(searchTerm) || position.includes(searchTerm)) {
-                if (column) column.style.display = '';
+            if (name.includes(searchTerm) || badge.includes(searchTerm) || position.includes(searchTerm) || device.includes(searchTerm)) {
+                if (column) column.style.display = ''; // Показуємо колонку
                 visibleCards++;
             } else {
-                if (column) column.style.display = 'none';
+                if (column) column.style.display = 'none'; // Ховаємо колонку
             }
         });
 
@@ -91,5 +95,93 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const savedView = localStorage.getItem('personnelViewStyle') || 'grid';
         setView(savedView);
+    }
+
+    // --- 3. ЛОГІКА СОРТУВАННЯ ---
+    const sortAlphaBtn = document.getElementById('btnSortAlpha');
+    const sortStatusBtn = document.getElementById('btnSortStatus'); // Нова кнопка сортування за статусом
+    const personnelGrid = document.getElementById('personnelGrid');
+    let currentSort = {
+        field: null, // 'name' або 'status'
+        order: 'asc' // 'asc' або 'desc'
+    };
+
+    // Скидання активних класів з кнопок сортування
+    function resetSortButtons() {
+        [sortAlphaBtn, sortStatusBtn].forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+    }
+
+    // Функція сортування
+    function sortPersonnel(field) {
+        resetSortButtons(); // Скидаємо інші кнопки
+
+        const isCurrentField = currentSort.field === field;
+        if (isCurrentField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = field;
+            currentSort.order = 'asc';
+        }
+
+        const sortedCards = Array.from(personnelCols).sort((a, b) => {
+            let valA, valB;
+
+            if (field === 'name') {
+                valA = a.querySelector('.emp-name').textContent.trim();
+                valB = b.querySelector('.emp-name').textContent.trim();
+                return currentSort.order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else if (field === 'status') {
+                // Призначаємо вагу для сортування за статусом:
+                // SOS > WARNING > ACTIVE > INACTIVE > UNASSIGNED
+                const getStatusWeight = (cardEl) => {
+                    const statusDiv = cardEl.querySelector('.device-status');
+                    if (!statusDiv) return 0; // Без пристрою (найнижчий пріоритет)
+                    if (statusDiv.classList.contains('status-active')) return 3; // Активний
+                    if (statusDiv.classList.contains('status-device-inactive')) return 2; // Неактивний
+                    if (statusDiv.classList.contains('status-unassigned')) return 1; // Не прив'язаний
+                    return 0; // Дефолт (Без пристрою, якщо немає інших класів)
+                };
+                
+                valA = getStatusWeight(a);
+                valB = getStatusWeight(b);
+
+                // Якщо ваги однакові, сортуємо за прізвищем як допоміжний критерій
+                if (valA === valB) {
+                    const nameA = a.querySelector('.emp-name').textContent.trim();
+                    const nameB = b.querySelector('.emp-name').textContent.trim();
+                    return nameA.localeCompare(nameB); // Завжди asc для допоміжного
+                }
+
+                return currentSort.order === 'asc' ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+
+        // Додаємо відсортовані картки назад в DOM
+        sortedCards.forEach(col => personnelGrid.appendChild(col));
+
+        // Оновлюємо іконку та активний клас для поточної кнопки сортування
+        const currentBtn = field === 'name' ? sortAlphaBtn : sortStatusBtn;
+        if (currentBtn) {
+            currentBtn.classList.add('active');
+            const icon = currentBtn.querySelector('i');
+            if (icon) {
+                if (field === 'name') {
+                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-alpha-down me-2' : 'fas fa-sort-alpha-up-alt me-2';
+                } else if (field === 'status') {
+                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-amount-down me-2' : 'fas fa-sort-amount-up-alt me-2';
+                }
+            }
+        }
+    }
+
+    // Обробники для кнопок сортування
+    if (sortAlphaBtn) {
+        sortAlphaBtn.addEventListener('click', () => sortPersonnel('name'));
+    }
+    if (sortStatusBtn) {
+        sortStatusBtn.addEventListener('click', () => sortPersonnel('status'));
     }
 });
