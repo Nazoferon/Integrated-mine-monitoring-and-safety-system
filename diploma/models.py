@@ -1,3 +1,10 @@
+'''
+Я передбачив навантаження на базу даних: для таблиці телеметрії створені B-Tree індекси 
+по ключових полях і складений індекс 'Пристрій + Час'. У реальному впровадженні 
+передбачається використання Cron-задачі, яка щоночі буде видаляти або архівувати логи, 
+старші за 30 днів, залишаючи лише записи про інциденти
+'''
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -216,19 +223,23 @@ class MinerDevice(models.Model):
 # --- 4. ТЕЛЕМЕТРІЯ ---
 class TelemetryLog(models.Model):
     device = models.ForeignKey(MinerDevice, on_delete=models.CASCADE, related_name='logs')
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     connected_repeater = models.ForeignKey(InfrastructureDevice, on_delete=models.SET_NULL, null=True, blank=True)
     wifi_signal_strength = models.IntegerField(default=0, verbose_name="RSSI")
     temperature = models.FloatField(null=True)
     humidity = models.FloatField(null=True)
-    gas_level = models.IntegerField(default=0, verbose_name="Gas PPM")
+    gas_level = models.FloatField(default=0, verbose_name="Gas % LEL")
     battery_level = models.IntegerField(default=100)
     is_moving = models.BooleanField(default=True)
-    is_sos = models.BooleanField(default=False)
+    is_sos = models.BooleanField(default=False, db_index=True)
     sos_reason = models.CharField(max_length=255, default='NONE')
 
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            # Складений індекс для надшвидкого пошуку "останнього логу конкретного пристрою"
+            models.Index(fields=['device', '-timestamp']),
+        ]
         
     def __str__(self): 
         # Відформатований час: "Лог 2026-04-01 11:58:54"
