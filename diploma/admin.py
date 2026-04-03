@@ -57,6 +57,7 @@ class TelemetryLogAdmin(admin.ModelAdmin):
 class SecurityAlertAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'employee', 'reason', 'is_resolved')
     list_filter = ('is_resolved', 'reason')
+    date_hierarchy = 'created_at'
 
 @admin.register(FirmwareUpdate)
 class FirmwareUpdateAdmin(admin.ModelAdmin):
