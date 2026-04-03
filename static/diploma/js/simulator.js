@@ -17,7 +17,7 @@ function sendData(isSos) {
     statusDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Відправка даних...</span>';
 
     const payload = {
-        badge_number: badge,
+        mac_address: badge,
         ap_uid: ap,
         battery: battery,
         gas_co: gas,

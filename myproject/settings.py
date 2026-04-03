@@ -92,25 +92,25 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Якщо в режимі розробки (DEBUG=True) - використовуємо SQLite (файл)
-if DEBUG:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+# if DEBUG:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
+# # Якщо на сервері (DEBUG=False) - використовуємо потжну PostgreSQL
+# else:
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_project',
+        'USER': 'bunb',
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
-# Якщо на сервері (DEBUG=False) - використовуємо потжну PostgreSQL
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'django_project',
-            'USER': 'bunb',
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
 
 
 # Password validation

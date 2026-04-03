@@ -1423,7 +1423,8 @@ footer {
 .emp-details {
     width: 100%;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     background: rgba(0, 0, 0, 0.2);
     padding: 10px 15px;
     border-radius: 10px;
@@ -1432,7 +1433,8 @@ footer {
     border: 1px solid rgba(255, 255, 255, 0.02);
 }
 
-.detail-label { color: #888; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 3px;}
+.emp-detail-item { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.detail-label { color: #888; font-size: 11px; text-transform: uppercase; margin-bottom: 0;}
 .detail-value { color: #e0e0e0; font-weight: 500; }
 .emp-status { position: absolute; top: 15px; right: 15px; }
 
@@ -1459,6 +1461,7 @@ footer {
 .list-view .emp-details {
     width: auto;
     margin-bottom: 0;
+    flex-direction: row;
     gap: 30px;
     background: transparent;
     border: none;

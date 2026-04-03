@@ -131,8 +131,11 @@
     background: rgba(0, 0, 0, 0.3); border-radius: 8px;
     padding: 10px; margin-bottom: 15px; text-align: left;
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-.emp-detail-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.emp-detail-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 0; }
 .detail-label { color: #888; }
 .detail-value { color: #ddd; font-weight: 500; font-family: monospace; }
 
@@ -199,9 +202,9 @@
 #personnelGrid.list-view .emp-position { margin-bottom: 0; }
 #personnelGrid.list-view .emp-details {
     margin: 0 20px; background: transparent; padding: 0;
-    display: flex; gap: 30px; align-items: center; flex-grow: 1; border-left: 1px solid #444; padding-left: 30px;
+    display: flex; flex-direction: row; gap: 30px; align-items: center; flex-grow: 1; border-left: 1px solid #444; padding-left: 30px;
 }
-#personnelGrid.list-view .emp-detail-item { margin: 0; flex-direction: column; }
+#personnelGrid.list-view .emp-detail-item { margin: 0; flex-direction: column; align-items: flex-start; gap: 5px; }
 #personnelGrid.list-view .device-status { margin-top: 0; }
 
 .clear-search-btn {
@@ -257,4 +260,21 @@
     border-color: #4dabf7;
     color: #fff;
     box-shadow: 0 0 10px rgba(77, 171, 247, 0.3);
+}
+
+/* Посилання на локацію */
+.location-link {
+    color: #4dabf7;
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: rgba(77, 171, 247, 0.1);
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.location-link:hover {
+    background: rgba(77, 171, 247, 0.25);
+    color: #fff;
 }

@@ -81,4 +81,110 @@ document.addEventListener('DOMContentLoaded', function () {
         drawPreviewMap();
         window.addEventListener('resize', drawPreviewMap);
     }
+
+    // ==========================================
+    // 2. АВТОМАТИЧНЕ ОНОВЛЕННЯ ДАШБОРДУ
+    // ==========================================
+    function updateDashboardStats() {
+        fetch('/diploma/api/dashboard-stats/')
+            .then(res => {
+                if (!res.ok) throw new Error('Помилка мережі');
+                return res.json();
+            })
+            .then(data => {
+                // 1. Оновлення списку "Персонал у Шахті"
+                const staffList = document.querySelector('.staff-list');
+                if (staffList && data.recent_staff) {
+                    let html = '';
+                    if (data.recent_staff.length === 0) {
+                        html = '<p class="text-muted text-center py-3">Наразі в шахті немає працівників.</p>';
+                    } else {
+                        data.recent_staff.forEach(emp => {
+                            let statusHtml = '';
+                            if (emp.status === 'OK') statusHtml = '<span class="staff-status online">Норма</span>';
+                            else if (emp.status === 'WARNING') statusHtml = '<span class="staff-status status-warning">Увага</span>';
+                            else if (emp.status === 'SOS') statusHtml = '<span class="staff-status status-sos">ТРИВОГА</span>';
+                            else statusHtml = '<span class="staff-status offline">Офлайн</span>';
+                            
+                            let avatarHtml = emp.photo_url 
+                                ? `<img src="${emp.photo_url}" alt="Avatar" class="staff-avatar-img">`
+                                : `<i class="fas fa-hard-hat"></i>`;
+                            
+                            let locationHtml = emp.location
+                            ? ` | <span class="text-info staff-location-text"><i class="fas fa-map-marker-alt"></i> ${emp.location}</span>`
+                            : '';
+                                html += `
+                            <a href="/diploma/mine_map/?focus_ap=${emp.location || ''}" class="staff-item">
+                                <div class="staff-avatar">${avatarHtml}</div>
+                                <div class="staff-info">
+                                    <h4>${emp.first_name} ${emp.last_name}</h4>
+                                    <p>${emp.position}${locationHtml}</p>
+                                    ${statusHtml}
+                                </div>
+                            </div>`;
+                        });
+                    }
+                    staffList.innerHTML = html;
+                }
+
+                // 2. Оновлення лічильників онлайн
+                const onlineIndicators = document.querySelectorAll('.online-indicator');
+                onlineIndicators.forEach(el => el.textContent = data.online_count + ' онлайн');
+                
+                const topOnlineCount = document.querySelector('.status-card.online h3');
+                if (topOnlineCount) topOnlineCount.textContent = data.online_count;
+
+                // 3. Оновлення Температури, Вологості та кількості Тривог
+                const tempEl = document.querySelector('.status-card .fa-thermometer-half')?.closest('.status-card')?.querySelector('h3');
+                if (tempEl && data.avg_temp !== undefined) tempEl.textContent = data.avg_temp.toFixed(1) + '°C';
+                
+                const humEl = document.querySelector('.status-card .fa-tint')?.closest('.status-card')?.querySelector('h3');
+                if (humEl && data.avg_hum !== undefined) humEl.textContent = data.avg_hum.toFixed(0) + '%';
+                
+                const warnEl = document.querySelector('.status-card .fa-exclamation-triangle')?.closest('.status-card')?.querySelector('h3');
+                if (warnEl && data.warning_count !== undefined) {
+                    warnEl.textContent = data.warning_count;
+                    const warnCard = warnEl.closest('.status-card');
+                    if (warnCard) warnCard.className = `status-card ${data.warning_count > 0 ? 'warning' : 'normal'}`;
+                }
+
+                // 4. Оновлення списку інцидентів
+                const alertsContainer = document.getElementById('active-alerts-container');
+                if (alertsContainer && data.alerts_html !== undefined) alertsContainer.innerHTML = data.alerts_html;
+
+                const alertBadge = document.querySelector('.alert-card .card-header .badge');
+                if (alertBadge && data.warning_count !== undefined) {
+                    if (data.warning_count > 0) {
+                        alertBadge.className = 'badge badge-critical';
+                        alertBadge.textContent = data.warning_count + ' критичних';
+                    } else {
+                        alertBadge.className = 'badge badge-safe';
+                        alertBadge.textContent = 'Все спокійно';
+                    }
+                }
+
+                // 5. Оновлення графіка "Показники Середовища"
+                const envCards = document.querySelectorAll('.environment-card .metric-item');
+                if (envCards.length >= 3) {
+                    envCards[0].querySelector('.metric-value').textContent = data.avg_temp.toFixed(1) + '°C';
+                    envCards[1].querySelector('.metric-value').textContent = data.avg_hum.toFixed(0) + '%';
+                    envCards[2].querySelector('.metric-value').textContent = data.gas_level;
+                    
+                    const gasTrend = envCards[2].querySelector('.metric-trend');
+                    if (gasTrend) {
+                        if (data.gas_level > 250) {
+                            gasTrend.className = 'metric-trend up';
+                            gasTrend.innerHTML = '<i class="fas fa-arrow-up icon-danger"></i>';
+                        } else {
+                            gasTrend.className = 'metric-trend stable';
+                            gasTrend.innerHTML = '<i class="fas fa-minus"></i>';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error("Помилка оновлення дашборду:", err));
+    }
+
+    // Запускаємо оновлення дашборду кожні 5 секунд
+    setInterval(updateDashboardStats, 5000);
 });

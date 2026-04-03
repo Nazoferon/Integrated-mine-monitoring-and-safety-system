@@ -45,10 +45,19 @@ def diploma_home(request):
     active_alerts_query = SecurityAlert.objects.filter(is_resolved=False)
     alerts_count = active_alerts_query.count()
 
+    recent_staff_qs = online_staff.order_by('-last_update')[:4]
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+    for emp in recent_staff_qs:
+        emp.latest_location = None
+        if hasattr(emp, 'device') and emp.device.is_active:
+            last_log = emp.device.logs.order_by('-timestamp').first()
+            if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
+                emp.latest_location = last_log.connected_repeater.uid
+
     context = {
         'online_count': online_staff.count(),
         'warning_count': alerts_count,
-        'recent_staff': online_staff.order_by('-last_update')[:4],
+        'recent_staff': recent_staff_qs,
         'active_alerts': active_alerts_query.order_by('-created_at')[:5],
         'critical_alerts_count': alerts_count,
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
@@ -62,17 +71,26 @@ def diploma_home(request):
 @login_required
 def personnel_list(request):
     """Список персоналу."""
-    employees = Employee.objects.all_with_device_status().annotate(
+    employees = list(Employee.objects.all_with_device_status().annotate(
         status_order=Case(
             When(device__is_active=True, then=Value(1)),
             When(device__is_active=False, then=Value(2)),
             default=Value(3),
             output_field=IntegerField()
         )
-    ).order_by('status_order', 'last_name', 'first_name')
+    ).order_by('status_order', 'last_name', 'first_name'))
+    
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+    for emp in employees:
+        emp.latest_location = None
+        if hasattr(emp, 'device') and emp.device.is_active:
+            last_log = emp.device.logs.order_by('-timestamp').first()
+            if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
+                emp.latest_location = last_log.connected_repeater.uid
+                
     return render(request, 'diploma/personnel.html', {
         'employees': employees,
-        'total_employees': employees.count()
+        'total_employees': len(employees)
     })
 
 
@@ -178,6 +196,26 @@ def dashboard_stats_api(request):
         'request': request  # Передаємо request для роботи `url` тега
     })
 
+    # Збираємо останніх активних працівників для віджета "Персонал у шахті"
+    recent_staff = Employee.objects.exclude(safety_status='OFF_SHIFT').order_by('-last_update')[:4]
+    recent_staff_data = []
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+    for emp in recent_staff:
+        location_uid = None
+        if hasattr(emp, 'device') and emp.device.is_active:
+            last_log = emp.device.logs.order_by('-timestamp').first()
+            if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
+                location_uid = last_log.connected_repeater.uid
+                
+        recent_staff_data.append({
+            'first_name': emp.first_name,
+            'last_name': emp.last_name,
+            'position': emp.get_position_display(),
+            'status': emp.safety_status,
+            'photo_url': emp.photo.url if emp.photo else None,
+            'location': location_uid
+        })
+
     return JsonResponse({
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
@@ -186,6 +224,7 @@ def dashboard_stats_api(request):
         'warning_count': warning_count,
         'new_alerts_count': new_alerts_count,
         'alerts_html': alerts_html, # Додаємо HTML до відповіді
+        'recent_staff': recent_staff_data,
     })
 
 def alert_telemetry_api(request, alert_id):
@@ -758,11 +797,19 @@ def personnel_status_api(request):
         statuses = {}
         # Отримуємо всі мобільні пристрої, прив'язані до працівників
         devices = MinerDevice.objects.filter(is_static=False, assigned_to__isnull=False)
+        recent_time = timezone.now() - timezone.timedelta(minutes=5)
         
         for device in devices:
+            location_uid = None
+            if device.is_active:
+                last_log = device.logs.order_by('-timestamp').first()
+                if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
+                    location_uid = last_log.connected_repeater.uid
+                    
             statuses[device.mac_address] = {
                 'is_active': device.is_active,
-                'inventory_number': device.inventory_number
+                'inventory_number': device.inventory_number,
+                'location': location_uid
             }
             
         return JsonResponse({'device_statuses': statuses})

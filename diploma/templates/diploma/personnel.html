@@ -12,7 +12,7 @@
 <div class="personnel-header mt-4">
   <div class="personnel-title">
     <h2><i class="fas fa-users text-primary"></i> Облік Персоналу</h2>
-    <span>Загальна кількість співробітників: {{ employees.count }}</span>
+    <span>Загальна кількість співробітників: {{ total_employees }}</span>
   </div>
 
   <div class="controls-wrapper d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -67,6 +67,18 @@
       </div>
 
       <div class="emp-details">
+        <div class="emp-detail-item">
+          <span class="detail-label">Локація:</span>
+          <span class="detail-value location-value">
+            {% if emp.device and emp.device.is_active and emp.latest_location %}
+              <a href="{% url 'mine_map' %}?focus_ap={{ emp.latest_location }}" class="location-link" title="Показати на карті">
+                <i class="fas fa-map-marker-alt text-danger"></i> {{ emp.latest_location }}
+              </a>
+            {% else %}
+              <span class="text-muted">Невідомо</span>
+            {% endif %}
+          </span>
+        </div>
         <div class="emp-detail-item">
           <span class="detail-label">Жетон:</span>
           <span class="detail-value">{{ emp.badge_number }}</span>

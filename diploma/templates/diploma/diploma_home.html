@@ -90,7 +90,7 @@
       <div class="card-body">
         <div class="staff-list">
           {% for emp in recent_staff %}
-          <div class="staff-item">
+          <a href="{% url 'mine_map' %}{% if emp.latest_location %}?focus_ap={{ emp.latest_location }}{% endif %}" class="staff-item">
             <div class="staff-avatar">
               {% if emp.photo %}
               <img src="{{ emp.photo.url }}" alt="Avatar" class="staff-avatar-img">
@@ -100,7 +100,12 @@
             </div>
             <div class="staff-info">
               <h4>{{ emp.first_name }} {{ emp.last_name }}</h4>
-              <p>{{ emp.get_position_display }}</p>
+              <p>
+                {{ emp.get_position_display }}
+                {% if emp.latest_location %}
+                | <span class="text-info staff-location-text"><i class="fas fa-map-marker-alt"></i> {{ emp.latest_location }}</span>
+                {% endif %}
+              </p>
               {% if emp.safety_status == 'OK' %}
               <span class="staff-status online">Норма</span>
               {% elif emp.safety_status == 'WARNING' %}
@@ -111,7 +116,7 @@
               <span class="staff-status offline">Офлайн</span>
               {% endif %}
             </div>
-          </div>
+          </a>
           {% empty %}
           <p class="text-muted text-center py-3">Наразі в шахті немає працівників.</p>
           {% endfor %}

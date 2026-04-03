@@ -218,8 +218,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isCurrentlyActive = statusDiv.classList.contains('status-active');
                 const shouldBeActive = statusInfo.is_active;
 
-                // Оновлюємо тільки якщо статус змінився
-                if (isCurrentlyActive !== shouldBeActive) {
+                const locationValue = card.querySelector('.location-value');
+                const currentLocationStr = locationValue ? locationValue.textContent.trim() : '';
+                const newLocationUID = statusInfo.location || 'Невідомо';
+                
+                const locationChanged = shouldBeActive && (!currentLocationStr.includes(newLocationUID));
+
+                // Оновлюємо якщо змінився статус або локація
+                if (isCurrentlyActive !== shouldBeActive || locationChanged) {
                     statusDiv.classList.add('updating'); // Додаємо клас для анімації
 
                     // Через невеликий проміжок часу оновлюємо класи та текст
@@ -229,11 +235,21 @@ document.addEventListener('DOMContentLoaded', function() {
                             statusDot.className = 'status-dot dot-active';
                             statusSpan.textContent = statusInfo.inventory_number;
                             statusDiv.title = '';
+                            
+                            if (locationValue) {
+                                locationValue.innerHTML = statusInfo.location ? 
+                                    `<a href="/diploma/mine_map/?focus_ap=${statusInfo.location}" class="location-link" title="Показати на карті"><i class="fas fa-map-marker-alt text-danger"></i> ${statusInfo.location}</a>` : 
+                                    '<span class="text-muted">Невідомо</span>';
+                            }
                         } else {
                             statusDiv.className = 'device-status status-device-inactive';
                             statusDot.className = 'status-dot dot-device-inactive';
                             statusSpan.textContent = `${statusInfo.inventory_number} (Неактивний)`;
                             statusDiv.title = 'Пристрій неактивний';
+                            
+                            if (locationValue) {
+                                locationValue.innerHTML = '<span class="text-muted">Невідомо</span>';
+                            }
                         }
                         statusDiv.classList.remove('updating');
                     }, 500);
