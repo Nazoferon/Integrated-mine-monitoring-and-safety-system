@@ -159,7 +159,7 @@
             <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
             <td>
               <div class="telemetry-online live-telemetry">
-                <span class="text-warning"><i class="fas fa-wind"></i> <span class="sim-gas">{{ item.latest_log.gas_level|default:"--" }}</span> ppm</span> | 
+                <span class="text-warning"><i class="fas fa-wind"></i> <span class="sim-gas">{{ item.latest_log.gas_level|default:"--" }}</span> LEL</span> | 
                 <span class="text-info"><i class="fas fa-temperature-half"></i> <span class="sim-temp">{{ item.latest_log.temperature|default:"--" }}</span>°C</span>
               </div>
               <div class="telemetry-offline">

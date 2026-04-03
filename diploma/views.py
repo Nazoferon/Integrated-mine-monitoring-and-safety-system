@@ -280,11 +280,24 @@ def reports_data_api(request):
             status_classes = {'RESOLVED': ('bg-success', 'Вирішено', 'text-muted'), 'IN_PROGRESS': ('bg-warning text-dark', 'В роботі', 'text-warning')}
             s_badge, s_text, e_class = status_classes.get(alert.status, ('bg-danger', 'Нова', 'text-danger'))
                 
+            # Відображення локації з репітера, якщо він є
+            location = alert.connected_repeater.uid if alert.connected_repeater else (alert.location_label or 'Невідомо')
+            
+            # Додаємо коментарі диспетчера та хто закрив тривогу
+            notes_html = ""
+            if alert.rescue_notes or alert.resolved_by:
+                dispatcher_name = alert.resolved_by.get_full_name() or alert.resolved_by.username if alert.resolved_by else ""
+                notes_text = f"Заходи: {alert.rescue_notes}" if alert.rescue_notes else ""
+                resolver_text = f"Диспетчер: {dispatcher_name}" if dispatcher_name else ""
+                combined_notes = " | ".join(filter(None, [resolver_text, notes_text]))
+                if combined_notes:
+                    notes_html = f'<div class="dispatcher-notes"><i class="fas fa-comment-dots"></i> {combined_notes}</div>'
+
             table_rows.append({
                 'date': alert.created_at.strftime('%Y-%m-%d %H:%M'),
                 'event_class': e_class,
-                'event_text': f'<i class="fas fa-exclamation-triangle"></i> {alert.reason}',
-                'location': alert.location_label or 'Невідомо',
+                'event_text': f'<i class="fas fa-exclamation-triangle"></i> {alert.reason}{notes_html}',
+                'location': location,
                 'person': f"{alert.employee.last_name} {alert.employee.first_name[0]}. ({alert.device.inventory_number})" if alert.employee and alert.device else '---',
                 'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
             })

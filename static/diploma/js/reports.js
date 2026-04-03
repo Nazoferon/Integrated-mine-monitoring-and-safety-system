@@ -308,5 +308,22 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const exportPdfBtn = document.getElementById('exportPdfBtn');
-    if (exportPdfBtn) exportPdfBtn.addEventListener('click', handlePrintAndPdf);
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', () => {
+            const printDate = document.getElementById('printDateGenerated');
+            if (printDate) printDate.innerText = new Date().toLocaleString('uk-UA');
+            handlePrintAndPdf();
+        });
+    }
+
+    // --- АВТОМАТИЧНА ЗМІНА ТЕМИ ГРАФІКІВ ДЛЯ ДРУКУ ---
+    window.addEventListener('beforeprint', () => {
+        Chart.defaults.color = '#000'; // Чорний текст для PDF
+        mainChart.update(); doughnutChart.update();
+    });
+
+    window.addEventListener('afterprint', () => {
+        Chart.defaults.color = '#888'; // Повертаємо сірий для сайту
+        mainChart.update(); doughnutChart.update();
+    });
 });

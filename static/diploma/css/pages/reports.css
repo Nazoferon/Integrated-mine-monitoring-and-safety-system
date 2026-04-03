@@ -71,6 +71,15 @@
     font-weight: 600;
 }
 
+/* Стилі для коментарів диспетчера (Times New Roman 14) */
+.dispatcher-notes {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 6px;
+    white-space: normal;
+}
+
 /* --- МОБІЛЬНА АДАПТИВНІСТЬ ДЛЯ ЗВІТІВ --- */
 @media (max-width: 768px) {
     .eq-header .d-flex {
@@ -136,12 +145,28 @@
     
     /* Прибираємо бейджі, робимо просто текстом */
     .badge { border: 1px solid #000; color: #000 !important; background: transparent !important; }
+
+    /* Робимо коментарі диспетчера чорними на друці */
+    .dispatcher-notes { color: #333 !important; }
     
     /* Ставимо графіки пліч-о-пліч */
-    #chartsRow { display: flex !important; flex-direction: row !important; page-break-inside: avoid; }
-    #chartsRow .col-md-8 { width: 60% !important; }
-    #chartsRow .col-md-4 { width: 40% !important; }
+    #chartsRow { display: flex !important; flex-direction: row !important; page-break-inside: avoid; margin-bottom: 20px !important; }
+    #chartsRow .col-md-8 { width: 65% !important; padding-right: 10px !important; }
+    #chartsRow .col-md-4 { width: 35% !important; padding-left: 10px !important; }
+    
+    .chart-container { height: 250px !important; } /* Фіксуємо висоту графіків для PDF */
+    
+    /* Захист від розриву рядків таблиці на дві сторінки */
+    .table-responsive { overflow: visible !important; }
+    .tech-table tr { page-break-inside: avoid; page-break-after: auto; }
+    .tech-table { page-break-inside: auto; }
     
     /* Фікс позиціонування на аркуші */
-    .dashboard-main { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important;}
+    .dashboard-main { width: 100%; padding: 0 !important; margin: 0 !important; display: block !important; }
+    
+    /* Блок підписів в кінці */
+    .print-signature-block {
+        margin-top: 40px !important;
+        page-break-inside: avoid;
+    }
 }

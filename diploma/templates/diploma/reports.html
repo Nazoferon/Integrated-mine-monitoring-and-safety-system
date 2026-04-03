@@ -135,13 +135,25 @@
                 </tr>
                 <tr class="tech-row">
                     <td>2026-03-20 22:45</td>
-                    <td class="text-danger"><i class="fas fa-wind"></i> Перевищення CO (55 ppm)</td>
+                    <td class="text-danger"><i class="fas fa-wind"></i> Перевищення CO (55 LEL)</td>
                     <td>Штрек 2</td>
                     <td>Датчик SENS-08</td>
                     <td><span class="badge bg-success">Вирішено</span></td>
                 </tr>
             </tbody>
         </table>
+    </div>
+
+    <!-- Блок підписів (видимий тільки при друці PDF) -->
+    <div class="print-only-block border-top print-signature-block text-dark">
+        <div class="d-flex justify-content-between pt-3">
+            <div>
+                <p class="mb-1"><strong>Звіт сформував(ла):</strong> Диспетчер _________________</p>
+            </div>
+            <div>
+                <p class="mb-1"><strong>Дата формування:</strong> <span id="printDateGenerated"></span></p>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

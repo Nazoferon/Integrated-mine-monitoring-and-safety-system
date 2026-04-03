@@ -123,7 +123,7 @@
         <span class="data-label">Рівень CO (Газ):</span>
         <span class="data-value {% if telemetry.gas_level > 250 %}text-danger{% else %}text-success{% endif %}"
           data-type="gas">
-          {% if telemetry %}{{ telemetry.gas_level }} ppm{% else %}0 ppm{% endif %}
+          {% if telemetry %}{{ telemetry.gas_level }} LEL{% else %}0 LEL{% endif %}
         </span>
       </div>
 
