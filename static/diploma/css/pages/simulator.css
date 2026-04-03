@@ -99,14 +99,44 @@
     color: white;
 }
 
+.btn-cancel-sos {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+.btn-cancel-sos:hover {
+    background: #10b981;
+    color: white;
+}
+
+.btn-auto-ping {
+    background: rgba(138, 99, 210, 0.1);
+    border: 1px solid rgba(138, 99, 210, 0.3);
+    color: #8a63d2;
+}
+.btn-auto-ping:hover {
+    background: #8a63d2;
+    color: white;
+}
+
 .sim-status-text {
     font-size: 13px;
     margin-top: 20px;
     padding: 10px;
     background: rgba(0,0,0,0.3);
     border-radius: 6px;
-    color: #9ca3af;
-    border: 1px solid rgba(255,255,255,0.05);
+    display: none;
+}
+.sim-status-text.show {
+    display: block;
+}
+.sim-status-text.error {
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.sim-status-text.success {
+    color: #4dabf7;
+    border: 1px solid rgba(77, 171, 247, 0.3);
 }
 
 @media (max-width: 768px) {

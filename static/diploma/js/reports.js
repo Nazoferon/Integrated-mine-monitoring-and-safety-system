@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const doughnutChart = new Chart(ctxDoughnut, {
         type: 'doughnut',
         data: {
-            labels: ['Кнопка SOS', 'Падіння (Man Down)', 'Низький заряд', 'Газ (CO)'],
+            labels: ['Кнопка SOS', 'Падіння (Man Down)', 'Низький заряд', 'Газ (Метан)'],
             datasets: [{
                 data: [40, 15, 25, 20],
                 backgroundColor: [

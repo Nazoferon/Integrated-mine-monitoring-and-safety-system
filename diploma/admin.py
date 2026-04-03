@@ -48,6 +48,7 @@ class MinerDeviceAdmin(admin.ModelAdmin):
 class TelemetryLogAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'device', 'gas_level', 'is_sos')
     list_filter = ('is_sos', 'timestamp')
+    date_hierarchy = 'timestamp'
     # Логи не можна змінювати, тільки дивитись
     def has_add_permission(self, request): return False
     def has_change_permission(self, request, obj=None): return False

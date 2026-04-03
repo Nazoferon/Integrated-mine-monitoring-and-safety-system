@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(data => {
                     if (data.status === 'ok') {
                       const gasEl = document.querySelector('[data-type="gas"]');
-                      if (gasEl) gasEl.innerText = data.gas + " ppm";
+                      if (gasEl) gasEl.innerText = data.gas + " % LEL";
 
                       const tempEl = document.querySelector('[data-type="temp"]');
                       if (tempEl) tempEl.innerText = data.temp + " °C";

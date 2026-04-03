@@ -709,8 +709,8 @@
                                     <td class="text-end pe-3 fw-bold text-info"><i class="fas fa-map-marker-alt"></i> ${m.ap_id}</td>
                                 </tr>
                                 <tr class="miner-popup-row">
-                                    <td class="text-secondary align-middle ps-3"><small>ГАЗ (CO)</small></td>
-                                    <td class="text-end pe-3 ${gasClass}"><i class="fas fa-wind"></i> ${m.gas} ppm</td>
+                                    <td class="text-secondary align-middle ps-3"><small>МЕТАН (CH4)</small></td>
+                                    <td class="text-end pe-3 ${gasClass}"><i class="fas fa-fire"></i> ${m.gas} % LEL</td>
                                 </tr>
                                 <tr class="miner-popup-row">
                                     <td class="text-secondary align-middle ps-3"><small>БАТАРЕЯ</small></td>

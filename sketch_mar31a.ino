@@ -225,8 +225,8 @@ void sendTelemetry(bool isSos, String reason = "Normal") {
   // мак репітера
   doc["battery"] = getBatteryPct();
   // відсоток батареї пристрою
-  doc["gas_co"] = getCleanGas();
-  // газ
+  doc["gas_level"] = getCleanGas();
+  // метан
   doc["is_sos"] = isSos;
   // сигнал сос
   doc["reason"] = reason;
@@ -762,7 +762,7 @@ void handleSerialCommands() {
     Serial.println("%");
     Serial.print("Gas: ");
     Serial.print(getCleanGas());
-    Serial.println(" ppm");
+    Serial.println("% LEL");
     Serial.print("Temperature: ");
     Serial.print(cachedTemp);
     Serial.println(" C");
@@ -1196,7 +1196,7 @@ void loop() {
         drawVLine(92, 17, 51);
         // --- Колонка 1: CO газ ---
         display.setCursor(2, 18);
-        display.print(utf8ukr("ГАЗ CO"));
+        display.print(utf8ukr("МЕТАН"));
         display.setTextSize(2);
         display.setCursor(2, 27);
         if (gasVal < 10) display.print("  ");
@@ -1204,7 +1204,7 @@ void loop() {
         display.print(gasVal);
         display.setTextSize(1);
         display.setCursor(2, 44);
-        display.print("ppm");
+        display.print("%LEL");
         // --- Колонка 2: Температура + Вологість ---
         display.setCursor(51, 18);
         display.print(utf8ukr("ТЕМП"));
@@ -1282,7 +1282,7 @@ void loop() {
           display.print(getCleanGas());
           display.setTextSize(1);
           display.setCursor(80, 39);
-          display.print("ppm CO");
+          display.print("% LEL");
         }
 
         display.drawLine(0, 52, 127, 52, SSD1306_WHITE);

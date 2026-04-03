@@ -267,10 +267,10 @@ def reports_data_api(request):
         
         # 2. Дані для кругового графіка (Розподіл причин тривог)
         sos_count = alerts.filter(reason__icontains='SOS').count()
-        gas_count = alerts.filter(reason__icontains='CO').count()
-        other_count = alerts.exclude(reason__icontains='SOS').exclude(reason__icontains='CO').count()
+        gas_count = alerts.filter(Q(reason__icontains='CO') | Q(reason__icontains='CH4')).count()
+        other_count = alerts.exclude(reason__icontains='SOS').exclude(reason__icontains='CO').exclude(reason__icontains='CH4').count()
         
-        doughnut_labels = ['Кнопка SOS', 'Газ (CO)', 'Інше']
+        doughnut_labels = ['Кнопка SOS', 'Газ (Метан)', 'Інше']
         doughnut_values = [sos_count, gas_count, other_count]
         doughnut_colors = ['#ff4444', '#ff9800', '#ffd700']
         
@@ -313,7 +313,7 @@ def reports_data_api(request):
         warning_count = logs.filter(gas_level__gte=10, gas_level__lt=50).count()
         danger_count = logs.filter(gas_level__gte=50).count()
         
-        doughnut_labels = ['Норма (<10 ppm)', 'Увага (10-50 ppm)', 'Небезпека (>50 ppm)']
+        doughnut_labels = ['Норма (<10 % LEL)', 'Увага (10-50 % LEL)', 'Небезпека (>50 % LEL)']
         doughnut_values = [safe_count, warning_count, danger_count]
         doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
         
@@ -333,7 +333,7 @@ def reports_data_api(request):
             table_rows.append({
                 'date': log.timestamp.strftime('%Y-%m-%d %H:%M'),
                 'event_class': e_class,
-                'event_text': f'<i class="fas fa-wind"></i> Газ: {log.gas_level} ppm | Темп: {log.temperature}°C',
+                'event_text': f'<i class="fas fa-fire"></i> CH4: {log.gas_level} % LEL | Темп: {log.temperature}°C',
                 'location': location,
                 'person': person_info,
                 'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
@@ -525,8 +525,9 @@ def download_map(request):
 def simulator_view(request):
     """Прихована сторінка пульта керування для генерації даних."""
     employees = Employee.objects.filter(device__isnull=False)
+    static_sensors = MinerDevice.objects.filter(is_static=True)
     aps = InfrastructureDevice.objects.filter(is_active=True).order_by('uid')
-    return render(request, 'diploma/simulator.html', {'employees': employees, 'aps': aps})
+    return render(request, 'diploma/simulator.html', {'employees': employees, 'static_sensors': static_sensors, 'aps': aps})
 
 @csrf_exempt
 def api_receive_telemetry(request):
@@ -537,7 +538,7 @@ def api_receive_telemetry(request):
             mac_address = data.get('mac_address')
             ap_uid = data.get('ap_uid', '')
             battery = int(data.get('battery', 100))
-            gas_co = float(data.get('gas_co', 0))
+            gas_level = float(data.get('gas_level', data.get('gas_co', 0)))
             is_sos = data.get('is_sos', False)
             reason_text = data.get('reason', 'Normal')
             rssi = int(data.get('rssi', 0))  # Зчитуємо RSSI з JSON
@@ -576,12 +577,12 @@ def api_receive_telemetry(request):
             if not employee:
                 # Стаціонарні датчики не мають працівника, але можуть надсилати телеметрію.
                 if device.is_static:
-                    ap = InfrastructureDevice.objects.filter(wifi_bssid__iexact=ap_uid).first()
+                    ap = InfrastructureDevice.objects.filter(Q(wifi_bssid__iexact=ap_uid) | Q(uid__iexact=ap_uid)).first()
                     TelemetryLog.objects.create(
                         device=device,
                         connected_repeater=ap,
                         battery_level=battery,
-                        gas_level=gas_co,
+                        gas_level=gas_level,
                         wifi_signal_strength=rssi,
                         is_sos=is_sos,
                         temperature=temperature,
@@ -591,14 +592,14 @@ def api_receive_telemetry(request):
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
 
-            ap = InfrastructureDevice.objects.filter(wifi_bssid__iexact=ap_uid).first()
+            ap = InfrastructureDevice.objects.filter(Q(wifi_bssid__iexact=ap_uid) | Q(uid__iexact=ap_uid)).first()
 
             # 2. Завжди створюємо лог (диспетчеру потрібна історія вимірювань)
             TelemetryLog.objects.create(
                 device=device,
                 connected_repeater=ap,
                 battery_level=battery,
-                gas_level=gas_co,
+                gas_level=gas_level,
                 wifi_signal_strength=rssi,
                 is_sos=is_sos,
                 temperature=temperature,
@@ -625,11 +626,11 @@ def api_receive_telemetry(request):
             # 4. ЛОГІКА СТВОРЕННЯ ТРИВОГ (SecurityAlert)
             alert_reason = None
             
-            # 1. СПОЧАТКУ перевіряємо об'єктивні сенсори (Газ)
-            if gas_co >= 50:
-                alert_reason = f'КРИТИЧНИЙ рівень CO: {gas_co} ppm (Негайна евакуація!)'
-            elif gas_co > 17:
-                alert_reason = f'Перевищення ГДК CO: {gas_co} ppm'
+            # 1. СПОЧАТКУ перевіряємо об'єктивні сенсори (Газ Метан)
+            if gas_level >= 50:
+                alert_reason = f'КРИТИЧНИЙ рівень CH4: {gas_level}% LEL (Негайна евакуація!)'
+            elif gas_level > 17:
+                alert_reason = f'Перевищення ГДК CH4: {gas_level}% LEL'
             # 2. Якщо газ в нормі, але є сигнал is_sos, значить це дійсно ручний виклик
             elif is_sos:
                 if 'MANUAL' in reason_text.upper():
@@ -669,14 +670,10 @@ def api_receive_telemetry(request):
                     active_alert.save()
                 
                 # Ставимо візуальний статус працівнику
-                employee.safety_status = 'SOS' if (is_sos or gas_co >= 50) else 'WARNING'
+                employee.safety_status = 'SOS' if (is_sos or gas_level >= 50) else 'WARNING'
             else:
-                # Якщо все в нормі, перевіряємо, чи це не початок зміни
-                if reason_text == 'CHECKPOINT_ENTRY' and employee.safety_status == 'OFF_SHIFT':
-                    employee.safety_status = 'OK'
-                # Якщо працівник вже на зміні і все добре, залишаємо статус ОК
-                elif employee.safety_status != 'OFF_SHIFT':
-                    employee.safety_status = 'OK'
+                # Будь-який нормальний пакет даних від пристрою означає, що працівник на зміні
+                employee.safety_status = 'OK'
 
             employee.save()
             return JsonResponse({'status': 'success'})
