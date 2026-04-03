@@ -87,9 +87,7 @@
         </thead>
         <tbody>
           {% for item in lamps %}
-          {% comment %} Визначаємо статус батареї та числове значення для сортування {% endcomment %}
-          {% cycle 'high' 'med' 'low' 'high' as bat_status silent %}
-          <tr class="tech-row" data-battery="{% if bat_status == 'high' %}3{% elif bat_status == 'med' %}2{% else %}1{% endif %}"
+          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-battery="{% if not item.is_active %}0{% elif item.latest_log %}{{ item.latest_log.battery_level }}{% else %}0{% endif %}"
             data-status="{% if item.is_active %}1{% else %}0{% endif %}" data-firmware="{{ item.firmware_version }}">
             <td class="search-target font-weight-bold text-primary">
               <i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number|default:"Без номера" }}
@@ -104,21 +102,23 @@
               {% endif %}
             </td>
             <td>
-              <div class="battery-wrapper" title="Рівень заряду (Імітація)">
-                <div class="battery-level bat-{{ bat_status }}"></div>
+              <div class="telemetry-online">
+                <div class="battery-wrapper" title="Рівень заряду: {{ item.latest_log.battery_level|default:0 }}%">
+                  <div class="battery-level {% if item.latest_log.battery_level|default:0 >= 50 %}bat-high{% elif item.latest_log.battery_level|default:0 >= 20 %}bat-med{% else %}bat-low{% endif %}"></div>
+                </div>
+              </div>
+              <div class="telemetry-offline">
+                <span class="text-muted"><i class="fas fa-battery-empty"></i> Офлайн</span>
               </div>
             </td>
             <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
             <td>
-              {% if item.is_active %}
               <div class="status-indicator on">
                 <div class="status-dot"></div> Online
               </div>
-              {% else %}
               <div class="status-indicator off">
                 <div class="status-dot"></div> Offline
               </div>
-              {% endif %}
             </td>
           </tr>
           {% empty %}
@@ -139,6 +139,7 @@
             <th>Інв. Номер</th>
             <th>MAC Адреса</th>
             <th>Координати (X, Y)</th>
+            <th>Показники (Імітація)</th>
             <th class="sortable" title="Сортувати по прошивці" data-sort-by="firmware">
               Прошивка <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
             </th>
@@ -149,29 +150,35 @@
         </thead>
         <tbody>
           {% for item in sensors %}
-          <tr class="tech-row" data-status="{% if item.is_active %}1{% else %}0{% endif %}"
+          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}"
             data-firmware="{{ item.firmware_version }}">
             <td class="search-target font-weight-bold text-primary">
               <i class="fas fa-box text-secondary mr-2"></i> {{item.inventory_number }}
             </td>
             <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
             <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
+            <td>
+              <div class="telemetry-online live-telemetry">
+                <span class="text-warning"><i class="fas fa-wind"></i> <span class="sim-gas">{{ item.latest_log.gas_level|default:"--" }}</span> ppm</span> | 
+                <span class="text-info"><i class="fas fa-temperature-half"></i> <span class="sim-temp">{{ item.latest_log.temperature|default:"--" }}</span>°C</span>
+              </div>
+              <div class="telemetry-offline">
+                <span class="text-muted">Офлайн</span>
+              </div>
+            </td>
             <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
             <td>
-              {% if item.is_active %}
               <div class="status-indicator on">
                 <div class="status-dot"></div> Online
               </div>
-              {% else %}
               <div class="status-indicator off">
                 <div class="status-dot"></div> Offline
               </div>
-              {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center text-muted py-4">Датчики не знайдено</td>
+            <td colspan="6" class="text-center text-muted py-4">Датчики не знайдено</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -188,6 +195,7 @@
             <th>BSSID (MAC)</th>
             <th>Локація (Карта)</th>
             <th>Координати</th>
+            <th>Підключені клієнти</th>
             <th class="sortable" title="Сортувати по статусу" data-sort-by="status">
               Статус мережі <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
             </th>
@@ -195,7 +203,7 @@
         </thead>
         <tbody>
           {% for item in repeaters %}
-          <tr class="tech-row" data-status="{% if item.is_active %}1{% else %}0{% endif %}">
+          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-uid="{{ item.uid }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}">
             <td class="search-target font-weight-bold text-success">
               <i class="fas fa-broadcast-tower mr-2"></i> {{ item.uid|default:"Без ID" }}
             </td>
@@ -203,20 +211,27 @@
             <td class="search-target">{{ item.map_location.name }}</td>
             <td>{{ item.x }}, {{ item.y }}</td>
             <td>
-              {% if item.is_active %}
+              <div class="telemetry-online">
+                <span class="text-success clients-wrapper" style="cursor: help;" title="{% if item.clients_count > 0 %}Підключені:&#10;{{ item.clients_list }}{% else %}Немає підключень{% endif %}">
+                  <i class="fas fa-users"></i> Клієнтів: <span class="sim-clients">{{ item.clients_count|default:"0" }}</span>
+                </span>
+              </div>
+              <div class="telemetry-offline">
+                <span class="text-muted">Офлайн</span>
+              </div>
+            </td>
+            <td>
               <div class="status-indicator on">
                 <div class="status-dot"></div> Signal OK
               </div>
-              {% else %}
               <div class="status-indicator off">
                 <div class="status-dot"></div> No Signal
               </div>
-              {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center text-muted py-4">Репітери не завантажено з MineCAD</td>
+            <td colspan="6" class="text-center text-muted py-4">Репітери не завантажено з MineCAD</td>
           </tr>
           {% endfor %}
         </tbody>

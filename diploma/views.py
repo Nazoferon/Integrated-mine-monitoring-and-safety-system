@@ -79,14 +79,31 @@ def personnel_list(request):
 @login_required
 def equipment_list(request):
     """Парк обладнання (коногонки, датчики, репітери)."""
-    lamps = MinerDevice.objects.filter(
-        is_static=False).select_related('assigned_to')
-    sensors = MinerDevice.objects.filter(is_static=True)
-    repeaters = InfrastructureDevice.objects.select_related('map_location')
+    lamps = list(MinerDevice.objects.filter(is_static=False).select_related('assigned_to').order_by('-is_active', 'inventory_number'))
+    sensors = list(MinerDevice.objects.filter(is_static=True).order_by('-is_active', 'inventory_number'))
+    repeaters = list(InfrastructureDevice.objects.select_related('map_location').order_by('-is_active', 'uid'))
+
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+
+    for device in lamps + sensors:
+        device.latest_log = device.logs.order_by('-timestamp').first()
+
+    # Підрахунок клієнтів: беремо імена/номери з ОСТАННЬОГО логу
+    repeater_clients = {rep.id: [] for rep in repeaters}
+    for device in lamps + sensors:
+        if device.latest_log and device.latest_log.timestamp >= recent_time:
+            rep_id = device.latest_log.connected_repeater_id
+            if rep_id in repeater_clients:
+                name = f"{device.assigned_to.last_name} {device.assigned_to.first_name[0]}." if device.assigned_to else device.inventory_number
+                repeater_clients[rep_id].append(name)
+
+    for rep in repeaters:
+        rep.clients_count = len(repeater_clients[rep.id])
+        rep.clients_list = "\n".join(repeater_clients[rep.id])
 
     return render(request, 'diploma/equipment.html', {
         'lamps': lamps, 'sensors': sensors, 'repeaters': repeaters,
-        'total_devices': lamps.count() + sensors.count() + repeaters.count()
+        'total_devices': len(lamps) + len(sensors) + len(repeaters)
     })
 
 
@@ -357,6 +374,47 @@ def reports_data_api(request):
         return JsonResponse({'chart_main': {'labels': main_labels, 'values': main_values}, 'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 'table_rows': table_rows})
 
     return JsonResponse({'error': 'Невідомий тип звіту'}, status=400)
+
+
+@login_required
+def equipment_telemetry_api(request):
+    """API для отримання поточних показників обладнання (реальна телеметрія)."""
+    if request.method == 'GET':
+        device_telemetry = {}
+        devices = MinerDevice.objects.filter(is_active=True).select_related('assigned_to')
+        recent_time = timezone.now() - timezone.timedelta(minutes=5)
+        
+        repeater_clients = {}
+        
+        for device in devices:
+            last_log = device.logs.order_by('-timestamp').first()
+            if last_log:
+                device_telemetry[device.mac_address] = {
+                    'battery': last_log.battery_level,
+                    'gas': last_log.gas_level,
+                    'temp': last_log.temperature,
+                }
+                
+                # Рахуємо пристрій ТІЛЬКИ на його останньому репітері (якщо дані свіжі)
+                if last_log.timestamp >= recent_time and last_log.connected_repeater_id:
+                    rep_id = last_log.connected_repeater_id
+                    if rep_id not in repeater_clients:
+                        repeater_clients[rep_id] = []
+                    
+                    name = f"{device.assigned_to.last_name} {device.assigned_to.first_name[0]}." if device.assigned_to else device.inventory_number
+                    repeater_clients[rep_id].append(name)
+        
+        repeater_telemetry = {}
+        repeaters = InfrastructureDevice.objects.filter(is_active=True)
+        for rep in repeaters:
+            clients = repeater_clients.get(rep.id, [])
+            repeater_telemetry[rep.uid] = {
+                'clients': len(clients),
+                'clients_list': "\n".join(clients)
+            }
+
+        return JsonResponse({'devices': device_telemetry, 'repeaters': repeater_telemetry})
+    return JsonResponse({'error': 'GET method required'}, status=405)
 
 
 @csrf_exempt

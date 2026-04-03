@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/upload-map/', views.upload_map_api, name='upload_map_api'),
     path('api/reports-data/', views.reports_data_api, name='reports_data_api'),
     path('alert/<int:alert_id>/api/', views.alert_telemetry_api, name='alert_telemetry_api'),
+    path('api/equipment-telemetry/', views.equipment_telemetry_api, name='equipment_telemetry_api'),
     
     # API для симулятора
     path('api/telemetry/', views.api_receive_telemetry, name='api_telemetry'),

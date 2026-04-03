@@ -49,6 +49,31 @@
 .tech-table td:first-child { border-left: 1px solid #333; border-radius: 8px 0 0 8px; }
 .tech-table td:last-child { border-right: 1px solid #333; border-radius: 0 8px 8px 0; }
 
+/* Стан Офлайн */
+.tech-table tr.tech-row.offline-device {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+.tech-table tr.tech-row.offline-device:hover {
+    opacity: 0.8;
+}
+
+/* Видимість елементів залежно від статусу (Онлайн/Офлайн) */
+.tech-row .telemetry-offline,
+.tech-row .status-indicator.off {
+    display: none;
+}
+
+.tech-row.offline-device .telemetry-online,
+.tech-row.offline-device .status-indicator.on {
+    display: none !important;
+}
+
+.tech-row.offline-device .telemetry-offline,
+.tech-row.offline-device .status-indicator.off {
+    display: block !important;
+}
+
 /* --- ЕЛЕМЕНТИ ДИЗАЙНУ --- */
 .mac-address {
     font-family: 'Courier New', monospace; color: #a5d8ff;
@@ -80,7 +105,7 @@
     content: ''; position: absolute; right: -4px; top: 3px;
     width: 3px; height: 6px; background: #555; border-radius: 0 2px 2px 0;
 }
-.battery-level { height: 100%; border-radius: 1px; }
+.battery-level { height: 100%; border-radius: 1px; transition: width 1.5s ease-in-out; }
 .bat-high { background: #00ff88; width: 90%; }
 .bat-med { background: #ffd700; width: 50%; }
 .bat-low { background: #ff4444; width: 15%; animation: blink 1s infinite; }
