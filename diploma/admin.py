@@ -58,12 +58,15 @@ class SecurityAlertAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'employee', 'reason', 'is_resolved')
     list_filter = ('is_resolved', 'reason')
     date_hierarchy = 'created_at'
+    # Завжди показувати найновіші тривоги зверху
+    ordering = ('-created_at',)
 
 @admin.register(FirmwareUpdate)
 class FirmwareUpdateAdmin(admin.ModelAdmin):
     list_display = ('version', 'uploaded_at', 'is_active', 'description', 'binary_file')
     list_filter = ('is_active', 'uploaded_at')
     search_fields = ('version', 'description')
+    date_hierarchy = 'uploaded_at'
     readonly_fields = ('uploaded_at',)
     filter_horizontal = ('target_devices',)
 
@@ -77,6 +80,7 @@ class FirmwareUpdateAdmin(admin.ModelAdmin):
 class OTALogAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'device', 'version', 'status')
     list_filter = ('status', 'timestamp')
+    date_hierarchy = 'timestamp'
     search_fields = ('device__mac_address', 'device__inventory_number')
     readonly_fields = ('timestamp', 'device', 'version', 'status', 'message')
     # Логи не можна створювати або змінювати вручну

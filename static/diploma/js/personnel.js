@@ -136,13 +136,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 valB = b.querySelector('.emp-name').textContent.trim();
                 return currentSort.order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else if (field === 'status') {
-                // Призначаємо вагу для сортування за статусом: Active > Inactive > Unassigned
+                // Сортування за рівнем безпеки (SOS найвищий пріоритет)
                 const getStatusWeight = (cardEl) => {
-                    const statusDiv = cardEl.querySelector('.device-status');
-                    if (!statusDiv) return 0; // Без пристрою (найнижчий пріоритет)
-                    if (statusDiv.classList.contains('status-active')) return 3; // Активний
-                    if (statusDiv.classList.contains('status-device-inactive')) return 2; // Неактивний
-                    if (statusDiv.classList.contains('status-unassigned')) return 1; // Не прив'язаний
+                    const badge = cardEl.querySelector('.emp-status .badge');
+                    if (!badge) return 0;
+                    if (badge.classList.contains('bg-danger')) return 4; // SOS
+                    if (badge.classList.contains('bg-warning')) return 3; // WARNING
+                    if (badge.classList.contains('bg-success')) return 2; // OK
+                    if (badge.classList.contains('bg-secondary')) return 1; // Не на зміні
                     return 0; // Дефолт (Без пристрою, якщо немає інших класів)
                 };
                 

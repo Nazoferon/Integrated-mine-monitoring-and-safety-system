@@ -238,8 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = [];
         document.querySelectorAll('.tech-table tbody tr').forEach(row => {
             const cells = Array.from(row.querySelectorAll('td'));
-            // Пропускаємо рядок "Даних не знайдено", якщо в ньому менше колонок
-            if (cells.length < selectedIndices.length) return; 
+            // Пропускаємо рядок "Даних не знайдено" (який має colspan)
+            if (cells.length === 1 && cells[0].hasAttribute('colspan')) return; 
             
             const rowData = selectedIndices.map(index => cells[index].innerText.trim().replace(/\n/g, ' '));
             rows.push(rowData);

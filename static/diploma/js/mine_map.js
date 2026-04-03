@@ -198,34 +198,6 @@
             if (e.touches.length === 0) isDragging = false;
         });
 
-        // --- НОВЕ: Обробка кліків всередині спливаючого вікна (Popup) ---
-        popup.addEventListener('click', (e) => {
-            // 1. Якщо клікнули на конкретного шахтаря у списку
-            const minerItem = e.target.closest('.cluster-miner-item');
-            if (minerItem) {
-                const minerId = parseInt(minerItem.dataset.minerId);
-                const miner = activeMiners.find(m => m.id === minerId);
-                const cluster = currentClusters.find(c => c.ap_id === miner.ap_id);
-                
-                if (miner && cluster) {
-                    // Змінюємо тип вибраного об'єкта на 'miner'
-                    selectedObject = { type: 'miner', data: { miner: miner, cluster: cluster } };
-                    showPopup(); // Перемальовуємо віконце
-                }
-                return;
-            }
-
-            // 2. Якщо клікнули на кнопку "Назад до групи"
-            const backBtn = e.target.closest('.back-to-cluster');
-            if (backBtn) {
-                // Повертаємо тип вибраного об'єкта назад на 'cluster'
-                const cluster = selectedObject.data.cluster;
-                selectedObject = { type: 'cluster', data: cluster };
-                showPopup(); // Перемальовуємо віконце
-                return;
-            }
-        });
-
         // Зум до курсора
         canvas.addEventListener('wheel', e => {
             e.preventDefault();

@@ -250,6 +250,7 @@ class SecurityAlert(models.Model):
     ALERT_STATUS_CHOICES = [
         ('NEW', '🔴 Нова (Необроблена)'),
         ('IN_PROGRESS', '🟡 В процесі порятунку'),
+        ('WARNING', '🟠 Попередження (Системне)'),
         ('RESOLVED', '🟢 Вирішено (Безпечно)'),
     ]
 

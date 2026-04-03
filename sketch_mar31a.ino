@@ -68,17 +68,24 @@ const char* WIFI_API_ENDPOINT = "/diploma/api/wifi-networks/";
 const char* OTA_CHECK_ENDPOINT = "/diploma/api/ota/check/";
 const char* OTA_LOG_ENDPOINT = "/diploma/api/ota/log/";
 
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.2"
 
 // --- ТАЙМЕРИ ТА ІНТЕРВАЛИ ---
-#define DATA_SEND_INTERVAL_MS 10000UL
-#define NO_MOTION_TIMEOUT_MS 10000UL
-#define SOS_GRACE_PERIOD_MS 5000UL
-#define LONG_PRESS_SOS_MS 5000UL
-#define LONG_PRESS_CALIB_MS 2000UL
-#define WARMUP_DURATION_MS 120000UL
-#define SENSOR_READ_INTERVAL_MS 2000UL
-#define UI_UPDATE_INTERVAL_MS 200UL  // 5 FPS
+#define DATA_SEND_INTERVAL_MS 10000UL         // Інтервал відправки телеметрії (10 сек)
+#define NO_MOTION_TIMEOUT_MS 10000UL          // Час без руху до появи попередження (10 сек)
+#define SOS_GRACE_PERIOD_MS 5000UL            // Час після попередження до активації SOS (5 сек)
+#define LONG_PRESS_SOS_MS 5000UL              // Час утримання кнопки для виклику SOS (5 сек)
+#define LONG_PRESS_CALIB_MS 2000UL            // Час утримання кнопки для калібрування (2 сек)
+#define WARMUP_DURATION_MS 120000UL           // Час прогріву датчика газу MQ-7 (2 хв)
+#define SENSOR_READ_INTERVAL_MS 2000UL        // Інтервал опитування сенсорів (2 сек)
+#define UI_UPDATE_INTERVAL_MS 200UL           // Інтервал оновлення екрану (5 FPS)
+#define WIFI_SCAN_INTERVAL_MS 10000UL         // Інтервал фонового сканування Wi-Fi для роумінгу (10 сек)
+#define OFFLINE_CRITICAL_TIMEOUT_MS 120000UL  // Час без Wi-Fi до критичного напису на екрані (2 хв)
+#define OFFLINE_BEEP_INTERVAL_MS 5000UL       // Інтервал звукового сигналу при втраті зв'язку (5 сек)
+#define QUEUE_PROCESS_INTERVAL_MS 2000UL      // Інтервал відправки збережених офлайн-пакетів (2 сек)
+#define SOS_TELEMETRY_INTERVAL_MS 15000UL     // Інтервал відправки телеметрії в режимі SOS (15 сек)
+#define HTTP_TIMEOUT_MS 3000                  // Макс. час очікування відповіді від сервера (3 сек)
+#define BTN_CLICK_RESET_MS 1000UL             // Час скидання подвійних/потрійних кліків (1 сек)
 
 // --- ПІНИ ---
 #define PIN_MQ7_ANALOG 34
@@ -132,6 +139,8 @@ unsigned long btnPressStart = 0;
 unsigned long stateStartMs = 0;
 unsigned long lastSensorReadMs = 0;
 unsigned long lastUiUpdateMs = 0;
+unsigned long offlineStartMs = 0;
+bool lowBatteryAlertSent = false;
 
 int btnClicks = 0;
 unsigned long lastClickMs = 0;
@@ -249,7 +258,7 @@ void sendTelemetry(bool isSos, String reason = "Normal") {
   }
 
   HTTPClient http;
-  http.setTimeout(3000);  // таймаут щоб не зависати
+  http.setTimeout(HTTP_TIMEOUT_MS);  // таймаут щоб не зависати
   http.begin(String(SERVER_ADDRESS) + TELEMETRY_ENDPOINT);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(json);
@@ -268,7 +277,7 @@ void processTelemetryQueue() {
 
   String json = telemetryQueue.front();
   HTTPClient http;
-  http.setTimeout(3000);
+  http.setTimeout(HTTP_TIMEOUT_MS);
   http.begin(String(SERVER_ADDRESS) + TELEMETRY_ENDPOINT);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(json);
@@ -310,7 +319,7 @@ void updateButton() {
   }
 
   // Скидання лічильника кліків через 1 секунду бездіяльності
-  if (millis() - lastClickMs > 1000) btnClicks = 0;
+  if (millis() - lastClickMs > BTN_CLICK_RESET_MS) btnClicks = 0;
   // 3 кліки — скасування SOS або попередження нерухомості
   if (btnClicks >= 3) {
     if (currentState == SOS_MODE || immobilityWarning) {
@@ -484,7 +493,7 @@ void loadNetworksFromPrefs() {
 void fetchKnownNetworks() {
   if (WiFi.status() != WL_CONNECTED) return;
   HTTPClient http;
-  http.setTimeout(5000);
+  http.setTimeout(HTTP_TIMEOUT_MS);
   http.begin(String(SERVER_ADDRESS) + WIFI_API_ENDPOINT);
   int httpCode = http.GET();
   if (httpCode == HTTP_CODE_OK) {
@@ -521,7 +530,7 @@ void checkFirmwareUpdate() {
 
   Serial.println("Checking for OTA updates...");
   HTTPClient http;
-  http.setTimeout(5000);
+  http.setTimeout(HTTP_TIMEOUT_MS);
   String url = String(SERVER_ADDRESS) + OTA_CHECK_ENDPOINT + "?mac=" + WiFi.macAddress() + "&version=" + String(FIRMWARE_VERSION);
   http.begin(url);
   int httpCode = http.GET();
@@ -564,7 +573,7 @@ void checkFirmwareUpdate() {
 
           // --- ВІДПРАВКА СТАТУСУ ПОМИЛКИ НА СЕРВЕР ---
           HTTPClient logHttp;
-          logHttp.setTimeout(3000);
+          logHttp.setTimeout(HTTP_TIMEOUT_MS);
           logHttp.begin(String(SERVER_ADDRESS) + OTA_LOG_ENDPOINT);
           logHttp.addHeader("Content-Type", "application/json");
           StaticJsonDocument<256> logDoc;
@@ -855,19 +864,14 @@ void loop() {
 
   // --- ОБРОБКА ЧЕРГИ ТЕЛЕМЕТРІЇ ---
   // Відправляємо по 1 збереженому повідомленню кожні 2 секунди
-  if (WiFi.status() == WL_CONNECTED && !telemetryQueue.empty() && millis() - lastQueueProcessMs > 2000) {
+  if (WiFi.status() == WL_CONNECTED && !telemetryQueue.empty() && millis() - lastQueueProcessMs > QUEUE_PROCESS_INTERVAL_MS) {
     processTelemetryQueue();
     lastQueueProcessMs = millis();
   }
 
-  // --- WI-FI ROAMING ТА РЕКОННЕКТ ---
-  if ((currentState == READY || currentState == SOS_MODE) && millis() - lastWifiScanMs > 10000UL) {
-    if (WiFi.status() != WL_CONNECTED) {
-      wifiScanActive = false;
-      WiFi.scanDelete();
-      currentState = CONNECT_CHECKPOINT;
-      return;  // Перериваємо loop, щоб почати з нового стану
-    } else if (!wifiScanActive) {
+  // --- WI-FI ROAMING ТА РЕКОННЕКТ (ФОНОВИЙ РЕЖИМ БЕЗ БЛОКУВАННЯ UI) ---
+  if ((currentState == READY || currentState == SOS_MODE) && millis() - lastWifiScanMs > WIFI_SCAN_INTERVAL_MS) {
+    if (!wifiScanActive) {
       WiFi.scanNetworks(true);
       // асинхронне сканування
       wifiScanActive = true;
@@ -904,26 +908,15 @@ void loop() {
       }
 
       String currentBssid = WiFi.BSSIDstr();
-      if (bestSsid != "" && bestBssid != currentBssid) {
-        if (bestRssi > WiFi.RSSI() + 10 || WiFi.RSSI() < -75) {
-          Serial.println("Roaming: " + currentBssid + " -> " + bestBssid + " (" + bestSsid + ")");
+      bool isDisconnected = (WiFi.status() != WL_CONNECTED);
+      
+      if (bestSsid != "") {
+        if (isDisconnected || (bestBssid != currentBssid && (bestRssi > WiFi.RSSI() + 10 || WiFi.RSSI() < -75))) {
+          Serial.println("Roaming/Reconnecting: " + currentBssid + " -> " + bestBssid + " (" + bestSsid + ")");
           WiFi.disconnect();
           WiFi.begin(bestSsid.c_str(), bestPass.c_str());
-
-          int attempts = 0;
-          while (WiFi.status() != WL_CONNECTED && attempts < 10) {
-            unsigned long t = millis();
-            while (millis() - t < 500) {
-              handleBuzzer();
-              delay(10);
-            }
-            attempts++;
-          }
-
-          if (WiFi.status() == WL_CONNECTED) {
-            sendTelemetry(isSosActive, isSosActive ? activeSosReason : "ROAMING_SUCCESS");
-            lastDataSendMs = millis();
-          }
+          // ПРИБРАНО БЛОКУЮЧИЙ ЦИКЛ! Екран не закриватиметься.
+          // ESP32 підключиться у фоні, продовжуючи збирати телеметрію в чергу.
         }
       }
 
@@ -1182,6 +1175,29 @@ void loop() {
           break;
         }
 
+        // --- ПЕРЕВІРКА БАТАРЕЇ ---
+        int bat = getBatteryPct();
+        if (bat <= 10 && !lowBatteryAlertSent) {
+          lowBatteryAlertSent = true;
+          sendTelemetry(false, "LOW_BATTERY_10");
+        } else if (bat > 15) {
+          lowBatteryAlertSent = false;
+        }
+
+        // --- ПЕРЕВІРКА ВТРАТИ ЗВ'ЯЗКУ (ОФЛАЙН) ---
+        if (WiFi.status() != WL_CONNECTED) {
+          if (offlineStartMs == 0) offlineStartMs = millis();
+          // Якщо офлайн більше 2 хвилин
+          if (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS) {
+            // Пікаємо кожні 5 секунд щоб шахтар звернув увагу на екран
+            if ((millis() - offlineStartMs) % OFFLINE_BEEP_INTERVAL_MS < 50) {
+              triggerBeep(2, 50); 
+            }
+          }
+        } else {
+          offlineStartMs = 0;
+        }
+
         if (!needUiUpdate) break;
 
         display.clearDisplay();
@@ -1227,7 +1243,15 @@ void loop() {
         display.setTextSize(1);
 
         display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
-        if (immobilityWarning) {
+        
+        // Пріоритет виводу повідомлень унизу екрану
+        if (offlineStartMs > 0 && (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS)) {
+          if ((millis() / 500) % 2 == 0) {
+            display.setCursor(2, 55); display.print(utf8ukr("!! ВТРАТА ЗВ'ЯЗКУ !!"));
+          } else {
+            display.setCursor(2, 55); display.print(utf8ukr("ПОВЕРНІТЬСЯ НА БАЗУ!"));
+          }
+        } else if (immobilityWarning) {
           if ((millis() / 400) % 2 == 0) {
             display.setCursor(2, 55);
             display.print(utf8ukr("!! РУХАЙТЕСЯ !!"));
@@ -1291,7 +1315,7 @@ void loop() {
         display.display();
 
         // Телеметрія SOS кожні 15 секунд
-        if (millis() - lastDataSendMs > 15000) sendTelemetry(true, activeSosReason);
+        if (millis() - lastDataSendMs > SOS_TELEMETRY_INTERVAL_MS) sendTelemetry(true, activeSosReason);
         break;
       }
 

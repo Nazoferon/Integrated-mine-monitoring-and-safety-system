@@ -70,7 +70,8 @@ document.addEventListener('DOMContentLoaded', function () {
                       const repEl = document.querySelector('[data-type="repeater"]');
                       if (repEl) repEl.innerHTML = `<i class="fas fa-wifi text-success"></i> ${data.repeater}`;
                   }
-                });
+                })
+                .catch(err => console.warn('Очікування мережі для оновлення телеметрії...'));
         }, 3000);
     }
 });
