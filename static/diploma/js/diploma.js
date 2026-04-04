@@ -11,7 +11,6 @@ class DashboardApp {
             isMobileMenuOpen: false,
             isMobileView: false,
             notifications: [],
-            realTimeData: {},
             isOnline: true
         };
 
@@ -356,8 +355,6 @@ class DashboardApp {
         
         const statusName = statusMap[type] || type;
         console.log('📊 Перегляд статусу:', statusName);
-        
-        this.showNotification(`Перегляд: ${statusName}`, 'info');
     }
 
     /**
@@ -368,22 +365,14 @@ class DashboardApp {
         const message = alertElement.querySelector('p')?.textContent || '';
         
         console.log(`🔔 Деталі сповіщення [${type}]:`, title, '-', message);
-        
-        // Тут можна реалізувати відкриття модального вікна з деталями
-        this.showNotification(`Перегляд сповіщення: ${title}`, 'info');
     }
 
     /**
      * Показати всіх співробітників
      */
     showAllStaff() {
-        console.log('👥 Перегляд всіх співробітників');
-        this.showNotification('Завантаження списку співробітників...', 'info');
-        
-        // Симуляція завантаження даних
-        setTimeout(() => {
-            this.showNotification('Список співробітників завантажено', 'success');
-        }, 1000);
+        console.log('👥 Перехід до списку персоналу');
+        window.location.href = '/diploma/personnel/';
     }
 
     /**
@@ -482,33 +471,14 @@ class DashboardApp {
      */
     async loadInitialData() {
         try {
-            // Симуляція завантаження даних
-            await this.delay(1000);
-            
-            this.state.realTimeData = {
-                temperature: 25.5,
-                humidity: 60,
-                methane: 0.8,
-                oxygen: 98.2,
-                onlineStaff: 24,
-                activeAlerts: 3
-            };
-            
-            this.updateDashboardData();
+            // Одразу завантажуємо реальні дані з сервера
+            await this.updateMetrics();
             this.dispatchEvent('data:loaded');
             
         } catch (error) {
             console.error('Помилка завантаження даних:', error);
-            this.showNotification('Помилка завантаження даних', 'error');
+            this.showNotification('Помилка завантаження даних з сервера', 'error');
         }
-    }
-
-    /**
-     * Оновлення даних на дашборді
-     */
-    updateDashboardData() {
-        // Оновлення метрик
-        this.updateMetrics();
     }
 
     /**
@@ -655,49 +625,7 @@ class DashboardApp {
         if (!this.state.isOnline) return;
         
         await this.updateMetrics();
-        this.simulateNewNotifications();
         this.dispatchEvent('data:updated');
-    }
-
-    /**
-     * Симуляція нових сповіщень
-     */
-    simulateNewNotifications() {
-        if (Math.random() < 0.2) { // 20% ймовірність нового сповіщення
-            const types = ['info', 'warning', 'critical'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            
-            this.addNewNotification(type);
-        }
-    }
-
-    /**
-     * Додавання нового сповіщення
-     */
-    addNewNotification(type) {
-        const notifications = {
-            info: [
-                'Планове оновлення системи',
-                'Нові дані доступні для аналізу',
-                'Система працює у штатному режимі'
-            ],
-            warning: [
-                'Підвищений рівень пилу в секторі 2',
-                'Зниження типу в системі вентиляції',
-                'Необхідна перевірка обладнання'
-            ],
-            critical: [
-                'Критичний рівень метану!',
-                'Аварійне відключення живлення',
-                'Евакуація персоналу!'
-            ]
-        };
-        
-        const messages = notifications[type];
-        const message = messages[Math.floor(Math.random() * messages.length)];
-        
-        this.showNotification(message, type);
-        this.dispatchEvent('notification:new', { type, message });
     }
 
     /**

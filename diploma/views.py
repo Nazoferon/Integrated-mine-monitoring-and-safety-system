@@ -221,8 +221,13 @@ def dashboard_stats_api(request):
             last_log = TelemetryLog.objects.filter(device=emp.device).order_by('-timestamp').first()
             rep = last_log.connected_repeater if last_log else None
             
-            # Якщо остання локація Руддвір (AP-MAIN) - ігноруємо (не створюємо тривогу)
             if rep and rep.uid == 'AP-MAIN':
+                # ЛОГІКА ЗАВЕРШЕННЯ ЗМІНИ: Якщо пристрій зник на базі - зміна закінчена!
+                emp.safety_status = 'OFF_SHIFT'
+                emp.save()
+                if emp.device:
+                    emp.device.is_active = False
+                    emp.device.save()
                 continue
                 
             SecurityAlert.objects.create(

@@ -10,7 +10,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--timeout',
             type=int,
-            default=60,  # За замовчуванням 60 хвилин
+            default=720,  # За замовчуванням 12 годин (720 хв) як резервне очищення
             help='Set the inactivity timeout in minutes for devices.'
         )
 
@@ -33,6 +33,19 @@ class Command(BaseCommand):
             # Якщо логів немає, або останній лог був раніше, ніж наш поріг
             if not last_log or last_log.timestamp < cutoff_time:
                 devices_to_set_inactive.append(device.id)
+                # Створюємо "прощальний" системний запис телеметрії (примусове закриття)
+                TelemetryLog.objects.create(
+                    device=device,
+                    connected_repeater=last_log.connected_repeater if last_log else None,
+                    wifi_signal_strength=0,
+                    battery_level=0,
+                    gas_level=last_log.gas_level if last_log else 0,
+                    temperature=last_log.temperature if last_log else 0,
+                    humidity=last_log.humidity if last_log else 0,
+                    is_moving=False,
+                    sos_reason="SYSTEM_AUTO_DEVICE_OFF"
+                )
+                
                 self.stdout.write(self.style.WARNING(
                     f"Device {device.inventory_number} is inactive. Last seen: {last_log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if last_log else 'never'}. Setting to inactive."
                 ))

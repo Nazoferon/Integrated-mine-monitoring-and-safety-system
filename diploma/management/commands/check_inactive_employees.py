@@ -10,7 +10,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--timeout',
             type=int,
-            default=30,  # За замовчуванням 30 хвилин
+            default=720,  # За замовчуванням 12 годин (720 хв) як резервне очищення
             help='Set the inactivity timeout in minutes.'
         )
 
@@ -36,6 +36,19 @@ class Command(BaseCommand):
             # Якщо логів немає, або останній лог був раніше, ніж наш поріг
             if not last_log or last_log.timestamp < cutoff_time:
                 employees_to_set_offline.append(employee.id)
+                # Створюємо "прощальний" системний запис телеметрії (примусове закриття)
+                TelemetryLog.objects.create(
+                    device=employee.device,
+                    connected_repeater=last_log.connected_repeater if last_log else None,
+                    wifi_signal_strength=0,
+                    battery_level=0,
+                    gas_level=last_log.gas_level if last_log else 0,
+                    temperature=last_log.temperature if last_log else 0,
+                    humidity=last_log.humidity if last_log else 0,
+                    is_moving=False,
+                    sos_reason="SYSTEM_AUTO_OFF_SHIFT"
+                )
+                
                 self.stdout.write(self.style.WARNING(
                     f"Employee {employee} is inactive. Last seen: {last_log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if last_log else 'never'}. Setting to OFF_SHIFT."
                 ))
