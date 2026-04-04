@@ -69,7 +69,8 @@
                     }
                 }
             })
-            .catch(err => console.error("Помилка завантаження телеметрії:", err));
+                .catch(err => console.error("Помилка завантаження телеметрії:", err))
+                .finally(() => setTimeout(fetchActiveMiners, 3000));
     }
 
     let isAnimating = false;
@@ -245,7 +246,6 @@
 
         // --- НОВЕ: Запускаємо цикл реального часу ---
         fetchActiveMiners(); // Перший запит одразу при завантаженні
-        setInterval(fetchActiveMiners, 3000); // Потім кожні 3 секунди
         
         // Автоцентрування з невеликою затримкою, щоб CSS та Flexbox 
         // встигли сформувати правильні розміри canvas.width перед прорахунком

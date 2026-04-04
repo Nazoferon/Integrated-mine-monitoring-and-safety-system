@@ -259,9 +259,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             // Ігноруємо помилки fetch, щоб не засмічувати консоль при обриві з'єднання
+        } finally {
+            // Рекурсивний виклик тільки після завершення поточного запиту
+            setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
         }
     }
 
-    // Запускаємо періодичне оновлення
-    setInterval(updateDeviceStatuses, UPDATE_INTERVAL);
+    // Запускаємо перше оновлення
+    setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
 });

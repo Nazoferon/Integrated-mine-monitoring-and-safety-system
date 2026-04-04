@@ -201,7 +201,7 @@ CONTENT_SECURITY_POLICY = {
         ),
         'style-src': (
             "'self'",
-            # "'unsafe-inline'", 
+            "'unsafe-inline'", 
             'https://cdnjs.cloudflare.com',
             'https://fonts.googleapis.com',
             'https://cdn.jsdelivr.net'

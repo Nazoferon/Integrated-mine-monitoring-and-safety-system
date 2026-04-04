@@ -220,11 +220,13 @@ class EquipmentPage {
                 }
             } catch (error) {
                 console.error("Помилка оновлення телеметрії:", error);
+            } finally {
+                setTimeout(updateTelemetry, 5000);
             }
         };
 
-        // Запускаємо оновлення кожні 5 секунд
-        setInterval(updateTelemetry, 5000);
+        // Запускаємо перше оновлення
+        setTimeout(updateTelemetry, 5000);
     }
 }
 

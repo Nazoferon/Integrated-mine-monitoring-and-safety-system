@@ -48,31 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функція для показу повідомлень
     function showMessage(text, type = 'success') {
-        const messagesContainer = document.querySelector('.profile-messages') || document.createElement('div');
-        if (!messagesContainer.classList.contains('profile-messages')) {
-            messagesContainer.className = 'profile-messages';
-            document.body.appendChild(messagesContainer);
+        if (window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
+            window.dashboardApp.showNotification(text, type);
+        } else {
+            alert(text);
         }
-
-        const oldMessages = messagesContainer.querySelectorAll('.profile-message');
-        oldMessages.forEach(msg => msg.remove());
-
-        const message = document.createElement('div');
-        message.className = `profile-message ${type} show`;
-        message.innerHTML = `
-            <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i>
-            <span>${text}</span>
-        `;
-        messagesContainer.appendChild(message);
-
-        setTimeout(() => {
-            message.classList.remove('show');
-            setTimeout(() => {
-                if (message.parentNode) {
-                    message.parentNode.removeChild(message);
-                }
-            }, 300);
-        }, 3000);
     }
 
     // Підсвічування активних полів

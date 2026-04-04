@@ -487,7 +487,7 @@ class DashboardApp {
     async updateMetrics() {
         try {
             const response = await fetch('/diploma/api/dashboard-stats/');
-            if (!response.ok) return;
+            if (!response.ok) return null;
             
             const data = await response.json();
 
@@ -581,8 +581,11 @@ class DashboardApp {
                     window.globalAlarmInterval = null;
                 }
             }
+            
+            return data; // Повертаємо дані для інших скриптів
         } catch (error) {
             console.error('Помилка автоматичного оновлення показників:', error);
+            return null;
         }
     }
 
@@ -624,8 +627,10 @@ class DashboardApp {
     async updateRealTimeData() {
         if (!this.state.isOnline) return;
         
-        await this.updateMetrics();
-        this.dispatchEvent('data:updated');
+        const data = await this.updateMetrics();
+        if (data) {
+            this.dispatchEvent('data:updated', data); // Передаємо дані у подію
+        }
     }
 
     /**
