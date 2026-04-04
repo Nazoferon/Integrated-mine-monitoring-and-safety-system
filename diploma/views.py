@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.core.cache import cache
 import json
 
 from .forms import UserForm, ProfileForm
@@ -18,9 +19,14 @@ from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerD
 
 
 def get_active_map():
-    """Повертає актуальну карту шахти."""
-    return MineMap.objects.filter(name="Основний горизонт").first() or \
-        MineMap.objects.order_by('-updated_at').first()
+    """Повертає актуальну карту шахти з кешуванням."""
+    cache_key = 'active_mine_map'
+    map_obj = cache.get(cache_key)
+    if not map_obj:
+        map_obj = MineMap.objects.filter(name="Основний горизонт").first() or MineMap.objects.order_by('-updated_at').first()
+        if map_obj:
+            cache.set(cache_key, map_obj, 3600)  # Кешуємо на 1 годину
+    return map_obj
 
 # --- ОСНОВНІ СТОРІНКИ ---
 
@@ -44,13 +50,23 @@ def diploma_home(request):
 
     active_alerts_query = SecurityAlert.objects.filter(is_resolved=False)
     alerts_count = active_alerts_query.count()
+    
+    latest_log_subquery = TelemetryLog.objects.filter(
+        device__assigned_to=OuterRef('pk')
+    ).order_by('-timestamp').values('id')[:1]
 
-    recent_staff_qs = online_staff.select_related('device').order_by('-last_update')[:4]
+    recent_staff_qs = online_staff.select_related('device').annotate(
+        latest_log_id=Subquery(latest_log_subquery)
+    ).order_by('-last_update')[:4]
+    
+    log_ids = [emp.latest_log_id for emp in recent_staff_qs if emp.latest_log_id]
+    logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids).select_related('connected_repeater')}
+
     recent_time = timezone.now() - timezone.timedelta(minutes=5)
     for emp in recent_staff_qs:
         emp.latest_location = None
-        if hasattr(emp, 'device') and emp.device.is_active:
-            last_log = emp.device.logs.order_by('-timestamp').first()
+        if getattr(emp, 'device', None) and emp.device.is_active:
+            last_log = logs_dict.get(emp.device.id)
             if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
                 emp.latest_location = last_log.connected_repeater.uid
 
@@ -58,7 +74,7 @@ def diploma_home(request):
         'online_count': online_staff.count(),
         'warning_count': alerts_count,
         'recent_staff': recent_staff_qs,
-        'active_alerts': active_alerts_query.order_by('-created_at')[:5],
+        'active_alerts': active_alerts_query.select_related('employee', 'device', 'connected_repeater').order_by('-created_at')[:5],
         'critical_alerts_count': active_alerts_query.exclude(status='WARNING').count(),
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
@@ -203,40 +219,46 @@ def dashboard_stats_api(request):
     """API для автоматичного оновлення показників мікроклімату на головній сторінці."""
     # --- ПЕРЕВІРКА НА ВТРАТУ ЗВ'ЯЗКУ (ОФЛАЙН) ---
     three_mins_ago = timezone.now() - timezone.timedelta(minutes=3)
-    latest_time_subquery = TelemetryLog.objects.filter(
+    latest_log_subquery = TelemetryLog.objects.filter(
         device__assigned_to=OuterRef('pk')
-    ).order_by('-timestamp').values('timestamp')[:1]
+    ).order_by('-timestamp')
     
-    offline_emps = Employee.objects.exclude(safety_status='OFF_SHIFT').filter(
+    latest_time_subquery = latest_log_subquery.values('timestamp')[:1]
+    latest_id_subquery = latest_log_subquery.values('id')[:1]
+    
+    offline_emps = list(Employee.objects.exclude(safety_status='OFF_SHIFT').filter(
         device__isnull=False
     ).annotate(
-        last_seen=Subquery(latest_time_subquery)
-    ).filter(last_seen__lt=three_mins_ago)
+        last_seen=Subquery(latest_time_subquery),
+        latest_log_id=Subquery(latest_id_subquery)
+    ).filter(last_seen__lt=three_mins_ago))
     
-    for emp in offline_emps:
-        # Перевіряємо чи немає вже відкритої АБО закритої тривоги САМЕ ПРО ЦЕЙ інцидент
-        last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
-        has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
-        if not has_offline_alert:
-            last_log = TelemetryLog.objects.filter(device=emp.device).order_by('-timestamp').first()
-            rep = last_log.connected_repeater if last_log else None
-            
-            if rep and rep.uid == 'AP-MAIN':
-                # ЛОГІКА ЗАВЕРШЕННЯ ЗМІНИ: Якщо пристрій зник на базі - зміна закінчена!
-                emp.safety_status = 'OFF_SHIFT'
-                emp.save()
-                if emp.device:
-                    emp.device.is_active = False
-                    emp.device.save()
-                continue
+    if offline_emps:
+        offline_log_ids = [emp.latest_log_id for emp in offline_emps if emp.latest_log_id]
+        offline_logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=offline_log_ids).select_related('connected_repeater')}
+        
+        for emp in offline_emps:
+            last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
+            has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
+            if not has_offline_alert:
+                last_log = offline_logs_dict.get(emp.device_id)
+                rep = last_log.connected_repeater if last_log else None
                 
-            SecurityAlert.objects.create(
-                employee=emp, device=emp.device, connected_repeater=rep,
-                reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}", status='WARNING'
-            )
-            if emp.safety_status == 'OK':
-                emp.safety_status = 'WARNING'
-                emp.save()
+                if rep and rep.uid == 'AP-MAIN':
+                    emp.safety_status = 'OFF_SHIFT'
+                    emp.save()
+                    if getattr(emp, 'device', None):
+                        emp.device.is_active = False
+                        emp.device.save()
+                    continue
+                    
+                SecurityAlert.objects.create(
+                    employee=emp, device=emp.device, connected_repeater=rep,
+                    reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}", status='WARNING'
+                )
+                if emp.safety_status == 'OK':
+                    emp.safety_status = 'WARNING'
+                    emp.save()
 
     recent_log_ids = TelemetryLog.objects.order_by('-timestamp').values_list('id', flat=True)[:50]
     stats = TelemetryLog.objects.filter(id__in=recent_log_ids).aggregate(
@@ -250,20 +272,26 @@ def dashboard_stats_api(request):
     new_alerts_count = SecurityAlert.objects.filter(status='NEW').count()
     
     # --- НОВЕ: Рендеримо HTML для списку сповіщень ---
-    active_alerts = SecurityAlert.objects.filter(is_resolved=False).order_by('-created_at')[:5]
+    active_alerts = SecurityAlert.objects.filter(is_resolved=False).select_related('employee', 'device', 'connected_repeater').order_by('-created_at')[:5]
     alerts_html = render_to_string('diploma/_alert_list.html', {
         'active_alerts': active_alerts,
         'request': request  # Передаємо request для роботи `url` тега
     })
 
     # Збираємо останніх активних працівників для віджета "Персонал у шахті"
-    recent_staff = Employee.objects.exclude(safety_status='OFF_SHIFT').order_by('-last_update')[:4]
+    recent_staff = Employee.objects.exclude(safety_status='OFF_SHIFT').annotate(
+        latest_log_id=Subquery(latest_id_subquery)
+    ).select_related('device').order_by('-last_update')[:4]
+    
+    recent_staff_log_ids = [emp.latest_log_id for emp in recent_staff if emp.latest_log_id]
+    recent_logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=recent_staff_log_ids).select_related('connected_repeater')}
+
     recent_staff_data = []
     recent_time = timezone.now() - timezone.timedelta(minutes=5)
     for emp in recent_staff:
         location_uid = None
-        if hasattr(emp, 'device') and emp.device.is_active:
-            last_log = emp.device.logs.order_by('-timestamp').first()
+        if getattr(emp, 'device', None) and emp.device.is_active:
+            last_log = recent_logs_dict.get(emp.device.id)
             if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
                 location_uid = last_log.connected_repeater.uid
                 
@@ -552,6 +580,7 @@ def upload_map_api(request):
                 name="Основний горизонт")
             mine_map.map_data = data
             mine_map.save()
+            cache.delete('active_mine_map')
 
             devices = data.get('devices', [])
             if 'tunnels' in data:

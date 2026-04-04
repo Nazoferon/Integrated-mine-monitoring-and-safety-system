@@ -47,6 +47,11 @@ class MineMap(models.Model):
     map_data = models.JSONField(default=dict, verbose_name="JSON карти")
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.name
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.delete('active_mine_map')
 
 class InfrastructureDevice(models.Model):
     uid = models.CharField(max_length=50, unique=True, verbose_name="ID на карті")
