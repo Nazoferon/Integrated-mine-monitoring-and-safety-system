@@ -79,8 +79,9 @@ class InfrastructureDevice(models.Model):
                     min_dist = dist
                     closest_tunnel = t
 
-            # Якщо пристрій знаходиться дуже близько до лінії (напр. < 2 одиниць на карті)
-            if closest_tunnel and min_dist < 2:
+            # Збільшуємо радіус пошуку до 10 одиниць, оскільки координати 
+            # пристроїв можуть знаходитись трохи збоку від самої осі штреку
+            if closest_tunnel and min_dist < 10:
                 return closest_tunnel.get('name')
 
         return "Руддвір / База"
@@ -255,7 +256,7 @@ class SecurityAlert(models.Model):
     ]
 
     created_at = models.DateTimeField(auto_now_add=True)
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
     device = models.ForeignKey(MinerDevice, on_delete=models.CASCADE)
     
     # --- НОВЕ ПОЛЕ ДЛЯ РЕПІТЕРА ---
@@ -277,7 +278,9 @@ class SecurityAlert(models.Model):
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
-    def __str__(self): return f"SOS: {self.employee.last_name} ({self.status})"
+    def __str__(self): 
+        emp_name = self.employee.last_name if self.employee else "Стаціонарний датчик"
+        return f"SOS: {emp_name} ({self.status})"
 
 # --- 6. OTA ОНОВЛЕННЯ ПРОШИВКИ ---
 class FirmwareUpdate(models.Model):

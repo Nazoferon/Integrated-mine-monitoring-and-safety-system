@@ -19,6 +19,7 @@
 
     // --- НОВЕ: Масив працівників у шахті ---
     let activeMiners = [];
+    let dangerTunnels = [];
     let clickableMiners = [];
 
     let scale = 1.0;
@@ -38,6 +39,11 @@
         fetch(apiUrl)
             .then(res => res.json())
             .then(data => {
+                if (data.danger_tunnels) {
+                    dangerTunnels = data.danger_tunnels;
+                } else {
+                    dangerTunnels = [];
+                }
                 if (data.miners) {
                     activeMiners = data.miners; // Оновлюємо глобальний масив
 
@@ -57,7 +63,7 @@
                     draw(); // Перемальовуємо карту з новими координатами/статусами
                     
                     // --- НОВЕ: Запуск анімації мигання, якщо є тривога ---
-                    let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING');
+                    let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING') || dangerTunnels.length > 0;
                     if (needsAnimation && !isAnimating) {
                         animateAlerts();
                     }
@@ -68,13 +74,14 @@
 
     let isAnimating = false;
     function animateAlerts() {
-        let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING');
+        let needsAnimation = activeMiners.some(m => m.status === 'SOS' || m.status === 'WARNING') || dangerTunnels.length > 0;
         if (needsAnimation) {
             isAnimating = true;
             draw();
             requestAnimationFrame(animateAlerts);
         } else {
             isAnimating = false;
+            draw(); // Очищаємо залишки червоної пульсації
         }
     }
 
@@ -324,17 +331,25 @@
 
         // 2. ШТРЕКИ
         if (mapData.tunnels) {
+            const time = Date.now();
+            const pulse = (Math.sin(time / 150) + 1) / 2;
+            
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             mapData.tunnels.forEach(t => {
                 const isHovered = (hoveredObject && hoveredObject.data === t);
                 const isSelected = (selectedObject && selectedObject.data === t);
+                const isDanger = dangerTunnels.includes(t.name);
                 const x1 = t.x1 * 10, y1 = t.y1 * 10, x2 = t.x2 * 10, y2 = t.y2 * 10;
 
                 // Підсвітка
-                if (isSelected || isHovered) {
-                    ctx.lineWidth = 16;
-                    ctx.strokeStyle = isSelected ? '#4dabf7' : '#333';
+                if (isSelected || isHovered || isDanger) {
+                    ctx.lineWidth = isDanger ? 16 + 6 * pulse : 16;
+                    if (isDanger) {
+                        ctx.strokeStyle = `rgba(255, 68, 68, ${0.4 + 0.4 * pulse})`;
+                    } else {
+                        ctx.strokeStyle = isSelected ? '#4dabf7' : '#333';
+                    }
                     ctx.beginPath();
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
@@ -350,7 +365,10 @@
 
                 // Внутрішня частина
                 ctx.lineWidth = 6;
-                ctx.strokeStyle = '#5a4d41';
+                ctx.strokeStyle = isDanger ? '#ff4444' : '#5a4d41';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
                 ctx.stroke();
 
                 // Назва
@@ -393,14 +411,14 @@
 
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ffff';
+        ctx.fillStyle = d.id === 'AP-MAIN' ? '#ff4444' : '#00ffff';
         ctx.fill();
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
         ctx.stroke();
 
         if (scale > 0.6 || isSelected) {
-            ctx.fillStyle = isSelected ? '#4dabf7' : '#fff';
+            ctx.fillStyle = isSelected ? '#4dabf7' : (d.id === 'AP-MAIN' ? '#ff4444' : '#fff');
             ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'center';
             ctx.fillText(d.id, x, y - 12);

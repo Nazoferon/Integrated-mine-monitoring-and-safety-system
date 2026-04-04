@@ -70,9 +70,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (t.devices) {
                         t.devices.forEach(d => {
                             ctx.beginPath(); ctx.arc(d.x * 10, d.y * 10, 4, 0, Math.PI * 2);
-                            ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 5; ctx.shadowColor = '#00ffff'; ctx.fill(); ctx.shadowBlur = 0;
+                            ctx.fillStyle = '#00ffff'; 
+                            ctx.shadowBlur = 5; ctx.shadowColor = '#00ffff'; 
+                            ctx.fill(); ctx.shadowBlur = 0;
                         });
                     }
+                });
+            }
+            
+            if (mapData.devices) {
+                mapData.devices.forEach(d => {
+                    ctx.beginPath(); ctx.arc(d.x * 10, d.y * 10, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = '#00ffff'; 
+                    ctx.shadowBlur = 5; ctx.shadowColor = '#00ffff'; 
+                    ctx.fill(); ctx.shadowBlur = 0;
                 });
             }
             ctx.restore();

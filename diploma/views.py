@@ -136,6 +136,9 @@ def equipment_list(request):
         rep.clients_count = len(repeater_clients[rep.id])
         rep.clients_list = "\n".join(repeater_clients[rep.id])
 
+    # Сортування: AP-MAIN завжди перший, потім решта за кількістю клієнтів (за спаданням)
+    repeaters.sort(key=lambda r: (0 if r.uid == "AP-MAIN" else 1, -r.clients_count))
+
     return render(request, 'diploma/equipment.html', {
         'lamps': lamps, 'sensors': sensors, 'repeaters': repeaters,
         'total_devices': len(lamps) + len(sensors) + len(repeaters)
@@ -173,8 +176,11 @@ def alert_detail(request, alert_id):
             if new_status == 'RESOLVED':
                 alert.is_resolved, alert.resolved_at, alert.resolved_by = True, timezone.now(), request.user
                 emp = alert.employee
-                emp.safety_status = 'OK'
-                emp.save()
+                if emp:
+                    # Скидаємо візуальний статус працівника ТІЛЬКИ якщо більше немає активних тривог
+                    if not SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(id=alert.id).exists():
+                        emp.safety_status = 'OK'
+                        emp.save()
             else:
                 alert.is_resolved = False
 
@@ -208,11 +214,17 @@ def dashboard_stats_api(request):
     ).filter(last_seen__lt=three_mins_ago)
     
     for emp in offline_emps:
-        # Перевіряємо чи немає вже відкритої тривоги про втрату зв'язку
-        has_offline_alert = SecurityAlert.objects.filter(employee=emp, is_resolved=False, reason__icontains="Втрата зв'язку").exists()
+        # Перевіряємо чи немає вже відкритої АБО закритої тривоги САМЕ ПРО ЦЕЙ інцидент
+        last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
+        has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
         if not has_offline_alert:
             last_log = TelemetryLog.objects.filter(device=emp.device).order_by('-timestamp').first()
             rep = last_log.connected_repeater if last_log else None
+            
+            # Якщо остання локація Руддвір (AP-MAIN) - ігноруємо (не створюємо тривогу)
+            if rep and rep.uid == 'AP-MAIN':
+                continue
+                
             SecurityAlert.objects.create(
                 employee=emp, device=emp.device, connected_repeater=rep,
                 reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}", status='WARNING'
@@ -656,6 +668,20 @@ def api_receive_telemetry(request):
                         humidity=humidity,
                         is_moving=is_moving
                     )
+                    
+                    # ТРИВОГА ДЛЯ СТАЦІОНАРНОГО ДАТЧИКА (ГАЗ)
+                    if gas_level > 17:
+                        alert_reason = f'КРИТИЧНИЙ рівень CH4: {gas_level}% LEL (Евакуація!)' if gas_level >= 50 else f'Перевищення ГДК CH4: {gas_level}% LEL'
+                        active_alert = SecurityAlert.objects.filter(device=device, is_resolved=False).first()
+                        if not active_alert:
+                            SecurityAlert.objects.create(
+                                employee=None, device=device, connected_repeater=ap,
+                                reason=alert_reason, status='NEW'
+                            )
+                        else:
+                            active_alert.reason = alert_reason
+                            active_alert.save()
+                            
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
 
@@ -684,25 +710,31 @@ def api_receive_telemetry(request):
                     active_alert.rescue_notes = "Автоматично: Тривогу скасовано з пристрою працівником."
                     active_alert.save()
                 
-                if employee.safety_status != 'OFF_SHIFT':
-                    employee.safety_status = 'OK'
+                # Перевіряємо чи не лишилося ІНШИХ тривог перед тим як ставити OK
+                if not SecurityAlert.objects.filter(employee=employee, is_resolved=False).exists():
+                    if employee.safety_status != 'OFF_SHIFT':
+                        employee.safety_status = 'OK'
                 employee.save()
                 
                 return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device'})
 
             # --- ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ ---
             if battery <= 10:
-                has_bat_alert = SecurityAlert.objects.filter(
-                    employee=employee, is_resolved=False, reason__icontains="Низький заряд"
-                ).exists()
-                if not has_bat_alert:
-                    SecurityAlert.objects.create(
-                        employee=employee, device=device, connected_repeater=ap,
-                        reason=f"Низький заряд батареї: {battery}%", status='WARNING'
-                    )
-                    # Змінюємо статус працівника для жовтого світіння на карті
-                    if employee.safety_status == 'OK':
-                        employee.safety_status = 'WARNING'
+                # Ігноруємо низький заряд, якщо працівник знаходиться в Руддворі (AP-MAIN)
+                if not (ap and ap.uid == 'AP-MAIN'):
+                    # Шукаємо активну тривогу АБО закриту за останні 8 годин (щоб не спамити до кінця зміни)
+                    recent_bat_time = timezone.now() - timezone.timedelta(hours=8)
+                    has_bat_alert = SecurityAlert.objects.filter(employee=employee, reason__icontains="Низький заряд").filter(
+                        Q(is_resolved=False) | Q(created_at__gte=recent_bat_time)
+                    ).exists()
+                    if not has_bat_alert:
+                        SecurityAlert.objects.create(
+                            employee=employee, device=device, connected_repeater=ap,
+                            reason=f"Низький заряд батареї: {battery}%", status='WARNING'
+                        )
+                        # Змінюємо статус працівника для жовтого світіння на карті
+                        if employee.safety_status == 'OK':
+                            employee.safety_status = 'WARNING'
 
             # 4. ЛОГІКА СТВОРЕННЯ ТРИВОГ (SecurityAlert)
             alert_reason = None
@@ -722,11 +754,11 @@ def api_receive_telemetry(request):
                     alert_reason = 'Ручний виклик SOS'
 
             if alert_reason:
-                # Перевіряємо, чи вже є ВІДКРИТА тривога для цього працівника
+                # Шукаємо існуючу НЕВИРІШЕНУ КРИТИЧНУ тривогу (Ігноруємо WARNING-батарею)
                 active_alert = SecurityAlert.objects.filter(
                     employee=employee, 
                     is_resolved=False
-                ).first()
+                ).exclude(status='WARNING').first()
 
                 if not active_alert:
                     # Якщо активної немає — створюємо НОВУ
@@ -754,7 +786,9 @@ def api_receive_telemetry(request):
                 employee.safety_status = 'SOS' if (is_sos or gas_level >= 50) else 'WARNING'
             else:
                 # Будь-який нормальний пакет даних від пристрою означає, що працівник на зміні
-                employee.safety_status = 'OK'
+                # ОНОВЛЕНО: Скидаємо статус на OK ТІЛЬКИ якщо немає не закритих інцидентів
+                if not SecurityAlert.objects.filter(employee=employee, is_resolved=False).exists():
+                    employee.safety_status = 'OK'
 
             employee.save()
             return JsonResponse({'status': 'success'})
@@ -791,7 +825,20 @@ def api_active_miners(request):
                 'temp': last_log.temperature,
                 'hum': last_log.humidity
             })
-    return JsonResponse({'miners': data})
+            
+    # Знаходимо штреки, для яких є активні (не закриті) критичні тривоги
+    danger_tunnels = set()
+    active_danger_alerts = SecurityAlert.objects.filter(
+        is_resolved=False,
+        connected_repeater__isnull=False
+    ).exclude(status='WARNING').select_related('connected_repeater', 'connected_repeater__map_location')
+    
+    for alert in active_danger_alerts:
+        loc = alert.connected_repeater.location_in_mine
+        if loc and "Штрек" in loc:
+            danger_tunnels.add(loc)
+            
+    return JsonResponse({'miners': data, 'danger_tunnels': list(danger_tunnels)})
 
 from django.db.models import Q
 

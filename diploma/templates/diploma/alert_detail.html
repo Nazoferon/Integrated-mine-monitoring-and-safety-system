@@ -30,7 +30,7 @@
 
 <div class="incident-header 
     {% if alert.status == 'NEW' %}status-new
-    {% elif alert.status == 'IN_PROGRESS' %}status-progress
+    {% elif alert.status == 'IN_PROGRESS' or alert.status == 'WARNING' %}status-progress
     {% else %}status-resolved{% endif %}">
 
   <div class="incident-title">
@@ -53,7 +53,7 @@
   <div>
     <div class="status-badge 
             {% if alert.status == 'NEW' %}badge-new
-            {% elif alert.status == 'IN_PROGRESS' %}badge-progress
+            {% elif alert.status == 'IN_PROGRESS' or alert.status == 'WARNING' %}badge-progress
             {% else %}badge-resolved{% endif %}">
       {{ alert.get_status_display }}
     </div>
@@ -65,6 +65,7 @@
     <div class="info-card">
       <h4><i class="fas fa-user-injured"></i> Об'єкт порятунку</h4>
       <div class="emp-summary">
+        {% if alert.employee %}
         {% if alert.employee.photo %}
         <img src="{{ alert.employee.photo.url }}" alt="Photo" class="emp-photo">
         {% else %}
@@ -74,10 +75,17 @@
           <h5 class="emp-name-title">{{ alert.employee.last_name }} {{ alert.employee.first_name }}</h5>
           <span class="emp-position-title">{{ alert.employee.get_position_display }}</span>
         </div>
+        {% else %}
+        <div class="emp-no-photo bg-warning text-dark"><i class="fas fa-wind"></i></div>
+        <div>
+          <h5 class="emp-name-title">Стаціонарний датчик</h5>
+          <span class="emp-position-title">Контроль газової обстановки</span>
+        </div>
+        {% endif %}
       </div>
       <div class="data-row">
         <span class="data-label">Жетон:</span>
-        <span class="data-value">{{ alert.employee.badge_number|default:"Не вказано" }}</span>
+        <span class="data-value">{% if alert.employee %}{{ alert.employee.badge_number|default:"Не вказано" }}{% else %}---{% endif %}</span>
       </div>
       <div class="data-row">
         <span class="data-label">Пристрій (MAC):</span>
@@ -173,15 +181,17 @@
             placeholder="Журнал дій...">{{ alert.rescue_notes }}</textarea>
         </div>
 
+        {% if not alert.is_resolved %}
         {% if alert.status == 'NEW' %}
         <button type="submit" name="status" value="IN_PROGRESS" class="btn-action btn-take">
           <i class="fas fa-hard-hat"></i> ВЗЯТИ В РОБОТУ
         </button>
-        {% elif alert.status == 'IN_PROGRESS' %}
+        {% else %}
         <button type="submit" name="status" value="RESOLVED" class="btn-action btn-resolve">
           <i class="fas fa-check-circle"></i> ЗАКРИТИ ІНЦИДЕНТ
         </button>
         <button type="submit" class="btn btn-outline-secondary mt-2 w-100">Зберегти нотатки</button>
+        {% endif %}
         {% else %}
         <div class="alert alert-success bg-transparent border-success text-success p-2 text-center">
           <i class="fas fa-lock"></i> Інцидент закрито користувачем {{ alert.resolved_by.username }}<br>
