@@ -70,7 +70,7 @@
 <div class="row" id="chartsRow">
     <div class="col-12 col-md-8 mb-4 mb-md-0">
         <div class="report-card">
-            <h5 class="text-white mb-3 card-title-lg">Динаміка інцидентів за вибраний період</h5>
+            <h5 class="text-white mb-3 card-title-lg" id="mainChartTitle">Динаміка інцидентів за вибраний період</h5>
             <div class="chart-container">
                 <canvas id="mainChart"></canvas>
             </div>
@@ -78,7 +78,7 @@
     </div>
     <div class="col-12 col-md-4">
         <div class="report-card">
-            <h5 class="text-white mb-3 card-title-lg">Причини тривог</h5>
+            <h5 class="text-white mb-3 card-title-lg" id="doughnutChartTitle">Причини тривог</h5>
             <div class="chart-container">
                 <canvas id="doughnutChart"></canvas>
             </div>
@@ -119,26 +119,10 @@
                 </tr>
             </thead>
             <tbody id="reportTableBody">
-                <tr class="tech-row">
-                    <td>2026-03-22 14:05</td>
-                    <td class="text-danger"><i class="fas fa-exclamation-triangle"></i> Ручний виклик SOS</td>
-                    <td>Штрек 1</td>
-                    <td>Ганюк Назар (LAMP-0001)</td>
-                    <td><span class="badge bg-success">Вирішено</span></td>
-                </tr>
-                <tr class="tech-row">
-                    <td>2026-03-21 09:12</td>
-                    <td class="text-warning"><i class="fas fa-battery-quarter"></i> Низький заряд (15%)</td>
-                    <td>Руддвір</td>
-                    <td>Щербань Р. (LAMP-0002)</td>
-                    <td><span class="badge bg-warning text-dark">В роботі</span></td>
-                </tr>
-                <tr class="tech-row">
-                    <td>2026-03-20 22:45</td>
-                    <td class="text-danger"><i class="fas fa-wind"></i> Перевищення CO (55 LEL)</td>
-                    <td>Штрек 2</td>
-                    <td>Датчик SENS-08</td>
-                    <td><span class="badge bg-success">Вирішено</span></td>
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Завантаження даних...
+                    </td>
                 </tr>
             </tbody>
         </table>

@@ -36,10 +36,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const mainChart = new Chart(ctxMain, {
         type: 'line',
         data: {
-            labels: ['01 Березня', '04 Березня', '08 Березня', '12 Березня', '16 Березня', '20 Березня', 'Сьогодні'],
+            labels: [],
             datasets: [{
                 label: 'Кількість інцидентів',
-                data: [3, 1, 5, 2, 0, 4, 1],
+                data: [],
                 borderColor: '#4dabf7',
                 backgroundColor: gradient,
                 borderWidth: 2,
@@ -53,8 +53,21 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 15, 35, 0.9)',
+                    titleColor: '#4dabf7',
+                    bodyFont: { size: 14 },
+                    padding: 12,
+                    borderColor: 'rgba(77, 171, 247, 0.3)',
+                    borderWidth: 1,
+                    displayColors: false
+                }
             },
             scales: {
                 y: { beginAtZero: true, suggestedMax: 8 }
@@ -67,9 +80,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const doughnutChart = new Chart(ctxDoughnut, {
         type: 'doughnut',
         data: {
-            labels: ['Кнопка SOS', 'Падіння (Man Down)', 'Низький заряд', 'Газ (Метан)'],
+            labels: [],
             datasets: [{
-                data: [40, 15, 25, 20],
+                data: [],
                 backgroundColor: [
                     '#ff4444', // Червоний (SOS)
                     '#ff9800', // Оранжевий (Падіння)
@@ -139,6 +152,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(data.error || 'Помилка отримання даних з сервера');
                 }
                 
+                // --- ДИНАМІЧНА ЗМІНА ЗАГОЛОВКІВ ГРАФІКІВ ---
+                const chartTitles = {
+                    'incidents': { main: 'Динаміка інцидентів (шт)', doughnut: 'Причини тривог' },
+                    'telemetry': { main: 'Максимальний рівень метану (% LEL)', doughnut: 'Розподіл небезпеки газу' },
+                    'equipment': { main: 'Події розряду батареї та втрати зв\'язку', doughnut: 'Склад обладнання' },
+                    'personnel': { main: 'Унікальні працівники в шахті (чол)', doughnut: 'Поточний статус безпеки' }
+                };
+                
+                const mainTitleEl = document.getElementById('mainChartTitle');
+                const doughnutTitleEl = document.getElementById('doughnutChartTitle');
+                
+                if (mainTitleEl && doughnutTitleEl && chartTitles[reportType]) {
+                    mainTitleEl.innerText = chartTitles[reportType].main;
+                    doughnutTitleEl.innerText = chartTitles[reportType].doughnut;
+                    mainChart.data.datasets[0].label = chartTitles[reportType].main;
+                }
+
                 if (data.chart_main) {
                     mainChart.data.labels = data.chart_main.labels || [];
                     mainChart.data.datasets[0].data = data.chart_main.values || [];
@@ -312,7 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
         exportPdfBtn.addEventListener('click', () => {
             const printDate = document.getElementById('printDateGenerated');
             if (printDate) printDate.innerText = new Date().toLocaleString('uk-UA');
-            handlePrintAndPdf();
+            
+            if (window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
+                window.dashboardApp.showNotification('У вікні друку оберіть "Зберегти як PDF"', 'info');
+            }
+            
+            setTimeout(handlePrintAndPdf, 600);
         });
     }
 
