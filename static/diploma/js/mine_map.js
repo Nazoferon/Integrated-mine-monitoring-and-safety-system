@@ -22,12 +22,55 @@
     let dangerTunnels = [];
     let clickableMiners = [];
 
+    // Константа масштабу, після якого кластери розпадаються
+    const ZOOM_THRESHOLD = 1.5;
+
     let scale = 1.0;
     let offsetX = 0, offsetY = 0;
     let isDragging = false, startX, startY;
 
     let hoveredObject = null;
     let selectedObject = null;
+
+    // --- НОВЕ: Плавна кінематична анімація камери (FlyTo) ---
+    let flightAnimationId = null;
+    
+    function flyTo(targetMapX, targetMapY, targetScale = scale, duration = 600) {
+        if (flightAnimationId) cancelAnimationFrame(flightAnimationId);
+        
+        const startScale = scale;
+        const startOffsetX = offsetX;
+        const startOffsetY = offsetY;
+        
+        const sidebar = document.getElementById('sidebar-panel');
+        const sidebarOffset = (sidebar && !sidebar.classList.contains('collapsed')) ? 300 : 0;
+        
+        // Рахуємо цільові відступи, щоб центрувати точку targetMapX/Y на екрані
+        const targetOffsetX = (canvas.width + sidebarOffset) / 2 - targetMapX * targetScale;
+        const targetOffsetY = canvas.height / 2 - targetMapY * targetScale;
+        
+        const startTime = performance.now();
+        
+        function animateFrame(now) {
+            if (isDragging) return; // Відміна польоту, якщо користувач почав тягнути карту руками
+            
+            let progress = (now - startTime) / duration;
+            if (progress >= 1) progress = 1;
+            
+            // Функція плавності EaseInOutCubic
+            const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            scale = startScale + (targetScale - startScale) * ease;
+            offsetX = startOffsetX + (targetOffsetX - startOffsetX) * ease;
+            offsetY = startOffsetY + (targetOffsetY - startOffsetY) * ease;
+            
+            updatePopupPosition();
+            draw();
+            
+            if (progress < 1) flightAnimationId = requestAnimationFrame(animateFrame);
+        }
+        flightAnimationId = requestAnimationFrame(animateFrame);
+    }
 
     // --- НОВЕ: Отримання даних з сервера в реальному часі ---
     function fetchActiveMiners() {
@@ -100,7 +143,14 @@
 
         canvas.addEventListener('mousedown', e => {
             if (hoveredObject) {
-                selectObject(hoveredObject.type, hoveredObject.data);
+                if (hoveredObject.type === 'cluster') {
+                    // СПАЙДЕРІФАЙ: При кліку на кластер — ховаємо вікно і плавно зумуємо
+                    selectObject(null, null); 
+                    // Налітаємо камерою, робимо зум трохи більшим за поріг розпаду
+                    flyTo(hoveredObject.data.map_x, hoveredObject.data.map_y, ZOOM_THRESHOLD + 0.4);
+                } else {
+                    selectObject(hoveredObject.type, hoveredObject.data);
+                }
                 isDragging = false;
             } else {
                 selectObject(null, null);
@@ -149,7 +199,12 @@
                 checkHover(mx, my); // Перевіряємо, чи не тапнули на об'єкт
 
                 if (hoveredObject) {
-                    selectObject(hoveredObject.type, hoveredObject.data);
+                    if (hoveredObject.type === 'cluster') {
+                        selectObject(null, null);
+                        flyTo(hoveredObject.data.map_x, hoveredObject.data.map_y, ZOOM_THRESHOLD + 0.4);
+                    } else {
+                        selectObject(hoveredObject.type, hoveredObject.data);
+                    }
                     isDragging = false;
                 } else {
                     selectObject(null, null);
@@ -267,9 +322,8 @@
                 }
 
                 if (targetAp) {
-                    scale = 2.5; // Сильно наближаємо до зони інциденту
-                    focusOnPoint(targetAp.x * 10, targetAp.y * 10);
                     selectObject('device', targetAp);
+                    flyTo(targetAp.x * 10, targetAp.y * 10, 2.5, 1000); // Кінематографічний наліт
                     focused = true;
                 }
             }
@@ -428,7 +482,6 @@
     // --- НОВЕ: Логіка групування та малювання працівників ---
     function drawMiners() {
         clickableMiners = []; // Очищаємо масив
-        const ZOOM_THRESHOLD = 1.5;
         const time = Date.now();
         const pulse = (Math.sin(time / 150) + 1) / 2; // Від 0 до 1, для пульсації
         
@@ -464,7 +517,7 @@
 
                 let hasSOS = minersArray.some(m => m.status === 'SOS');
                 let hasWarn = minersArray.some(m => m.status === 'WARNING');
-                let cRadius = hasSOS ? 50 : (hasWarn ? 40 : (count > 1 ? 12 : 10));
+                let cRadius = hasSOS ? 50 : (hasWarn ? 40 : (count > 1 ? 16 : 14));
 
                 // НОВЕ: Зберігаємо координати прямо в DATA (як у репітерів)
                 if (count === 1) {
@@ -503,15 +556,23 @@
                 ctx.stroke();
 
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px Arial';
+                ctx.font = 'bold 14px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(count > 1 ? count.toString() : 'P', cx, cy);
             } 
             else {
-                const spreadRadius = 14; 
+                // АНІМАЦІЯ "ВИБУХУ" (Spiderify)
+                let animProgress = 1.0;
+                // Якщо масштаб ледь перейшов рубіж — крапки повільно випливають з центру
+                if (scale < ZOOM_THRESHOLD + 0.3) {
+                    animProgress = (scale - ZOOM_THRESHOLD) / 0.3;
+                    animProgress = 1 - Math.pow(1 - animProgress, 3); // easeOutCubic
+                }
+                const spreadRadius = 32 * animProgress; 
+                
                 minersArray.forEach((m, index) => {
-                    const angle = index * (Math.PI * 2 / count);
+                    const angle = index * (Math.PI * 2 / count) - (Math.PI / 2); // Починаємо зверху
                     const mx = cx + spreadRadius * Math.cos(angle);
                     const my = cy + spreadRadius * Math.sin(angle);
 
@@ -519,7 +580,7 @@
 
                     let isSOS = m.status === 'SOS';
                     let isWarn = m.status === 'WARNING';
-                    let mRadius = isSOS ? 40 : (isWarn ? 30 : 8);
+                    let mRadius = isSOS ? 40 : (isWarn ? 30 : 12);
 
                     // НОВЕ: Зберігаємо координати прямо в DATA
                     m.map_x = mx;
@@ -547,7 +608,7 @@
                     ctx.stroke();
 
                     ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 10px Arial';
+                    ctx.font = 'bold 12px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText('P', mx, my);
@@ -579,7 +640,7 @@
         // --- Перевіряємо кластери та шахтарів ---
         clickableMiners.forEach(item => {
             const dist = Math.hypot(item.data.map_x - wx, item.data.map_y - wy);
-            if (dist < 15 / scale + 5) { // Формула радіусу як у репітерів!
+            if (dist < 22 / scale + 5) { // Збільшена зона (hitbox) для зручнішого кліку
                 hoveredObject = item;
                 canvas.style.cursor = 'pointer';
             }
@@ -885,17 +946,7 @@
     }
 
     function focusOnPoint(x, y) {
-        // Враховуємо ширину лівої панелі (300px), щоб візуально центрувати у видимій області екрану
-        const sidebar = document.getElementById('sidebar-panel');
-        let sidebarOffset = 0;
-        if (sidebar && !sidebar.classList.contains('collapsed')) {
-            sidebarOffset = 300;
-        }
-
-        offsetX = (canvas.width + sidebarOffset) / 2 - x * scale;
-        offsetY = canvas.height / 2 - y * scale;
-        updatePopupPosition();
-        draw();
+        flyTo(x, y, scale, 400); // Використовуємо нову плавну анімацію
     }
 
     window.resetView = function () {
@@ -947,17 +998,11 @@
             
             const scaleX = visibleWidth / (rangeX * 10 + 200);
             const scaleY = canvas.height / (rangeY * 10 + 200);
-            scale = (rangeX === 0 && rangeY === 0) ? 1.0 : Math.min(scaleX, scaleY, 2.0);
+            const targetScale = (rangeX === 0 && rangeY === 0) ? 1.0 : Math.min(scaleX, scaleY, 2.0);
             
-            focusOnPoint(centerX * 10, centerY * 10);
+            flyTo(centerX * 10, centerY * 10, targetScale, 800); // Кінематографічне віддалення камери
         } else {
-            scale = 1.0;
-            const sidebar = document.getElementById('sidebar-panel');
-            const sidebarOffset = (sidebar && !sidebar.classList.contains('collapsed')) ? 300 : 0;
-            offsetX = (canvas.width + sidebarOffset) / 2;
-            offsetY = canvas.height / 2;
-            updatePopupPosition();
-            draw();
+            flyTo(0, 0, 1.0, 500);
         }
     };
 
