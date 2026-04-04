@@ -62,13 +62,13 @@ String utf8ukr(const char* source) {
 }
 
 // --- НАЛАШТУВАННЯ СЕРВЕРА ---
-const char* SERVER_ADDRESS = "http://91.98.171.31";
+const char* SERVER_ADDRESS = "http://bunb.pp.ua";
 const char* TELEMETRY_ENDPOINT = "/diploma/api/telemetry/";
 const char* WIFI_API_ENDPOINT = "/diploma/api/wifi-networks/";
 const char* OTA_CHECK_ENDPOINT = "/diploma/api/ota/check/";
 const char* OTA_LOG_ENDPOINT = "/diploma/api/ota/log/";
 
-#define FIRMWARE_VERSION "1.0.2"
+#define FIRMWARE_VERSION "1.0.0"
 
 // --- ТАЙМЕРИ ТА ІНТЕРВАЛИ ---
 #define DATA_SEND_INTERVAL_MS 10000UL         // Інтервал відправки телеметрії (10 сек)
