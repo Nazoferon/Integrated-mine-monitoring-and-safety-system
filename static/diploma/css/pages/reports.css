@@ -80,6 +80,41 @@
     white-space: normal;
 }
 
+/* Кнопка завантаження архіву */
+.btn-download-archive {
+    background: rgba(138, 99, 210, 0.1);
+    color: #8a63d2;
+    border: 1px solid rgba(138, 99, 210, 0.3);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+.btn-download-archive:hover {
+    background: rgba(138, 99, 210, 0.25);
+    color: #fff;
+    border-color: rgba(138, 99, 210, 0.5);
+}
+
+/* Пагінація */
+.custom-pagination .page-link {
+    background-color: rgba(20, 20, 35, 0.6);
+    border-color: #444;
+    color: #e0e0e0;
+}
+.custom-pagination .page-link:hover {
+    background-color: rgba(77, 171, 247, 0.2);
+    color: #4dabf7;
+}
+.custom-pagination .page-item.active .page-link {
+    background-color: #4dabf7;
+    border-color: #4dabf7;
+    color: #111;
+}
+
 /* --- МОБІЛЬНА АДАПТИВНІСТЬ ДЛЯ ЗВІТІВ --- */
 @media (max-width: 768px) {
     .eq-header .d-flex {
@@ -120,6 +155,9 @@
     header, #sidebar, .eq-header, .export-options, .btn-generate, .custom-input, .filter-label {
         display: none !important;
     }
+    
+    /* Приховуємо блок архівів під час експорту в PDF */
+    .archive-section { display: none !important; }
     
     .print-only-block { display: block !important; }
     

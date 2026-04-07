@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=mine_db
+      - POSTGRES_USER=mine_user
+      - POSTGRES_PASSWORD=mine_super_password
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  web:
+    build: .
+    # Команда автоматично застосовує міграції, збирає статику та запускає Gunicorn
+    command: >
+      bash -c "python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               gunicorn django_project.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    volumes:
+      - .:/var/www/django_project
+      - static_volume:/var/www/django_project/static_root
+      - media_volume:/var/www/django_project/media
+      - archives_volume:/var/www/django_project/archives
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=0
+      - SECRET_KEY=ChangeThisSuperSecretKeyInProduction2026!
+      - DB_NAME=mine_db
+      - DB_USER=mine_user
+      - DB_PASSWORD=mine_super_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - ESP32_API_KEY=SecretMineKey2026
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+  archives_volume:

@@ -25,6 +25,9 @@ portfolio_backup.json
 # Media files
 media/
 
+# Archives files
+archives/
+
 # Static files (collected)
 staticfiles/
 

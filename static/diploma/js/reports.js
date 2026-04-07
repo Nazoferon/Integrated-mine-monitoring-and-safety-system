@@ -108,146 +108,217 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- 3. Отримання реальних даних при натисканні "Згенерувати" ---
     let isInitialLoad = true;
+    let currentReportPage = 1;
     const generateBtn = document.getElementById('generateBtn');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', async function() {
-            // Запобігання подвійним клікам та накладанням запитів
-            if (this.disabled) return;
 
-            const icon = generateBtn.querySelector('i');
+    async function loadReportData(page = 1) {
+        if (generateBtn && generateBtn.disabled) return;
+
+        currentReportPage = page;
+        const icon = generateBtn ? generateBtn.querySelector('i') : null;
+        
+        try {
+            if (icon) icon.classList.add('fa-spin');
+            if (generateBtn) generateBtn.disabled = true;
             
-            try {
-                if (icon) icon.classList.add('fa-spin');
-                generateBtn.disabled = true;
-                
-                if (window.dashboardApp && typeof window.dashboardApp.showLoader === 'function') {
-                    window.dashboardApp.showLoader('Отримання даних з БД...');
-                }
-                
-                const reportType = document.getElementById('reportType').value;
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                
-                // Додаємо таймаут 10 секунд на випадок, якщо мережа зависла (через розширення браузера)
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-                const response = await fetch(`/diploma/api/reports-data/?type=${reportType}&start_date=${startDate}&end_date=${endDate}`, {
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                let data;
-                try {
-                    data = await response.json();
-                } catch (e) {
-                    if (!response.ok) {
-                        throw new Error(`Помилка сервера: ${response.status} ${response.statusText}`);
-                    }
-                    throw new Error('Помилка обробки даних (невірний формат)');
-                }
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Помилка отримання даних з сервера');
-                }
-                
-                // --- ДИНАМІЧНА ЗМІНА ЗАГОЛОВКІВ ГРАФІКІВ ---
-                const chartTitles = {
-                    'incidents': { main: 'Динаміка інцидентів (шт)', doughnut: 'Причини тривог' },
-                    'telemetry': { main: 'Максимальний рівень метану (% LEL)', doughnut: 'Розподіл небезпеки газу' },
-                    'equipment': { main: 'Події розряду батареї та втрати зв\'язку', doughnut: 'Склад обладнання' },
-                    'personnel': { main: 'Унікальні працівники в шахті (чол)', doughnut: 'Поточний статус безпеки' }
-                };
-                
-                const mainTitleEl = document.getElementById('mainChartTitle');
-                const doughnutTitleEl = document.getElementById('doughnutChartTitle');
-                
-                if (mainTitleEl && doughnutTitleEl && chartTitles[reportType]) {
-                    mainTitleEl.innerText = chartTitles[reportType].main;
-                    doughnutTitleEl.innerText = chartTitles[reportType].doughnut;
-                    mainChart.data.datasets[0].label = chartTitles[reportType].main;
-                }
-
-                if (data.chart_main) {
-                    mainChart.data.labels = data.chart_main.labels || [];
-                    mainChart.data.datasets[0].data = data.chart_main.values || [];
-                    
-                    // Якщо на графіку лише один запис (одна крапка) — робимо її великою і помітною
-                    if (mainChart.data.datasets[0].data.length === 1) {
-                        mainChart.data.datasets[0].pointRadius = 8;
-                        mainChart.data.datasets[0].pointBorderWidth = 3;
-                    } else {
-                        mainChart.data.datasets[0].pointRadius = 4;
-                        mainChart.data.datasets[0].pointBorderWidth = 1;
-                    }
-                    
-                    mainChart.update();
-                }
-                
-                if (data.chart_doughnut) {
-                    doughnutChart.data.labels = data.chart_doughnut.labels || [];
-                    doughnutChart.data.datasets[0].data = data.chart_doughnut.values || [];
-                    if (data.chart_doughnut.colors) {
-                        doughnutChart.data.datasets[0].backgroundColor = data.chart_doughnut.colors;
-                    }
-                    doughnutChart.update();
-                }
-                
-                const tbody = document.getElementById('reportTableBody');
-                if (tbody) {
-                    tbody.innerHTML = '';
-                    if (!data.table_rows || data.table_rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">За обраний період даних не знайдено</td></tr>';
-                    } else {
-                        data.table_rows.forEach(row => {
-                            const tr = document.createElement('tr');
-                            tr.className = 'tech-row';
-                            tr.innerHTML = `
-                                <td>${row.date || ''}</td>
-                                <td class="${row.event_class || ''}">${row.event_text || ''}</td>
-                                <td>${row.location || ''}</td>
-                                <td>${row.person || ''}</td>
-                                <td>${row.status_html || ''}</td>
-                            `;
-                            tbody.appendChild(tr);
-                        });
-                    }
-                }
-                
-                if (!isInitialLoad && window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
-                    window.dashboardApp.showNotification('Дані успішно завантажено!', 'success');
-                }
-                isInitialLoad = false;
-                
-            } catch (error) {
-                console.error("Помилка генерації звіту:", error);
-                const isTimeout = error.name === 'AbortError';
-                const msg = isTimeout ? 'Сервер не відповідає. Перевірте з\'єднання.' : (error.message || 'Помилка при генерації звіту');
-                
-                if (window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
-                    window.dashboardApp.showNotification(msg, 'critical');
-                } else {
-                    alert(msg);
-                }
-            } finally {
-                if (icon) icon.classList.remove('fa-spin');
-                generateBtn.disabled = false;
-                if (window.dashboardApp && typeof window.dashboardApp.hideLoader === 'function') window.dashboardApp.hideLoader();
+            if (window.dashboardApp && typeof window.dashboardApp.showLoader === 'function') {
+                window.dashboardApp.showLoader('Отримання даних з БД...');
             }
-        });
+            
+            const reportType = document.getElementById('reportType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            // ДОДАЄМО &page=${currentReportPage} ДО URL
+            const response = await fetch(`/diploma/api/reports-data/?type=${reportType}&start_date=${startDate}&end_date=${endDate}&page=${currentReportPage}`, {
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                if (!response.ok) {
+                    throw new Error(`Помилка сервера: ${response.status} ${response.statusText}`);
+                }
+                throw new Error('Помилка обробки даних (невірний формат)');
+            }
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Помилка отримання даних з сервера');
+            }
+            
+            const chartTitles = {
+                'incidents': { main: 'Динаміка інцидентів (шт)', doughnut: 'Причини тривог' },
+                'telemetry': { main: 'Максимальний рівень метану (% LEL)', doughnut: 'Розподіл небезпеки газу' },
+                'equipment': { main: 'Події розряду батареї та втрати зв\'язку', doughnut: 'Склад обладнання' },
+                'personnel': { main: 'Унікальні працівники в шахті (чол)', doughnut: 'Поточний статус безпеки' }
+            };
+            
+            const mainTitleEl = document.getElementById('mainChartTitle');
+            const doughnutTitleEl = document.getElementById('doughnutChartTitle');
+            
+            if (mainTitleEl && doughnutTitleEl && chartTitles[reportType]) {
+                mainTitleEl.innerText = chartTitles[reportType].main;
+                doughnutTitleEl.innerText = chartTitles[reportType].doughnut;
+                mainChart.data.datasets[0].label = chartTitles[reportType].main;
+            }
+
+            if (data.chart_main) {
+                mainChart.data.labels = data.chart_main.labels || [];
+                mainChart.data.datasets[0].data = data.chart_main.values || [];
+                
+                if (mainChart.data.datasets[0].data.length === 1) {
+                    mainChart.data.datasets[0].pointRadius = 8;
+                    mainChart.data.datasets[0].pointBorderWidth = 3;
+                } else {
+                    mainChart.data.datasets[0].pointRadius = 4;
+                    mainChart.data.datasets[0].pointBorderWidth = 1;
+                }
+                
+                mainChart.update();
+            }
+            
+            if (data.chart_doughnut) {
+                doughnutChart.data.labels = data.chart_doughnut.labels || [];
+                doughnutChart.data.datasets[0].data = data.chart_doughnut.values || [];
+                if (data.chart_doughnut.colors) {
+                    doughnutChart.data.datasets[0].backgroundColor = data.chart_doughnut.colors;
+                }
+                doughnutChart.update();
+            }
+            
+            const tbody = document.getElementById('reportTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (!data.table_rows || data.table_rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">За обраний період даних не знайдено</td></tr>';
+                } else {
+                    data.table_rows.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'tech-row';
+                        tr.innerHTML = `
+                            <td>${row.date || ''}</td>
+                            <td class="${row.event_class || ''}">${row.event_text || ''}</td>
+                            <td>${row.location || ''}</td>
+                            <td>${row.person || ''}</td>
+                            <td>${row.status_html || ''}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // ВІДМАЛЬОВУЄМО ПАГІНАЦІЮ
+            if (data.pagination) {
+                renderPagination(data.pagination);
+            }
+            
+            if (!isInitialLoad && window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
+                window.dashboardApp.showNotification('Дані успішно завантажено!', 'success');
+            }
+            isInitialLoad = false;
+            
+        } catch (error) {
+            console.error("Помилка генерації звіту:", error);
+            const isTimeout = error.name === 'AbortError';
+            const msg = isTimeout ? 'Сервер не відповідає. Перевірте з\'єднання.' : (error.message || 'Помилка при генерації звіту');
+            
+            if (window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
+                window.dashboardApp.showNotification(msg, 'critical');
+            } else {
+                alert(msg);
+            }
+        } finally {
+            if (icon) icon.classList.remove('fa-spin');
+            if (generateBtn) generateBtn.disabled = false;
+            if (window.dashboardApp && typeof window.dashboardApp.hideLoader === 'function') window.dashboardApp.hideLoader();
+        }
+    }
+
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => loadReportData(1));
     }
 
     // --- Автоматичне оновлення при зміні параметрів ---
     ['reportType', 'startDate', 'endDate'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.addEventListener('change', () => generateBtn.click());
+            el.addEventListener('change', () => loadReportData(1));
         }
     });
 
     // Завантажуємо дані за замовчуванням при відкритті сторінки
-    generateBtn.click();
+    if (generateBtn) loadReportData(1);
+
+    // --- Рендеринг кнопок сторінок ---
+    function renderPagination(pagination) {
+        const wrapper = document.getElementById('paginationWrapper');
+        const info = document.getElementById('paginationInfo');
+        const controls = document.getElementById('paginationControls');
+        
+        if (!wrapper || !info || !controls) return;
+        
+        if (!pagination || pagination.total === 0) {
+            wrapper.style.setProperty('display', 'none', 'important');
+            return;
+        }
+        
+        wrapper.style.setProperty('display', 'flex', 'important');
+        
+        const startRec = (pagination.current - 1) * pagination.per_page + 1;
+        const endRec = Math.min(pagination.current * pagination.per_page, pagination.total);
+        info.innerHTML = `Показано <b>${startRec}-${endRec}</b> з <b>${pagination.total}</b>`;
+        
+        let html = '';
+        
+        html += `<li class="page-item ${pagination.current === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${pagination.current - 1}">«</a>
+                 </li>`;
+                 
+        let startPage = Math.max(1, pagination.current - 2);
+        let endPage = Math.min(pagination.pages, pagination.current + 2);
+        
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<li class="page-item ${i === pagination.current ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                     </li>`;
+        }
+        
+        if (endPage < pagination.pages) {
+            if (endPage < pagination.pages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.pages}">${pagination.pages}</a></li>`;
+        }
+        
+        html += `<li class="page-item ${pagination.current === pagination.pages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${pagination.current + 1}">»</a>
+                 </li>`;
+                 
+        controls.innerHTML = html;
+        
+        controls.querySelectorAll('.page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const parent = this.parentElement;
+                if (parent.classList.contains('disabled') || parent.classList.contains('active')) return;
+                
+                const newPage = parseInt(this.getAttribute('data-page'));
+                if (newPage && newPage !== currentReportPage) {
+                    loadReportData(newPage); // Завантажуємо нову сторінку
+                }
+            });
+        });
+    }
 
     // --- Допоміжна функція для отримання вибраних колонок таблиці ---
     function getExportData() {

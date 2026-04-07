@@ -127,6 +127,13 @@
             </tbody>
         </table>
     </div>
+    
+    <!-- Контейнер для пагінації -->
+    <div class="d-flex justify-content-between align-items-center mt-3 d-print-none" id="paginationWrapper" style="display: none !important;">
+        <div class="text-muted small" id="paginationInfo"></div>
+        <ul class="pagination pagination-sm mb-0 custom-pagination" id="paginationControls"></ul>
+    </div>
+
 
     <!-- Блок підписів (видимий тільки при друці PDF) -->
     <div class="print-only-block border-top print-signature-block text-dark">
@@ -140,6 +147,51 @@
         </div>
     </div>
 </div>
+
+{% if request.user.is_superuser %}
+<!-- Секція Архівів Даних -->
+<div class="report-card mt-4 archive-section d-print-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-white m-0 card-title-lg"><i class="fas fa-archive text-warning me-2"></i> Архіви телеметрії (Холодне сховище)</h5>
+    </div>
+    
+        {% if archives %}
+        <div class="table-responsive">
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Назва файлу</th>
+                        <th>Створено</th>
+                        <th>Розмір</th>
+                        <th class="text-end">Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for arc in archives %}
+                    <tr>
+                        <td><i class="fas fa-file-archive text-muted me-2"></i>{{ arc.name }}</td>
+                        <td>{{ arc.date }}</td>
+                        <td><span class="badge bg-secondary">{{ arc.size_mb }} MB</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'download_archive' arc.name %}" class="btn-download-archive">
+                                <i class="fas fa-download"></i> Завантажити
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mt-3"><i class="fas fa-info-circle"></i> Старі архіви видаляються автоматично через 6 місяців для економії місця.</p>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-box-open text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+            <p class="text-muted mt-3">Архіви поки що відсутні. Вони з'являться автоматично через 30 днів після накопичення перших даних.</p>
+        </div>
+        {% endif %}
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}

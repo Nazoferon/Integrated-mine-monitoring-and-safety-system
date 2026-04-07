@@ -1,13 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.csrf import csrf_exempt 
 from django.db.models import Avg, Max, Count, Q, Case, When, Value, IntegerField, Subquery, OuterRef
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.template.loader import render_to_string
+from django.conf import settings
 import os, json
 from django.utils import timezone
 from django.core.cache import cache
@@ -178,9 +179,47 @@ def equipment_list(request):
 
 @login_required
 def reports_view(request):
-    # Поки що просто рендеримо шаблон. 
-    # Пізніше сюди можна додати реальну вибірку з бази даних.
-    return render(request, 'diploma/reports.html')
+    """Сторінка звітів та список доступних архівів телеметрії."""
+    archives = []
+    
+    # Лише суперкористувачі можуть бачити список архівів
+    if request.user.is_superuser:
+        archive_dir = os.path.join(settings.BASE_DIR, 'archives', 'telemetry')
+        
+        if os.path.exists(archive_dir):
+            for file in os.listdir(archive_dir):
+                if file.endswith('.csv.gz'):
+                    file_path = os.path.join(archive_dir, file)
+                    size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                    mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path))
+                    archives.append({
+                        'name': file,
+                        'size_mb': round(size_mb, 2),
+                        'date': mtime.strftime('%Y-%m-%d %H:%M')
+                    })
+                    
+        # Сортуємо від найновіших до найстаріших
+        archives.sort(key=lambda x: x['name'], reverse=True)
+    
+    return render(request, 'diploma/reports.html', {'archives': archives})
+
+@login_required
+def download_archive(request, filename):
+    """Функція для безпечного завантаження архіву."""
+    if not request.user.is_superuser:
+        return HttpResponse("Доступ заборонено. Тільки для адміністраторів.", status=403)
+        
+    # Захист від Path Traversal (щоб хакер не міг завантажити системні файли сервера)
+    if not filename.endswith('.csv.gz') or '/' in filename or '\\' in filename:
+        return HttpResponse("Недійсний файл", status=400)
+        
+    file_path = os.path.join(settings.BASE_DIR, 'archives', 'telemetry', filename)
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/gzip')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+    raise Http404("Файл не знайдено")
 
 @login_required
 def mine_map(request):
@@ -355,6 +394,14 @@ def reports_data_api(request):
     if not start_date or not end_date:
         return JsonResponse({'error': 'Не вказані дати'}, status=400)
 
+    try:
+        page = int(request.GET.get('page', 1))
+    except ValueError:
+        page = 1
+    per_page = 50
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+
     # --- ЗВІТ ПО ІНЦИДЕНТАХ (SOS) ---
     if report_type == 'incidents':
         # Фільтруємо реальні тривоги з БД за обраний період
@@ -377,9 +424,13 @@ def reports_data_api(request):
         doughnut_values = [sos_count, gas_count, other_count]
         doughnut_colors = ['#ff4444', '#ff9800', '#ffd700']
         
+        alerts_qs = alerts.order_by('-created_at')
+        total_records = alerts_qs.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
         # 3. Рядки для таблиці
         table_rows = []
-        for alert in alerts.order_by('-created_at')[:100]:
+        for alert in alerts_qs[start_idx:end_idx]:
             status_classes = {
                 'RESOLVED': ('bg-success', 'Вирішено', 'text-muted'), 
                 'IN_PROGRESS': ('bg-warning text-dark', 'В роботі', 'text-warning'),
@@ -412,7 +463,8 @@ def reports_data_api(request):
         return JsonResponse({
             'chart_main': {'labels': main_labels, 'values': main_values},
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
-            'table_rows': table_rows
+            'table_rows': table_rows,
+            'pagination': {'total': total_records, 'pages': total_pages, 'current': page, 'per_page': per_page}
         })
         
     # --- ЗВІТ ПО ТЕЛЕМЕТРІЇ (ГАЗ ТА МІКРОКЛІМАТ) ---
@@ -437,9 +489,13 @@ def reports_data_api(request):
         doughnut_values = [safe_count, warning_count, danger_count]
         doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
         
+        logs_qs = logs.order_by('-gas_level', '-timestamp')
+        total_records = logs_qs.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
         # 3. Рядки для таблиці (Топ-100 записів з найвищим показником газу)
         table_rows = []
-        for log in logs.order_by('-gas_level', '-timestamp')[:100]:
+        for log in logs_qs[start_idx:end_idx]:
             if log.gas_level >= 50:
                 s_badge, s_text, e_class = 'bg-danger', 'Евакуація', 'text-danger'
             elif log.gas_level > 17:
@@ -462,7 +518,8 @@ def reports_data_api(request):
         return JsonResponse({
             'chart_main': {'labels': main_labels, 'values': main_values},
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
-            'table_rows': table_rows
+            'table_rows': table_rows,
+            'pagination': {'total': total_records, 'pages': total_pages, 'current': page, 'per_page': per_page}
         })
 
     # --- ЗВІТ ПО ОБЛАДНАННЮ (БАТАРЕЯ ТА МЕРЕЖА) ---
@@ -483,9 +540,13 @@ def reports_data_api(request):
         ]
         doughnut_colors = ['#4dabf7', '#00c851', '#ffd700']
         
+        logs_qs = logs.order_by('battery_level', '-timestamp')
+        total_records = logs_qs.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
         # 3. Таблиця: Топ-100 записів із найнижчим зарядом або поганим сигналом
         table_rows = []
-        for log in logs.order_by('battery_level', '-timestamp')[:100]:
+        for log in logs_qs[start_idx:end_idx]:
             s_badge = 'bg-danger' if log.battery_level < 20 else ('bg-warning text-dark' if log.battery_level < 50 else 'bg-success')
             e_class = 'text-danger' if log.battery_level < 20 else 'text-muted'
             table_rows.append({
@@ -497,7 +558,12 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{log.battery_level}%</span>'
             })
             
-        return JsonResponse({'chart_main': {'labels': main_labels, 'values': main_values}, 'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 'table_rows': table_rows})
+        return JsonResponse({
+            'chart_main': {'labels': main_labels, 'values': main_values}, 
+            'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 
+            'table_rows': table_rows,
+            'pagination': {'total': total_records, 'pages': total_pages, 'current': page, 'per_page': per_page}
+        })
 
     # --- ЗВІТ ПО ПЕРСОНАЛУ ---
     elif report_type == 'personnel':
@@ -517,9 +583,13 @@ def reports_data_api(request):
         doughnut_values = [item['count'] for item in status_counts]
         doughnut_colors = [color_map.get(item['safety_status'], '#4dabf7') for item in status_counts]
         
+        emp_qs = Employee.objects.all().order_by('-last_update')
+        total_records = emp_qs.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
         # 3. Таблиця: Останні оновлення працівників
         table_rows = []
-        for emp in Employee.objects.all().order_by('-last_update')[:100]:
+        for emp in emp_qs[start_idx:end_idx]:
             s_badge = 'bg-success' if emp.safety_status == 'OK' else ('bg-danger' if emp.safety_status == 'SOS' else ('bg-warning text-dark' if emp.safety_status == 'WARNING' else 'bg-secondary'))
             table_rows.append({
                 'date': emp.last_update.strftime('%Y-%m-%d %H:%M'), 
@@ -530,7 +600,12 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{emp.get_safety_status_display()}</span>'
             })
             
-        return JsonResponse({'chart_main': {'labels': main_labels, 'values': main_values}, 'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 'table_rows': table_rows})
+        return JsonResponse({
+            'chart_main': {'labels': main_labels, 'values': main_values}, 
+            'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 
+            'table_rows': table_rows,
+            'pagination': {'total': total_records, 'pages': total_pages, 'current': page, 'per_page': per_page}
+        })
 
     return JsonResponse({'error': 'Невідомий тип звіту'}, status=400)
 
