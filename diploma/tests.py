@@ -9,6 +9,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 import json
+import os
 from diploma.models import Employee, MinerDevice, InfrastructureDevice, SecurityAlert, MineMap
 
 class DiplomaModelsTest(TestCase):
@@ -68,6 +69,27 @@ class TelemetryAPITest(TestCase):
             assigned_to=self.emp
         )
 
+    def test_api_key_protection_missing(self):
+        """Перевірка захисту API: відмова без ключа."""
+        response = self.client.post(
+            reverse('api_telemetry'),
+            data=json.dumps({"mac_address": self.device.mac_address}),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Unauthorized", response.json().get('error', ''))
+
+    def test_api_key_protection_invalid(self):
+        """Перевірка захисту API: відмова з неправильним ключем."""
+        response = self.client.post(
+            reverse('api_telemetry'),
+            data=json.dumps({"mac_address": self.device.mac_address}),
+            content_type="application/json",
+            HTTP_X_API_KEY="WRONG_KEY_123"
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Unauthorized", response.json().get('error', ''))
+
     def test_api_sos_alert_creation(self):
         """Перевірка створення тривоги при отриманні SOS сигналу."""
         payload = {
@@ -82,7 +104,8 @@ class TelemetryAPITest(TestCase):
         response = self.client.post(
             reverse('api_telemetry'),
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
+            HTTP_X_API_KEY=os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
         )
         
         self.assertEqual(response.status_code, 200)
@@ -109,7 +132,8 @@ class TelemetryAPITest(TestCase):
         self.client.post(
             reverse('api_telemetry'),
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
+            HTTP_X_API_KEY=os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
         )
         
         # Перевіряємо тривогу та її причину
@@ -132,7 +156,12 @@ class TelemetryAPITest(TestCase):
             "is_sos": False
         }
         
-        self.client.post(reverse('api_telemetry'), data=json.dumps(payload), content_type="application/json")
+        self.client.post(
+            reverse('api_telemetry'), 
+            data=json.dumps(payload), 
+            content_type="application/json",
+            HTTP_X_API_KEY=os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
+        )
         
         # Оскільки працівник біля AP-MAIN, система не повинна створювати тривогу
         alert_exists = SecurityAlert.objects.filter(employee=self.emp, is_resolved=False).exists()

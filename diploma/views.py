@@ -8,14 +8,29 @@ from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.template.loader import render_to_string
+import os, json
 from django.utils import timezone
 from django.core.cache import cache
-import json
+from functools import wraps
 
 from .forms import UserForm, ProfileForm
 from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog, FirmwareUpdate, OTALog
 
 # --- ДОПОМІЖНА ФУНКЦІЯ ---
+
+# Секретний ключ для API (завантажується з .env, інакше використовується дефолтний)
+ESP32_API_KEY = os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
+
+def api_key_required(view_func):
+    """Декоратор для перевірки API-ключа у запитах від ESP32 та інших зовнішніх систем."""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Шукаємо ключ у заголовку X-API-Key або в параметрах URL ?api_key=...
+        api_key = request.headers.get('X-API-Key') or request.GET.get('api_key')
+        if api_key != ESP32_API_KEY:
+            return JsonResponse({'error': 'Unauthorized. Invalid API Key.'}, status=401)
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 
 def get_active_map():
@@ -569,6 +584,7 @@ def equipment_telemetry_api(request):
 
 
 @csrf_exempt
+@api_key_required
 def upload_map_api(request):
     """Приймає JSON з MineCAD та синхронізує репітери."""
     if request.method != 'POST':
@@ -643,6 +659,7 @@ def simulator_view(request):
     return render(request, 'diploma/simulator.html', {'employees': employees, 'static_sensors': static_sensors, 'aps': aps})
 
 @csrf_exempt
+@api_key_required
 def api_receive_telemetry(request):
     """API для прийому POST-запитів від ESP32 з дедуплікацією тривог."""
     if request.method == 'POST':
@@ -877,6 +894,7 @@ def api_active_miners(request):
 from django.db.models import Q
 
 @csrf_exempt
+@api_key_required
 def api_get_wifi_networks(request):
     """
     API для отримання списку відомих Wi-Fi мереж.
@@ -897,6 +915,7 @@ def api_get_wifi_networks(request):
     return JsonResponse({'error': 'Only GET method is allowed'}, status=405)
 
 @csrf_exempt
+@api_key_required
 def api_ota_check(request):
     """API для перевірки наявності OTA-оновлень для ESP32."""
     if request.method != 'GET':
@@ -937,6 +956,7 @@ def api_ota_check(request):
     return JsonResponse({'status': 'up_to_date', 'current_version': current_version})
 
 @csrf_exempt
+@api_key_required
 def api_ota_log(request):
     """API для отримання інформації про помилки OTA з ESP32."""
     if request.method == 'POST':

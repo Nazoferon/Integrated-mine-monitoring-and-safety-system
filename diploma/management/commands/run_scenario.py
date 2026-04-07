@@ -2,8 +2,7 @@ from django.core.management.base import BaseCommand
 from django.http import HttpRequest
 from diploma.models import MinerDevice, InfrastructureDevice, SecurityAlert, TelemetryLog
 from diploma.views import api_receive_telemetry
-import time
-import json
+import time, json, os
 
 class Command(BaseCommand):
     help = 'Запускає бойовий сценарій аварії для презентації'
@@ -27,6 +26,7 @@ class Command(BaseCommand):
         request.method = 'POST'
         request._body = json.dumps(payload).encode('utf-8')
         request.META['CONTENT_TYPE'] = 'application/json'
+        request.META['HTTP_X_API_KEY'] = os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
         
         response = api_receive_telemetry(request)
         res_data = json.loads(response.content)

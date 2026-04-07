@@ -78,7 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'SecretMineKey2026'
+                },
                 body: JSON.stringify(data)
             });
             

@@ -67,8 +67,9 @@ const char* TELEMETRY_ENDPOINT = "/diploma/api/telemetry/";
 const char* WIFI_API_ENDPOINT = "/diploma/api/wifi-networks/";
 const char* OTA_CHECK_ENDPOINT = "/diploma/api/ota/check/";
 const char* OTA_LOG_ENDPOINT = "/diploma/api/ota/log/";
+const char* API_KEY = "SecretMineKey2026"; // Ключ доступу до API сервера
 
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.1"
 
 // --- ТАЙМЕРИ ТА ІНТЕРВАЛИ ---
 #define DATA_SEND_INTERVAL_MS 10000UL         // Інтервал відправки телеметрії (10 сек)
@@ -260,6 +261,7 @@ void sendTelemetry(bool isSos, String reason = "Normal") {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);  // таймаут щоб не зависати
   http.begin(String(SERVER_ADDRESS) + TELEMETRY_ENDPOINT);
+  http.addHeader("X-API-Key", API_KEY);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(json);
 
@@ -279,6 +281,7 @@ void processTelemetryQueue() {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
   http.begin(String(SERVER_ADDRESS) + TELEMETRY_ENDPOINT);
+  http.addHeader("X-API-Key", API_KEY);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(json);
 
@@ -495,6 +498,7 @@ void fetchKnownNetworks() {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
   http.begin(String(SERVER_ADDRESS) + WIFI_API_ENDPOINT);
+  http.addHeader("X-API-Key", API_KEY);
   int httpCode = http.GET();
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
@@ -532,6 +536,7 @@ void checkFirmwareUpdate() {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
   String url = String(SERVER_ADDRESS) + OTA_CHECK_ENDPOINT + "?mac=" + WiFi.macAddress() + "&version=" + String(FIRMWARE_VERSION);
+  http.addHeader("X-API-Key", API_KEY);
   http.begin(url);
   int httpCode = http.GET();
   if (httpCode == HTTP_CODE_OK) {
@@ -575,6 +580,7 @@ void checkFirmwareUpdate() {
           HTTPClient logHttp;
           logHttp.setTimeout(HTTP_TIMEOUT_MS);
           logHttp.begin(String(SERVER_ADDRESS) + OTA_LOG_ENDPOINT);
+          logHttp.addHeader("X-API-Key", API_KEY);
           logHttp.addHeader("Content-Type", "application/json");
           StaticJsonDocument<256> logDoc;
           logDoc["mac_address"] = WiFi.macAddress();
