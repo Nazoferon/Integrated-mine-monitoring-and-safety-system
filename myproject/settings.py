@@ -128,7 +128,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'uk-UA'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Kyiv' # Для коректного відображення часу в Україні
 
 USE_I18N = True
 
@@ -139,7 +139,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
+# Каталог, куди збирається статика командою collectstatic:
 STATIC_ROOT = '/var/www/django_project/static/'
+# Опціонально: папка з вашими вихідними статичними файлами
+# STATICFILES_DIRS = [BASE_DIR / 'static_source'] 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -148,7 +151,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = '/diploma/'  # Після логіну — на дипломну сторінку
 LOGOUT_REDIRECT_URL = '/login'  # Після виходу — на головну
-LOGIN_URL = '/login/'  # URL для логіну 
 
 MEDIA_URL = '/media/' # URL для завантажених файлів
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Каталог для збереження завантажених файлів
@@ -212,4 +214,49 @@ CONTENT_SECURITY_POLICY = {
             'https://cdn.jsdelivr.net',
         )
     }
+}
+
+# --- НАЛАШТУВАННЯ КЕШУВАННЯ ---
+# Вкрай важливо для Gunicorn з кількома workers (щоб кеш Карти не розсинхронізовувався)
+REDIS_URL = os.getenv('REDIS_URL')
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+            'LOCATION': BASE_DIR / 'django_cache',
+        }
+    }
+
+# --- ЛОГУВАННЯ ПОМИЛОК В PRODUCTION ---
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'django_error.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }

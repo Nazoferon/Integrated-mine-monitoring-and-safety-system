@@ -28,8 +28,12 @@ media/
 # Archives files
 archives/
 
+# Cache files
+django_cache/
+
 # Static files (collected)
 staticfiles/
+static_root/
 
 # IDE
 .vscode/
