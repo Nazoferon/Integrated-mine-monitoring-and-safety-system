@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.http import HttpRequest
-from diploma.models import MinerDevice, InfrastructureDevice, SecurityAlert, TelemetryLog
+from diploma.models import MinerDevice, InfrastructureDevice, SecurityAlert, TelemetryLog, Employee, MineMap
 from diploma.views import api_receive_telemetry
 import time, json, os
 
@@ -40,8 +40,30 @@ class Command(BaseCommand):
         ap = InfrastructureDevice.objects.filter(is_active=True).first()
         
         if not device or not ap:
-            self.stdout.write(self.style.ERROR("Помилка: Немає активних пристроїв або репітерів у базі!"))
-            return
+            self.stdout.write(self.style.WARNING("⚠️ Не знайдено активних пристроїв або репітерів. Створюємо тестові дані..."))
+            
+            mine_map, _ = MineMap.objects.get_or_create(name="Основний горизонт")
+            
+            ap, _ = InfrastructureDevice.objects.get_or_create(
+                uid="AP-SCENARIO-TEST",
+                defaults={'map_location': mine_map, 'x': 0, 'y': 0}
+            )
+            ap.is_active = True
+            ap.save()
+            
+            emp, _ = Employee.objects.get_or_create(
+                first_name="Іван",
+                last_name="Сценарій",
+                position="GOV"
+            )
+            
+            device, _ = MinerDevice.objects.get_or_create(mac_address="SC:EN:AR:IO:00:01")
+            device.is_static = False
+            device.assigned_to = emp
+            device.is_active = True
+            device.save()
+            
+            self.stdout.write(self.style.SUCCESS("✅ Тестові дані успішно створено!"))
 
         mac = device.mac_address
         ap_uid = ap.uid
