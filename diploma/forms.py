@@ -26,10 +26,10 @@ class ProfileForm(forms.ModelForm):
         labels = {
             'profile_photo': 'Фото профілю',
             'phone_number': 'Номер телефону',
-            'bio': 'Про себе'
+            'bio': 'Службові нотатки'
         }
         widgets = {
-            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Розкажіть трохи про себе...'}),
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Додаткові контакти, графік чергувань або інша службова інформація...'}),
             'phone_number': forms.TextInput(attrs={'placeholder': '+380XXXXXXXXX'}),
             'profile_photo': forms.FileInput(attrs={'accept': 'image/png,image/jpeg,image/jpg'}),
         }
