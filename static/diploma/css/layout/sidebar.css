@@ -126,6 +126,7 @@
     background: rgba(77, 171, 247, 0.15);
     color: var(--accent-blue);
     border-right: 3px solid var(--accent-blue);
+    box-shadow: inset -4px 0 15px rgba(77, 171, 247, 0.1);
 }
 
 .nav-link i {

@@ -38,3 +38,9 @@
         opacity: 1;
     }
 }
+
+.metric-updated {
+    transform: scale(1.1);
+    color: #4dabf7 !important;
+    transition: all 0.3s ease;
+}

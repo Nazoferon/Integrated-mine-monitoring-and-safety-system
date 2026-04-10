@@ -85,6 +85,30 @@
     color: white;
 }
 
+/* Settings Button */
+.btn-settings {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-normal);
+    cursor: pointer;
+    padding: 0;
+    outline: none;
+}
+
+.btn-settings:hover {
+    background: rgba(77, 171, 247, 0.15);
+    color: var(--accent-blue);
+    border-color: rgba(77, 171, 247, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
 
 /* Mobile Devices */
 @media (max-width: 768px) {

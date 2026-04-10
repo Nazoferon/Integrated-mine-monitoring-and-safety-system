@@ -267,8 +267,8 @@ UNFOLD = {
     "SITE_TITLE": "Глибина 4.0 - Адміністрування",
     "SITE_HEADER": "Глибина 4.0",
     "SITE_ICON": {
-        "light": lambda request: "/static/diploma/image/favicon.ico",
-        "dark": lambda request: "/static/diploma/image/favicon.ico",
+        "light": lambda request: "/static/diploma/image/logo.ico",
+        "dark": lambda request: "/static/diploma/image/logo.ico",
     },
     "COLORS": {
         "primary": {

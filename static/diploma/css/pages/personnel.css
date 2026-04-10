@@ -4,32 +4,41 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 30px;
-    padding-bottom: 20px;
+    padding-bottom: 15px;
     border-bottom: 1px solid #333;
 }
-.personnel-title h2 { color: #fff; font-weight: 600; margin: 0; }
-.personnel-title span { color: #888; font-size: 14px; }
+.personnel-title {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+}
+.personnel-title h2 { color: #fff; font-weight: 600; margin: 0; font-size: 22px; }
+.personnel-title span { color: #4dabf7; font-size: 13px; font-weight: 500; margin-top: 4px; }
 
 .controls-wrapper {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     align-items: center;
     flex-wrap: wrap;
+    flex: 1;
+    justify-content: flex-end;
 }
 
 /* Стильний пошук */
 .search-wrapper {
     position: relative;
-    width: 300px;
+    flex: 1 1 220px;
+    max-width: 300px;
 }
 .custom-search {
     width: 100%;
     background: rgba(20, 20, 20, 0.8);
     border: 1px solid #444;
     border-radius: 30px;
-    padding: 10px 45px 10px 45px;
+    height: 42px;
+    padding: 0 45px;
     color: #fff;
     transition: all 0.3s ease;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
@@ -59,6 +68,7 @@
     background: rgba(20, 20, 20, 0.8);
     border: 1px solid #444;
     border-radius: 8px;
+    height: 42px;
     overflow: hidden;
 }
 .btn-view {
@@ -80,7 +90,7 @@
     background: rgba(30, 30, 30, 0.8);
     border: 1px solid #444;
     border-radius: 16px;
-    padding: 20px;
+    padding: 16px 12px;
     text-align: center;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
@@ -91,9 +101,10 @@
     flex-direction: column;
 }
 .employee-card:hover {
-    transform: translateY(-5px);
-    border-color: #4dabf7;
-    box-shadow: 0 10px 25px rgba(77, 171, 247, 0.15);
+    /* Прибрано transform, щоб картка не виглядала як кнопка */
+    border-color: rgba(77, 171, 247, 0.4);
+    background: rgba(35, 35, 40, 0.9);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 .card-top-line {
     position: absolute;
@@ -107,7 +118,7 @@
 
 .emp-photo-wrapper {
     position: relative;
-    width: 90px; height: 90px;
+    width: 75px; height: 75px;
     margin: 0 auto 15px;
     flex-shrink: 0;
 }
@@ -121,15 +132,15 @@
 .emp-no-photo {
     width: 100%; height: 100%; border-radius: 50%;
     background: #222; display: flex; align-items: center; justify-content: center;
-    font-size: 36px; color: #555; border: 3px solid #333;
+    font-size: 28px; color: #555; border: 3px solid #333;
 }
 
-.emp-name { color: #fff; font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-.emp-position { color: #4dabf7; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+.emp-name { color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 3px; line-height: 1.2; }
+.emp-position { color: #4dabf7; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
 
 .emp-details {
     background: rgba(0, 0, 0, 0.3); border-radius: 8px;
-    padding: 10px; margin-bottom: 15px; text-align: left;
+    padding: 8px; margin-bottom: 12px; text-align: left;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -137,7 +148,7 @@
 }
 .emp-detail-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 0; }
 .detail-label { color: #888; }
-.detail-value { color: #ddd; font-weight: 500; font-family: monospace; }
+.detail-value { color: #ddd; font-weight: 500; font-family: monospace; font-size: 12px; }
 
 .device-status {
     display: inline-flex; align-items: center; gap: 8px;
@@ -237,7 +248,11 @@
     border: 1px solid #1D3446; 
     color: #e0e0e0; 
     font-weight: 500; 
-    height: 44px; 
+    height: 42px;
+    padding: 0 15px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap; 
     transition: 0.3s;
 }
@@ -249,7 +264,11 @@
     border: 1px solid #1D3446; 
     color: #e0e0e0; 
     font-weight: 500; 
-    height: 44px; 
+    height: 42px;
+    padding: 0 15px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap; 
     transition: 0.3s;
 }
@@ -277,4 +296,49 @@
 .location-link:hover {
     background: rgba(77, 171, 247, 0.25);
     color: #fff;
+}
+
+/* ОПТИМІЗАЦІЯ ДЛЯ ПЛАНШЕТІВ ТА СЕНСОРНИХ ЕКРАНІВ */
+@media (hover: none) and (pointer: coarse) {
+    .employee-card:hover {
+        transform: none !important;
+    }
+    .employee-card:active {
+        transform: scale(0.98) !important;
+    }
+}
+
+/* --- МОБІЛЬНА АДАПТИВНІСТЬ --- */
+@media (max-width: 768px) {
+    .personnel-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        text-align: center;
+        gap: 15px;
+    }
+    .controls-wrapper, .search-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+    }
+    .custom-search, #searchInput {
+        width: 100%;
+        max-width: 100%;
+    }
+    .view-toggles {
+        justify-content: center;
+        width: 100%;
+    }
+    /* Фікс для списку співробітників на мобільному (List View) */
+    .list-view .employee-card {
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: 20px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+    .list-view .emp-avatar { margin-right: 0 !important; margin-bottom: 15px !important; width: 60px !important; height: 60px !important; }
+    .list-view .emp-details { flex-direction: column !important; gap: 10px !important; align-items: center !important; width: 100% !important; }
+    .list-view .emp-status { position: relative !important; top: 0 !important; right: 0 !important; margin-top: 15px !important; margin-left: 0 !important; }
 }

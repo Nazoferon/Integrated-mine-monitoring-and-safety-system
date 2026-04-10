@@ -179,3 +179,13 @@
       font-size: 18px;
   }
 }
+
+/* ОПТИМІЗАЦІЯ ДЛЯ ПЛАНШЕТІВ ТА СЕНСОРНИХ ЕКРАНІВ */
+@media (hover: none) and (pointer: coarse) {
+    .status-card:hover {
+        transform: none !important;
+    }
+    .status-card:active {
+        transform: scale(0.98) !important;
+    }
+}

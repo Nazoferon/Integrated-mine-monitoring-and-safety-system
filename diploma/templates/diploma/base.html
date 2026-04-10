@@ -102,6 +102,12 @@
                         </a>
                         {% endif %}
                     </div>
+                
+                <!-- Кнопка налаштувань вигляду -->
+                <button class="btn-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" title="Налаштування вигляду">
+                    <i class="fas fa-cog"></i>
+                </button>
+
                     <button class="menu-toggle" id="menu-toggle">
                         <span></span>
                         <span></span>
@@ -205,6 +211,57 @@
             </div>
         </div>
     </footer>
+
+    <!-- Offcanvas Панель Налаштувань -->
+    <div class="offcanvas offcanvas-end settings-offcanvas" tabindex="-1" id="settingsOffcanvas" aria-labelledby="settingsOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="settingsOffcanvasLabel"><i class="fas fa-sliders-h me-2"></i> Вигляд дашборду</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            
+            <!-- Ширина макета -->
+            <div class="setting-item">
+                <h6><i class="fas fa-arrows-alt-h me-2"></i> Ширина екрану</h6>
+                <div class="custom-radio-group">
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="layoutStandard" name="layoutWidth" value="standard" checked>
+                        <label for="layoutStandard">Стандарт</label>
+                    </div>
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="layoutFluid" name="layoutWidth" value="fluid">
+                        <label for="layoutFluid">На весь екран</label>
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block">"На весь екран" ідеально підходить для великих моніторів.</small>
+            </div>
+
+            <!-- Масштаб інтерфейсу -->
+            <div class="setting-item">
+                <h6><i class="fas fa-search-plus me-2"></i> Масштаб (Zoom)</h6>
+                <div class="custom-radio-group">
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="zoom90" name="uiZoom" value="90">
+                        <label for="zoom90">90%</label>
+                    </div>
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="zoom100" name="uiZoom" value="100" checked>
+                        <label for="zoom100">100%</label>
+                    </div>
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="zoom110" name="uiZoom" value="110">
+                        <label for="zoom110">110%</label>
+                    </div>
+                    <div class="custom-radio-btn">
+                        <input type="radio" id="zoom125" name="uiZoom" value="125">
+                        <label for="zoom125">125%</label>
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block">Збільшення робить шрифти та картки крупнішими.</small>
+            </div>
+
+        </div>
+    </div>
 
     <script src="{% static 'diploma/js/diploma.js' %}"></script>
     {% block extra_js %}{% endblock %}

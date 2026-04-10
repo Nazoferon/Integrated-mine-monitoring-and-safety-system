@@ -212,3 +212,19 @@
 .custom-tab-btn:hover .stat-card {
     border-color: #4dabf7;
 }
+
+/* --- МОБІЛЬНА АДАПТИВНІСТЬ --- */
+@media (max-width: 768px) {
+    .eq-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        text-align: center;
+        gap: 15px;
+    }
+    /* Зменшення відступів у таблицях для екранів телефонів */
+    .tech-table th, .tech-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+}

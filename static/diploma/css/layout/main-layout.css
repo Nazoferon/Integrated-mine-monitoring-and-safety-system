@@ -1,16 +1,42 @@
 /* ===== LAYOUT ===== */
+html {
+    background-color: #0f1c2d; /* Заповнює фон при масштабуванні сторінки */
+}
+
+/* СУЧАСНИЙ СКРОЛБАР ДЛЯ ДАШБОРДУ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(15, 28, 45, 0.5);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(77, 171, 247, 0.3);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 171, 247, 0.8);
+}
+.table-responsive::-webkit-scrollbar {
+    height: 4px;
+}
+
 .dashboard-body {
     background: linear-gradient(135deg, var(--primary-dark) 0%, #0f2a42 100%);
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 
 /* Main Container */
 .dashboard-container {
     display: flex;
-    min-height: 100vh;
+    flex: 1;
+    width: 100%;
     padding-top: var(--header-height);
     max-width: 1400px;
     margin: 0 auto;
@@ -74,4 +100,138 @@
   .dashboard-main {
       padding: 10px 8px;
   }
+}
+
+/* Режим "На весь екран" (Fluid Layout) */
+body.fluid-layout .dashboard-container {
+    max-width: 100% !important;
+}
+
+body.fluid-layout .footer-content {
+    max-width: 100% !important;
+    width: 100%;
+}
+
+/* ПРИМУСОВА ГОРИЗОНТАЛЬНА ОРІЄНТАЦІЯ */
+.orientation-warning {
+    display: none;
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 15, 21, 0.9);
+    border: 1px solid #4dabf7;
+    border-radius: 12px;
+    z-index: 9999;
+    color: #fff;
+    align-items: center;
+    padding: 12px 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    pointer-events: none; /* КРИТИЧНО ВАЖЛИВО: Пропускає всі кліки крізь себе! */
+    gap: 15px;
+}
+
+.orientation-warning .rotate-icon {
+    font-size: 24px;
+    color: #4dabf7;
+    animation: rotateDevice 2s infinite ease-in-out;
+}
+
+@keyframes rotateDevice {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}
+
+/* Показуємо попередження лише на мобільних і планшетах у вертикальному (портретному) положенні */
+@media screen and (max-width: 1024px) and (orientation: portrait) {
+    .orientation-warning {
+        display: flex;
+    }
+}
+
+/* ВІДЇЗНА ПАНЕЛЬ НАЛАШТУВАНЬ (OFFCANVAS) */
+.settings-offcanvas {
+    background: rgba(20, 20, 25, 0.95) !important;
+    backdrop-filter: blur(15px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+.settings-offcanvas .offcanvas-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-offcanvas .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+}
+
+.setting-item {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-item h6 {
+    color: #4dabf7;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Масштабування інтерфейсу (Zoom) */
+body.zoom-110 { zoom: 1.1; min-height: calc(100vh / 1.1); }
+body.zoom-125 { zoom: 1.25; min-height: calc(100vh / 1.25); }
+body.zoom-90  { zoom: 0.9; min-height: calc(100vh / 0.9); }
+
+/* Кастомні радіокнопки для налаштувань */
+.custom-radio-group {
+    display: flex;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-radio-btn {
+    flex: 1;
+}
+
+.custom-radio-btn input[type="radio"] {
+    display: none;
+}
+
+.custom-radio-btn label {
+    display: block;
+    text-align: center;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    color: #888;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.custom-radio-btn input[type="radio"]:checked + label {
+    background: #4dabf7;
+    color: #111;
+    box-shadow: 0 2px 10px rgba(77, 171, 247, 0.3);
+}
+
+/* КОНТЕЙНЕР ДЛЯ СПОВІЩЕНЬ (Вирішує проблему накладання) */
+#toast-container {
+    position: fixed;
+    top: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 10000; pointer-events: none;
+}
+#toast-container .notification-toast {
+    position: relative !important;
+    top: auto !important; right: auto !important;
+    pointer-events: auto;
 }

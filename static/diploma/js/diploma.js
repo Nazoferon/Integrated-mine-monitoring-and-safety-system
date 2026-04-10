@@ -33,6 +33,8 @@ class DashboardApp {
             this.setupObservers();
             this.checkViewport();
             this.setupServiceWorker();
+            this.setupSettingsPanel();
+            this.initTooltips();
             
             await this.loadInitialData();
             this.startRealTimeUpdates();
@@ -659,8 +661,15 @@ class DashboardApp {
      * Показати сповіщення
      */
     showNotification(message, type = 'info') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
         const notification = this.createNotificationElement(message, type);
-        document.body.appendChild(notification);
+        container.appendChild(notification);
         
         // Анімація появи
         setTimeout(() => {
@@ -895,6 +904,75 @@ class DashboardApp {
             banner.classList.add('active');
         } else {
             banner.classList.remove('active');
+        }
+    }
+
+    /**
+     * Ініціалізація красивих підказок Bootstrap
+     */
+    initTooltips() {
+        if (typeof bootstrap !== 'undefined') {
+            // Ігноруємо елементи, які вже мають інші Bootstrap-тогли (модалки, вкладки), щоб уникнути конфліктів
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]:not([data-bs-toggle])'));
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                if (!bootstrap.Tooltip.getInstance(tooltipTriggerEl)) {
+                    new bootstrap.Tooltip(tooltipTriggerEl, { boundary: document.body });
+                }
+            });
+        }
+    }
+
+    /**
+     * Налаштування панелі вигляду (Offcanvas)
+     */
+    setupSettingsPanel() {
+        const layoutRadios = document.querySelectorAll('input[name="layoutWidth"]');
+        const zoomRadios = document.querySelectorAll('input[name="uiZoom"]');
+        
+        // 1. Відновлюємо налаштування з localStorage
+        const savedLayout = localStorage.getItem('dashboard_layout') || 'standard';
+        const savedZoom = localStorage.getItem('dashboard_zoom') || '100';
+
+        // 2. Застосовуємо налаштування до body
+        this.applyLayout(savedLayout);
+        this.applyZoom(savedZoom);
+
+        // 3. Відмічаємо правильні радіокнопки в UI
+        if(layoutRadios.length > 0) {
+            const targetRadio = document.querySelector(`input[name="layoutWidth"][value="${savedLayout}"]`);
+            if (targetRadio) targetRadio.checked = true;
+            layoutRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.applyLayout(e.target.value);
+                    localStorage.setItem('dashboard_layout', e.target.value);
+                });
+            });
+        }
+
+        if(zoomRadios.length > 0) {
+            const targetRadio = document.querySelector(`input[name="uiZoom"][value="${savedZoom}"]`);
+            if (targetRadio) targetRadio.checked = true;
+            zoomRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.applyZoom(e.target.value);
+                    localStorage.setItem('dashboard_zoom', e.target.value);
+                });
+            });
+        }
+    }
+
+    applyLayout(type) {
+        if (type === 'fluid') {
+            document.body.classList.add('fluid-layout');
+        } else {
+            document.body.classList.remove('fluid-layout');
+        }
+    }
+
+    applyZoom(level) {
+        document.body.classList.remove('zoom-90', 'zoom-110', 'zoom-125');
+        if (level !== '100') {
+            document.body.classList.add(`zoom-${level}`);
         }
     }
 
