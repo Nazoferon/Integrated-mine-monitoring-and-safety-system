@@ -44,6 +44,9 @@ static_root/
 # Logs
 *.log
 
+# Logs changes
+*.dff
+
 # OS
 .DS_Store
 Thumbs.db
