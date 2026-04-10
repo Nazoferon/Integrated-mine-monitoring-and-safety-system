@@ -132,7 +132,14 @@ class EquipmentPage {
     startRealTelemetryUpdates() {
         const updateTelemetry = async () => {
             try {
-                const response = await fetch('/diploma/api/equipment-telemetry/');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                
+                const response = await fetch('/diploma/api/equipment-telemetry/', {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) return;
                 
                 const data = await response.json();

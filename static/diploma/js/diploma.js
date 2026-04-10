@@ -11,7 +11,8 @@ class DashboardApp {
             isMobileMenuOpen: false,
             isMobileView: false,
             notifications: [],
-            isOnline: true
+            isOnline: navigator.onLine,
+            consecutiveErrors: 0
         };
 
         this.elements = {};
@@ -456,10 +457,13 @@ class DashboardApp {
         
         if (isOnline) {
             this.showNotification('Зʼєднання відновлено', 'success');
+            this.state.consecutiveErrors = 0;
+            this.toggleOfflineWarning(false);
             this.restartRealTimeUpdates();
         } else {
             this.showNotification('Втрачено зʼєднання з інтернетом', 'warning');
-            this.stopRealTimeUpdates();
+            this.toggleOfflineWarning(true);
+            // Ми свідомо НЕ зупиняємо фонове опитування, щоб система могла "самовилікуватись"
         }
         
         this.updateSystemStatus();
@@ -486,9 +490,23 @@ class DashboardApp {
      */
     async updateMetrics() {
         try {
-            const response = await fetch('/diploma/api/dashboard-stats/');
+            // Таймаут 4 секунди (щоб захиститися від "тихого" зависання інтернету)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            
+            const response = await fetch('/diploma/api/dashboard-stats/', {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
             if (!response.ok) return null;
             
+            if (this.state.consecutiveErrors > 0) {
+                this.state.consecutiveErrors = 0;
+                this.toggleOfflineWarning(false);
+                this.updateSystemStatus();
+            }
+
             const data = await response.json();
 
             // Допоміжна функція для візуальної анімації при зміні цифр
@@ -584,7 +602,11 @@ class DashboardApp {
             
             return data; // Повертаємо дані для інших скриптів
         } catch (error) {
-            console.error('Помилка автоматичного оновлення показників:', error);
+            this.state.consecutiveErrors++;
+            if (this.state.consecutiveErrors >= 2) {
+                this.toggleOfflineWarning(true);
+                this.updateSystemStatus();
+            }
             return null;
         }
     }
@@ -743,7 +765,7 @@ class DashboardApp {
         const statusText = document.querySelector('.footer-status span:last-child');
         
         if (statusIndicator && statusText) {
-            if (this.state.isOnline) {
+            if (this.state.isOnline && this.state.consecutiveErrors < 2) {
                 statusIndicator.classList.add('online');
                 statusIndicator.classList.remove('offline');
                 statusText.textContent = 'Система активна';
@@ -854,6 +876,26 @@ class DashboardApp {
     dispatchEvent(name, detail = {}) {
         const event = new CustomEvent(name, { detail });
         document.dispatchEvent(event);
+    }
+
+    /**
+     * Показати/приховати глобальний банер втрати зв'язку
+     */
+    toggleOfflineWarning(show) {
+        let banner = document.getElementById('global-offline-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'global-offline-banner';
+            banner.className = 'offline-banner';
+            banner.innerHTML = '<i class="fas fa-wifi-slash" style="animation: pulseSOS 1s infinite;"></i> <span>КРИТИЧНО: Втрачено зв\'язок з сервером. Дані можуть бути неактуальними!</span>';
+            document.body.appendChild(banner);
+        }
+        
+        if (show) {
+            banner.classList.add('active');
+        } else {
+            banner.classList.remove('active');
+        }
     }
 
     /**

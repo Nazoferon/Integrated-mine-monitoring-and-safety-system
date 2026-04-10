@@ -38,6 +38,7 @@ CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']
 # Application definition
 
 INSTALLED_APPS = [
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -257,6 +258,30 @@ LOGGING = {
             'handlers': ['file'],
             'level': 'ERROR',
             'propagate': True,
+        },
+    },
+}
+
+# Кастомізація адмінки
+UNFOLD = {
+    "SITE_TITLE": "Глибина 4.0 - Адміністрування",
+    "SITE_HEADER": "Глибина 4.0",
+    "SITE_ICON": {
+        "light": lambda request: "/static/diploma/image/favicon.ico",
+        "dark": lambda request: "/static/diploma/image/favicon.ico",
+    },
+    "COLORS": {
+        "primary": {
+            "50": "#e3f2fd",
+            "100": "#c7e5fc",
+            "200": "#8ecbf9",
+            "300": "#4dabf7", # Ваш фірмовий блакитний колір
+            "400": "#339af0",
+            "500": "#228be6",
+            "600": "#1c7ed6",
+            "700": "#1971c2",
+            "800": "#1864ab",
+            "900": "#14558f",
         },
     },
 }

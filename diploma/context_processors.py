@@ -17,6 +17,5 @@ def sidebar_counters(request):
         return {
             'global_total_employees': total_employees,
             'global_total_devices': total_devices,
-            # Тут можна буде додати ще лічильник активних тривог (Сповіщень)
         }
     return {}

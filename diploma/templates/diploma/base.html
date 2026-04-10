@@ -27,6 +27,15 @@
 </head>
 
 <body class="dashboard-body {% block body_class %}{% endblock %}">
+    <!-- Неблокуюче попередження про орієнтацію -->
+    <div class="orientation-warning">
+        <i class="fas fa-mobile-alt rotate-icon"></i>
+        <div class="text-start">
+            <div class="fw-bold text-info" style="font-size: 13px;">Рекомендація</div>
+            <div class="text-muted" style="font-size: 11px;">Поверніть пристрій горизонтально</div>
+        </div>
+    </div>
+
     <!-- Модальне вікно виходу -->
     <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -53,7 +62,8 @@
     </div>
 
     <header class="dashboard-header">
-        <div class="container-fluid">
+        <!-- Розносимо логотип і профіль по самих краях на будь-якому дисплеї -->
+        <div class="container-fluid px-2 px-xl-3">
             <nav class="dashboard-nav">
                 <div class="nav-brand">
                     <a href="{% url 'diploma_home' %}" class="logo-link">
@@ -73,6 +83,7 @@
 
                 <div class="nav-controls">
                     <div class="user-menu">
+                        
                         {% if user.is_authenticated %}
                         <div class="user-welcome">
                             <a href="{% url 'profile' %}" class="user-welcome__button">
@@ -175,7 +186,8 @@
         </aside>
 
         <main class="dashboard-main">
-            <div class="container-fluid">
+            <!-- Контент також притискаємо ближче до країв для максимізації робочої площі -->
+            <div class="container-fluid px-2 px-md-3 px-xl-4">
                 {% block content %}
                 {% endblock %}
             </div>

@@ -1,22 +1,23 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import *
 
 @admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
+class UserProfileAdmin(ModelAdmin):
     list_display = ('user', 'phone_number')
 
 @admin.register(MineMap)
-class MineMapAdmin(admin.ModelAdmin):
+class MineMapAdmin(ModelAdmin):
     list_display = ('name', 'updated_at')
 
 @admin.register(InfrastructureDevice)
-class InfrastructureDeviceAdmin(admin.ModelAdmin):
+class InfrastructureDeviceAdmin(ModelAdmin):
     list_display = ('uid', 'wifi_bssid', 'map_location', 'is_active')
     list_filter = ('map_location',)
     search_fields = ('uid', 'wifi_bssid')
 
 @admin.register(Employee)
-class EmployeeAdmin(admin.ModelAdmin):
+class EmployeeAdmin(ModelAdmin):
     list_display = ('last_name', 'first_name', 'badge_number', 'position', 'safety_status')
     list_filter = ('position', 'safety_status')
     search_fields = ('last_name', 'badge_number')
@@ -24,7 +25,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     readonly_fields = ('badge_number', 'last_update') 
 
 @admin.register(MinerDevice)
-class MinerDeviceAdmin(admin.ModelAdmin):
+class MinerDeviceAdmin(ModelAdmin):
     list_display = ('inventory_number', 'is_static', 'assigned_to', 'mac_address', 'is_active')
     list_filter = ('is_static', 'is_active')
     search_fields = ('inventory_number', 'mac_address')
@@ -45,7 +46,7 @@ class MinerDeviceAdmin(admin.ModelAdmin):
     )
 
 @admin.register(TelemetryLog)
-class TelemetryLogAdmin(admin.ModelAdmin):
+class TelemetryLogAdmin(ModelAdmin):
     list_display = ('timestamp', 'device', 'gas_level', 'is_sos')
     list_filter = ('is_sos', 'timestamp')
     date_hierarchy = 'timestamp'
@@ -54,7 +55,7 @@ class TelemetryLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None): return False
 
 @admin.register(SecurityAlert)
-class SecurityAlertAdmin(admin.ModelAdmin):
+class SecurityAlertAdmin(ModelAdmin):
     list_display = ('created_at', 'employee', 'reason', 'is_resolved')
     list_filter = ('is_resolved', 'reason')
     date_hierarchy = 'created_at'
@@ -62,7 +63,7 @@ class SecurityAlertAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
 @admin.register(FirmwareUpdate)
-class FirmwareUpdateAdmin(admin.ModelAdmin):
+class FirmwareUpdateAdmin(ModelAdmin):
     list_display = ('version', 'uploaded_at', 'is_active', 'description', 'binary_file')
     list_filter = ('is_active', 'uploaded_at')
     search_fields = ('version', 'description')
@@ -77,7 +78,7 @@ class FirmwareUpdateAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(OTALog)
-class OTALogAdmin(admin.ModelAdmin):
+class OTALogAdmin(ModelAdmin):
     list_display = ('timestamp', 'device', 'version', 'status')
     list_filter = ('status', 'timestamp')
     date_hierarchy = 'timestamp'

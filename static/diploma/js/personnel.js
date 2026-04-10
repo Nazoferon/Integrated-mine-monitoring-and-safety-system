@@ -195,7 +195,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function updateDeviceStatuses() {
         try {
-            const response = await fetch(API_URL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            
+            const response = await fetch(API_URL, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
                 // Не виводимо помилку в консоль, щоб не засмічувати її при обриві з'єднання
                 return;

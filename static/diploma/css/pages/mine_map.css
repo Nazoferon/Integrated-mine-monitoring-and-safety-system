@@ -238,6 +238,8 @@
 .map-canvas-area {
     flex: 1; position: relative; overflow: hidden; cursor: grab;
     background: radial-gradient(circle at center, #141414 0%, #0a0a0a 100%);
+    /* Критично важливо для жестів на планшеті (Pinch-to-zoom / Drag) */
+    touch-action: none;
 }
 .map-canvas-area:active { cursor: grabbing; }
 canvas { display: block; width: 100%; height: 100%; }

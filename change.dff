@@ -1,0 +1,1433 @@
+diff --git a/diploma/admin.py b/diploma/admin.py
+index 69ea3ec..da244e2 100755
+--- a/diploma/admin.py
++++ b/diploma/admin.py
+@@ -1,22 +1,23 @@
+ from django.contrib import admin
++from unfold.admin import ModelAdmin
+ from .models import *
+ 
+ @admin.register(UserProfile)
+-class UserProfileAdmin(admin.ModelAdmin):
++class UserProfileAdmin(ModelAdmin):
+     list_display = ('user', 'phone_number')
+ 
+ @admin.register(MineMap)
+-class MineMapAdmin(admin.ModelAdmin):
++class MineMapAdmin(ModelAdmin):
+     list_display = ('name', 'updated_at')
+ 
+ @admin.register(InfrastructureDevice)
+-class InfrastructureDeviceAdmin(admin.ModelAdmin):
++class InfrastructureDeviceAdmin(ModelAdmin):
+     list_display = ('uid', 'wifi_bssid', 'map_location', 'is_active')
+     list_filter = ('map_location',)
+     search_fields = ('uid', 'wifi_bssid')
+ 
+ @admin.register(Employee)
+-class EmployeeAdmin(admin.ModelAdmin):
++class EmployeeAdmin(ModelAdmin):
+     list_display = ('last_name', 'first_name', 'badge_number', 'position', 'safety_status')
+     list_filter = ('position', 'safety_status')
+     search_fields = ('last_name', 'badge_number')
+@@ -24,7 +25,7 @@ class EmployeeAdmin(admin.ModelAdmin):
+     readonly_fields = ('badge_number', 'last_update') 
+ 
+ @admin.register(MinerDevice)
+-class MinerDeviceAdmin(admin.ModelAdmin):
++class MinerDeviceAdmin(ModelAdmin):
+     list_display = ('inventory_number', 'is_static', 'assigned_to', 'mac_address', 'is_active')
+     list_filter = ('is_static', 'is_active')
+     search_fields = ('inventory_number', 'mac_address')
+@@ -45,7 +46,7 @@ class MinerDeviceAdmin(admin.ModelAdmin):
+     )
+ 
+ @admin.register(TelemetryLog)
+-class TelemetryLogAdmin(admin.ModelAdmin):
++class TelemetryLogAdmin(ModelAdmin):
+     list_display = ('timestamp', 'device', 'gas_level', 'is_sos')
+     list_filter = ('is_sos', 'timestamp')
+     date_hierarchy = 'timestamp'
+@@ -54,7 +55,7 @@ class TelemetryLogAdmin(admin.ModelAdmin):
+     def has_change_permission(self, request, obj=None): return False
+ 
+ @admin.register(SecurityAlert)
+-class SecurityAlertAdmin(admin.ModelAdmin):
++class SecurityAlertAdmin(ModelAdmin):
+     list_display = ('created_at', 'employee', 'reason', 'is_resolved')
+     list_filter = ('is_resolved', 'reason')
+     date_hierarchy = 'created_at'
+@@ -62,7 +63,7 @@ class SecurityAlertAdmin(admin.ModelAdmin):
+     ordering = ('-created_at',)
+ 
+ @admin.register(FirmwareUpdate)
+-class FirmwareUpdateAdmin(admin.ModelAdmin):
++class FirmwareUpdateAdmin(ModelAdmin):
+     list_display = ('version', 'uploaded_at', 'is_active', 'description', 'binary_file')
+     list_filter = ('is_active', 'uploaded_at')
+     search_fields = ('version', 'description')
+@@ -77,7 +78,7 @@ class FirmwareUpdateAdmin(admin.ModelAdmin):
+         super().save_model(request, obj, form, change)
+ 
+ @admin.register(OTALog)
+-class OTALogAdmin(admin.ModelAdmin):
++class OTALogAdmin(ModelAdmin):
+     list_display = ('timestamp', 'device', 'version', 'status')
+     list_filter = ('status', 'timestamp')
+     date_hierarchy = 'timestamp'
+diff --git a/diploma/context_processors.py b/diploma/context_processors.py
+index a0c8a9e..c1dab89 100644
+--- a/diploma/context_processors.py
++++ b/diploma/context_processors.py
+@@ -17,6 +17,5 @@ def sidebar_counters(request):
+         return {
+             'global_total_employees': total_employees,
+             'global_total_devices': total_devices,
+-            # Тут можна буде додати ще лічильник активних тривог (Сповіщень)
+         }
+     return {}
+\ No newline at end of file
+diff --git a/diploma/templates/diploma/base.html b/diploma/templates/diploma/base.html
+index 8b1f111..dfa7a38 100644
+--- a/diploma/templates/diploma/base.html
++++ b/diploma/templates/diploma/base.html
+@@ -27,6 +27,15 @@
+ </head>
+ 
+ <body class="dashboard-body {% block body_class %}{% endblock %}">
++    <!-- Неблокуюче попередження про орієнтацію -->
++    <div class="orientation-warning">
++        <i class="fas fa-mobile-alt rotate-icon"></i>
++        <div class="text-start">
++            <div class="fw-bold text-info" style="font-size: 13px;">Рекомендація</div>
++            <div class="text-muted" style="font-size: 11px;">Поверніть пристрій горизонтально</div>
++        </div>
++    </div>
++
+     <!-- Модальне вікно виходу -->
+     <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+         <div class="modal-dialog modal-dialog-centered">
+@@ -53,7 +62,8 @@
+     </div>
+ 
+     <header class="dashboard-header">
+-        <div class="container-fluid">
++        <!-- Розносимо логотип і профіль по самих краях на будь-якому дисплеї -->
++        <div class="container-fluid px-2 px-xl-3">
+             <nav class="dashboard-nav">
+                 <div class="nav-brand">
+                     <a href="{% url 'diploma_home' %}" class="logo-link">
+@@ -73,6 +83,7 @@
+ 
+                 <div class="nav-controls">
+                     <div class="user-menu">
++                        
+                         {% if user.is_authenticated %}
+                         <div class="user-welcome">
+                             <a href="{% url 'profile' %}" class="user-welcome__button">
+@@ -175,7 +186,8 @@
+         </aside>
+ 
+         <main class="dashboard-main">
+-            <div class="container-fluid">
++            <!-- Контент також притискаємо ближче до країв для максимізації робочої площі -->
++            <div class="container-fluid px-2 px-md-3 px-xl-4">
+                 {% block content %}
+                 {% endblock %}
+             </div>
+diff --git a/myproject/settings.py b/myproject/settings.py
+index 9c9ed82..2c42f10 100755
+--- a/myproject/settings.py
++++ b/myproject/settings.py
+@@ -38,6 +38,7 @@ CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']
+ # Application definition
+ 
+ INSTALLED_APPS = [
++    'unfold',
+     'django.contrib.admin',
+     'django.contrib.auth',
+     'django.contrib.contenttypes',
+@@ -259,4 +260,28 @@ LOGGING = {
+             'propagate': True,
+         },
+     },
++}
++
++# Кастомізація адмінки
++UNFOLD = {
++    "SITE_TITLE": "Глибина 4.0 - Адміністрування",
++    "SITE_HEADER": "Глибина 4.0",
++    "SITE_ICON": {
++        "light": lambda request: "/static/diploma/image/favicon.ico",
++        "dark": lambda request: "/static/diploma/image/favicon.ico",
++    },
++    "COLORS": {
++        "primary": {
++            "50": "#e3f2fd",
++            "100": "#c7e5fc",
++            "200": "#8ecbf9",
++            "300": "#4dabf7", # Ваш фірмовий блакитний колір
++            "400": "#339af0",
++            "500": "#228be6",
++            "600": "#1c7ed6",
++            "700": "#1971c2",
++            "800": "#1864ab",
++            "900": "#14558f",
++        },
++    },
+ }
+\ No newline at end of file
+diff --git a/static/admin/js/actions.js b/static/admin/js/actions.js
+index 04b25e9..2f0db2d 100644
+--- a/static/admin/js/actions.js
++++ b/static/admin/js/actions.js
+@@ -1,204 +1,246 @@
+ /*global gettext, interpolate, ngettext, Actions*/
+-'use strict';
++"use strict";
+ {
+-    function show(selector) {
+-        document.querySelectorAll(selector).forEach(function(el) {
+-            el.classList.remove('hidden');
+-        });
+-    }
++  function show(options, selector) {
++    options.parent.querySelectorAll(selector).forEach(function (el) {
++      el.classList.remove("hidden");
++    });
++  }
+ 
+-    function hide(selector) {
+-        document.querySelectorAll(selector).forEach(function(el) {
+-            el.classList.add('hidden');
+-        });
++  function hide(options, selector) {
++    options.parent.querySelectorAll(selector).forEach(function (el) {
++      el.classList.add("hidden");
++    });
++  }
++
++  function showQuestion(options) {
++    hide(options, options.acrossClears);
++    show(options, options.acrossQuestions);
++    hide(options, options.allContainer);
++  }
++
++  function showClear(options) {
++    show(options, options.acrossClears);
++    hide(options, options.acrossQuestions);
++    options.parent
++      .querySelector(options.actionContainer)
++      .classList.remove(options.selectedClass);
++    show(options, options.allContainer);
++    hide(options, options.counterContainer);
++  }
++
++  function reset(options) {
++    hide(options, options.acrossClears);
++    hide(options, options.acrossQuestions);
++    hide(options, options.allContainer);
++    show(options, options.counterContainer);
++  }
++
++  function clearAcross(options) {
++    reset(options);
++    const acrossInputs = options.parent.querySelectorAll(options.acrossInput);
++    acrossInputs.forEach(function (acrossInput) {
++      acrossInput.value = 0;
++      acrossInput.dispatchEvent(new Event("input"));
++    });
++    options.parent
++      .querySelector(options.actionContainer)
++      .classList.remove(options.selectedClass);
++  }
++
++  function checker(actionCheckboxes, options, checked) {
++    if (checked) {
++      showQuestion(options);
++    } else {
++      reset(options);
+     }
+-
+-    function showQuestion(options) {
+-        hide(options.acrossClears);
+-        show(options.acrossQuestions);
+-        hide(options.allContainer);
++    actionCheckboxes.forEach(function (el) {
++      el.checked = checked;
++      el.closest("tr").classList.toggle(options.selectedClass, checked);
++    });
++  }
++
++  function updateCounter(actionCheckboxes, options) {
++    const sel = Array.from(actionCheckboxes).filter(function (el) {
++      return el.checked;
++    }).length;
++    const counter = options.parent.querySelector(options.counterContainer);
++    // data-actions-icnt is defined in the generated HTML
++    // and contains the total amount of objects in the queryset
++    const actions_icnt = Number(counter.dataset.actionsIcnt);
++    counter.textContent = interpolate(
++      ngettext(
++        "%(sel)s of %(cnt)s selected",
++        "%(sel)s of %(cnt)s selected",
++        sel
++      ),
++      {
++        sel: sel,
++        cnt: actions_icnt,
++      },
++      true
++    );
++    const allToggle = options.parent.querySelector(".action-toggle");
++    allToggle.checked = sel === actionCheckboxes.length;
++    if (allToggle.checked) {
++      showQuestion(options);
++    } else {
++      clearAcross(options);
+     }
++  }
++
++  const defaults = {
++    actionContainer: "div.actions",
++    counterContainer: "span.action-counter",
++    allContainer: "div.actions span.all",
++    acrossInput: "div.actions input.select-across",
++    acrossQuestions: "div.actions span.question",
++    acrossClears: "div.actions span.clear",
++    allToggleId: "action-toggle",
++    selectedClass: "selected",
++  };
++
++  window.Actions = function (actionCheckboxes, options) {
++    options = Object.assign({}, defaults, options);
++    let list_editable_changed = false;
++    let lastChecked = null;
++    let shiftPressed = false;
++
++    document.addEventListener("keydown", (event) => {
++      shiftPressed = event.shiftKey;
++    });
+ 
+-    function showClear(options) {
+-        show(options.acrossClears);
+-        hide(options.acrossQuestions);
+-        document.querySelector(options.actionContainer).classList.remove(options.selectedClass);
+-        show(options.allContainer);
+-        hide(options.counterContainer);
+-    }
++    document.addEventListener("keyup", (event) => {
++      shiftPressed = event.shiftKey;
++    });
+ 
+-    function reset(options) {
+-        hide(options.acrossClears);
+-        hide(options.acrossQuestions);
+-        hide(options.allContainer);
+-        show(options.counterContainer);
+-    }
++    const allToggle = options.parent.querySelector(".action-toggle");
++    allToggle.addEventListener("click", function (event) {
++      checker(actionCheckboxes, options, this.checked);
++      updateCounter(actionCheckboxes, options);
++    });
+ 
+-    function clearAcross(options) {
+-        reset(options);
+-        const acrossInputs = document.querySelectorAll(options.acrossInput);
+-        acrossInputs.forEach(function(acrossInput) {
+-            acrossInput.value = 0;
++    options.parent
++      .querySelectorAll(options.acrossQuestions + " a")
++      .forEach(function (el) {
++        el.addEventListener("click", function (event) {
++          event.preventDefault();
++          const acrossInputs = options.parent.querySelectorAll(
++            options.acrossInput
++          );
++          acrossInputs.forEach(function (acrossInput) {
++            acrossInput.value = 1;
++            acrossInput.dispatchEvent(new Event("input"));
++          });
++          showClear(options);
+         });
+-        document.querySelector(options.actionContainer).classList.remove(options.selectedClass);
++      });
++
++    options.parent
++      .querySelectorAll(options.acrossClears + " a")
++      .forEach(function (el) {
++        el.addEventListener("click", function (event) {
++          event.preventDefault();
++          options.parent.querySelector(".action-toggle").checked = false;
++          clearAcross(options);
++          checker(actionCheckboxes, options, false);
++          updateCounter(actionCheckboxes, options);
++        });
++      });
++
++    function affectedCheckboxes(target, withModifier) {
++      const multiSelect = lastChecked && withModifier && lastChecked !== target;
++      if (!multiSelect) {
++        return [target];
++      }
++      const checkboxes = Array.from(actionCheckboxes);
++      const targetIndex = checkboxes.findIndex((el) => el === target);
++      const lastCheckedIndex = checkboxes.findIndex((el) => el === lastChecked);
++      const startIndex = Math.min(targetIndex, lastCheckedIndex);
++      const endIndex = Math.max(targetIndex, lastCheckedIndex);
++      const filtered = checkboxes.filter(
++        (el, index) => startIndex <= index && index <= endIndex
++      );
++      return filtered;
+     }
+ 
+-    function checker(actionCheckboxes, options, checked) {
+-        if (checked) {
+-            showQuestion(options);
++    const resultList = options.parent.querySelector(".result-list").tBodies;
++    Array.from(resultList).forEach(function (el) {
++      el.addEventListener("change", function (event) {
++        const target = event.target;
++        if (target.classList.contains("action-select")) {
++          const checkboxes = affectedCheckboxes(target, shiftPressed);
++          checker(checkboxes, options, target.checked);
++          updateCounter(actionCheckboxes, options);
++          lastChecked = target;
+         } else {
+-            reset(options);
++          list_editable_changed = true;
+         }
+-        actionCheckboxes.forEach(function(el) {
+-            el.checked = checked;
+-            el.closest('tr').classList.toggle(options.selectedClass, checked);
+-        });
+-    }
++      });
++    });
+ 
+-    function updateCounter(actionCheckboxes, options) {
+-        const sel = Array.from(actionCheckboxes).filter(function(el) {
+-            return el.checked;
+-        }).length;
+-        const counter = document.querySelector(options.counterContainer);
+-        // data-actions-icnt is defined in the generated HTML
+-        // and contains the total amount of objects in the queryset
+-        const actions_icnt = Number(counter.dataset.actionsIcnt);
+-        counter.textContent = interpolate(
+-            ngettext('%(sel)s of %(cnt)s selected', '%(sel)s of %(cnt)s selected', sel), {
+-                sel: sel,
+-                cnt: actions_icnt
+-            }, true);
+-        const allToggle = document.getElementById(options.allToggleId);
+-        allToggle.checked = sel === actionCheckboxes.length;
+-        if (allToggle.checked) {
+-            showQuestion(options);
+-        } else {
+-            clearAcross(options);
++    options.parent
++      .querySelector("button[name=index]")
++      .addEventListener("click", function (event) {
++        if (list_editable_changed) {
++          const confirmed = confirm(
++            gettext(
++              "You have unsaved changes on individual editable fields. If you run an action, your unsaved changes will be lost."
++            )
++          );
++          if (!confirmed) {
++            event.preventDefault();
++          }
++        }
++      });
++
++    const el = options.parent.querySelector("input[name=_save]");
++
++    // The button does not exist if no fields are editable.
++    if (el) {
++      el.addEventListener("click", function (event) {
++        if (document.querySelector("[name=action]").value) {
++          const text = list_editable_changed
++            ? gettext(
++                "You have selected an action, but you haven’t saved your changes to individual fields yet. Please click OK to save. You’ll need to re-run the action."
++              )
++            : gettext(
++                "You have selected an action, and you haven’t made any changes on individual fields. You’re probably looking for the Go button rather than the Save button."
++              );
++          if (!confirm(text)) {
++            event.preventDefault();
++          }
+         }
++      });
+     }
+ 
+-    const defaults = {
+-        actionContainer: "div.actions",
+-        counterContainer: "span.action-counter",
+-        allContainer: "div.actions span.all",
+-        acrossInput: "div.actions input.select-across",
+-        acrossQuestions: "div.actions span.question",
+-        acrossClears: "div.actions span.clear",
+-        allToggleId: "action-toggle",
+-        selectedClass: "selected"
+-    };
+-
+-    window.Actions = function(actionCheckboxes, options) {
+-        options = Object.assign({}, defaults, options);
+-        let list_editable_changed = false;
+-        let lastChecked = null;
+-        let shiftPressed = false;
+-
+-        document.addEventListener('keydown', (event) => {
+-            shiftPressed = event.shiftKey;
+-        });
+-
+-        document.addEventListener('keyup', (event) => {
+-            shiftPressed = event.shiftKey;
+-        });
+-
+-        document.getElementById(options.allToggleId).addEventListener('click', function(event) {
+-            checker(actionCheckboxes, options, this.checked);
+-            updateCounter(actionCheckboxes, options);
+-        });
+-
+-        document.querySelectorAll(options.acrossQuestions + " a").forEach(function(el) {
+-            el.addEventListener('click', function(event) {
+-                event.preventDefault();
+-                const acrossInputs = document.querySelectorAll(options.acrossInput);
+-                acrossInputs.forEach(function(acrossInput) {
+-                    acrossInput.value = 1;
+-                });
+-                showClear(options);
+-            });
+-        });
+-
+-        document.querySelectorAll(options.acrossClears + " a").forEach(function(el) {
+-            el.addEventListener('click', function(event) {
+-                event.preventDefault();
+-                document.getElementById(options.allToggleId).checked = false;
+-                clearAcross(options);
+-                checker(actionCheckboxes, options, false);
+-                updateCounter(actionCheckboxes, options);
+-            });
+-        });
++    // Sync counter when navigating to the page, such as through the back
++    // button.
++    window.addEventListener("pageshow", (event) =>
++      updateCounter(actionCheckboxes, options)
++    );
++  };
++
++  // Call function fn when the DOM is loaded and ready. If it is already
++  // loaded, call the function now.
++  // http://youmightnotneedjquery.com/#ready
++  function ready(fn) {
++    if (document.readyState !== "loading") {
++      fn();
++    } else {
++      document.addEventListener("DOMContentLoaded", fn);
++    }
++  }
+ 
+-        function affectedCheckboxes(target, withModifier) {
+-            const multiSelect = (lastChecked && withModifier && lastChecked !== target);
+-            if (!multiSelect) {
+-                return [target];
+-            }
+-            const checkboxes = Array.from(actionCheckboxes);
+-            const targetIndex = checkboxes.findIndex(el => el === target);
+-            const lastCheckedIndex = checkboxes.findIndex(el => el === lastChecked);
+-            const startIndex = Math.min(targetIndex, lastCheckedIndex);
+-            const endIndex = Math.max(targetIndex, lastCheckedIndex);
+-            const filtered = checkboxes.filter((el, index) => (startIndex <= index) && (index <= endIndex));
+-            return filtered;
+-        };
+-
+-        Array.from(document.getElementById('result_list').tBodies).forEach(function(el) {
+-            el.addEventListener('change', function(event) {
+-                const target = event.target;
+-                if (target.classList.contains('action-select')) {
+-                    const checkboxes = affectedCheckboxes(target, shiftPressed);
+-                    checker(checkboxes, options, target.checked);
+-                    updateCounter(actionCheckboxes, options);
+-                    lastChecked = target;
+-                } else {
+-                    list_editable_changed = true;
+-                }
+-            });
+-        });
++  ready(function () {
++    document.querySelectorAll(".result-list-wrapper").forEach(function (el) {
++      const actionsEls = el.querySelectorAll("tr input.action-select");
+ 
+-        document.querySelector('#changelist-form button[name=index]').addEventListener('click', function(event) {
+-            if (list_editable_changed) {
+-                const confirmed = confirm(gettext("You have unsaved changes on individual editable fields. If you run an action, your unsaved changes will be lost."));
+-                if (!confirmed) {
+-                    event.preventDefault();
+-                }
+-            }
++      if (actionsEls.length > 0) {
++        Actions(actionsEls, {
++          parent: el,
+         });
+-
+-        const el = document.querySelector('#changelist-form input[name=_save]');
+-        // The button does not exist if no fields are editable.
+-        if (el) {
+-            el.addEventListener('click', function(event) {
+-                if (document.querySelector('[name=action]').value) {
+-                    const text = list_editable_changed
+-                        ? gettext("You have selected an action, but you haven’t saved your changes to individual fields yet. Please click OK to save. You’ll need to re-run the action.")
+-                        : gettext("You have selected an action, and you haven’t made any changes on individual fields. You’re probably looking for the Go button rather than the Save button.");
+-                    if (!confirm(text)) {
+-                        event.preventDefault();
+-                    }
+-                }
+-            });
+-        }
+-        // Sync counter when navigating to the page, such as through the back
+-        // button.
+-        window.addEventListener('pageshow', (event) => updateCounter(actionCheckboxes, options));
+-    };
+-
+-    // Call function fn when the DOM is loaded and ready. If it is already
+-    // loaded, call the function now.
+-    // http://youmightnotneedjquery.com/#ready
+-    function ready(fn) {
+-        if (document.readyState !== 'loading') {
+-            fn();
+-        } else {
+-            document.addEventListener('DOMContentLoaded', fn);
+-        }
+-    }
+-
+-    ready(function() {
+-        const actionsEls = document.querySelectorAll('tr input.action-select');
+-        if (actionsEls.length > 0) {
+-            Actions(actionsEls);
+-        }
++      }
+     });
++  });
+ }
+diff --git a/static/admin/js/admin/RelatedObjectLookups.js b/static/admin/js/admin/RelatedObjectLookups.js
+index 1fc03c6..2d281f9 100644
+--- a/static/admin/js/admin/RelatedObjectLookups.js
++++ b/static/admin/js/admin/RelatedObjectLookups.js
+@@ -1,252 +1,299 @@
+ /*global SelectBox, interpolate*/
+ // Handles related-objects functionality: lookup link for raw_id_fields
+ // and Add Another links.
+-'use strict';
++"use strict";
+ {
+-    const $ = django.jQuery;
+-    let popupIndex = 0;
+-    const relatedWindows = [];
+-
+-    function dismissChildPopups() {
+-        relatedWindows.forEach(function(win) {
+-            if(!win.closed) {
+-                win.dismissChildPopups();
+-                win.close();    
+-            }
+-        });
+-    }
++  const $ = django.jQuery;
++  let popupIndex = 0;
++  const relatedWindows = [];
+ 
+-    function setPopupIndex() {
+-        if(document.getElementsByName("_popup").length > 0) {
+-            const index = window.name.lastIndexOf("__") + 2;
+-            popupIndex = parseInt(window.name.substring(index));   
+-        } else {
+-            popupIndex = 0;
+-        }
+-    }
++  function dismissChildPopups() {
++    relatedWindows.forEach(function (win) {
++      if (!win.closed) {
++        win.dismissChildPopups();
++        win.close();
++      }
++    });
++  }
+ 
+-    function addPopupIndex(name) {
+-        return name + "__" + (popupIndex + 1);
++  function setPopupIndex() {
++    if (document.getElementsByName("_popup").length > 0) {
++      const index = window.name.lastIndexOf("__") + 2;
++      popupIndex = parseInt(window.name.substring(index));
++    } else {
++      popupIndex = 0;
+     }
++  }
+ 
+-    function removePopupIndex(name) {
+-        return name.replace(new RegExp("__" + (popupIndex + 1) + "$"), '');
+-    }
++  function addPopupIndex(name) {
++    return name + "__" + (popupIndex + 1);
++  }
+ 
+-    function showAdminPopup(triggeringLink, name_regexp, add_popup) {
+-        const name = addPopupIndex(triggeringLink.id.replace(name_regexp, ''));
+-        const href = new URL(triggeringLink.href);
+-        if (add_popup) {
+-            href.searchParams.set('_popup', 1);
+-        }
+-        const win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
+-        relatedWindows.push(win);
+-        win.focus();
+-        return false;
+-    }
++  function removePopupIndex(name) {
++    return name.replace(new RegExp("__" + (popupIndex + 1) + "$"), "");
++  }
+ 
+-    function showRelatedObjectLookupPopup(triggeringLink) {
+-        return showAdminPopup(triggeringLink, /^lookup_/, true);
++  function showAdminPopup(triggeringLink, name_regexp, add_popup) {
++    const name = addPopupIndex(triggeringLink.id.replace(name_regexp, ""));
++    const href = new URL(triggeringLink.href);
++    if (add_popup) {
++      href.searchParams.set("_popup", 1);
+     }
++    const win = window.open(
++      href,
++      name,
++      "height=768,width=1024,resizable=yes,scrollbars=yes"
++    );
++    relatedWindows.push(win);
++    win.focus();
++    return false;
++  }
+ 
+-    function dismissRelatedLookupPopup(win, chosenId) {
+-        const name = removePopupIndex(win.name);
+-        const elem = document.getElementById(name);
+-        if (elem.classList.contains('vManyToManyRawIdAdminField') && elem.value) {
+-            elem.value += ',' + chosenId;
+-        } else {
+-            elem.value = chosenId;
+-        }
+-        $(elem).trigger('change');
+-        const index = relatedWindows.indexOf(win);
+-        if (index > -1) {
+-            relatedWindows.splice(index, 1);
+-        }
+-        win.close();
++  function showRelatedObjectLookupPopup(triggeringLink) {
++    return showAdminPopup(triggeringLink, /^lookup_/, true);
++  }
++
++  function dismissRelatedLookupPopup(win, chosenId) {
++    const name = removePopupIndex(win.name);
++    const elem = document.getElementById(name);
++    if (elem.classList.contains("vManyToManyRawIdAdminField") && elem.value) {
++      elem.value += "," + chosenId;
++    } else {
++      document.getElementById(name).value = chosenId;
++    }
++    const index = relatedWindows.indexOf(win);
++    if (index > -1) {
++      relatedWindows.splice(index, 1);
+     }
++    win.close();
++  }
+ 
+-    function showRelatedObjectPopup(triggeringLink) {
+-        return showAdminPopup(triggeringLink, /^(change|add|delete)_/, false);
++  function showRelatedObjectPopup(triggeringLink) {
++    return showAdminPopup(triggeringLink, /^(change|add|delete)_/, false);
++  }
++
++  function updateRelatedObjectLinks(triggeringLink) {
++    const $this = $(triggeringLink);
++    // !CHANGED from original
++    // const siblings = $this.nextAll(
++    //   ".view-related, .change-related, .delete-related"
++    // );
++
++    const siblings = $("body").find('#' + $this.closest(".related-widget-wrapper").data("id")).find(".view-related, .change-related, .delete-related");
++
++    if (!siblings.length) {
++      return;
+     }
++    const value = $this.val();
++    if (value) {
++      siblings.each(function () {
++        const elm = $(this);
++        elm.attr(
++          "href",
++          elm.attr("data-href-template").replace("__fk__", value)
++        );
++        elm.removeAttr("aria-disabled");
++      });
++    } else {
++      siblings.removeAttr("href");
++      siblings.attr("aria-disabled", true);
++    }
++  }
+ 
+-    function updateRelatedObjectLinks(triggeringLink) {
+-        const $this = $(triggeringLink);
+-        const siblings = $this.nextAll('.view-related, .change-related, .delete-related');
+-        if (!siblings.length) {
+-            return;
+-        }
+-        const value = $this.val();
+-        if (value) {
+-            siblings.each(function() {
+-                const elm = $(this);
+-                elm.attr('href', elm.attr('data-href-template').replace('__fk__', value));
+-                elm.removeAttr('aria-disabled');
+-            });
+-        } else {
+-            siblings.removeAttr('href');
+-            siblings.attr('aria-disabled', true);
++  function updateRelatedSelectsOptions(
++    currentSelect,
++    win,
++    objId,
++    newRepr,
++    newId,
++    skipIds = []
++  ) {
++    // After create/edit a model from the options next to the current
++    // select (+ or :pencil:) update ForeignKey PK of the rest of selects
++    // in the page.
++
++    const path = win.location.pathname;
++    // Extract the model from the popup url '.../<model>/add/' or
++    // '.../<model>/<id>/change/' depending the action (add or change).
++    const modelName = path.split("/")[path.split("/").length - (objId ? 4 : 3)];
++    // Select elements with a specific model reference and context of "available-source".
++    const selectsRelated = document.querySelectorAll(
++      `[data-model-ref="${modelName}"] [data-context="available-source"]`
++    );
++
++    selectsRelated.forEach(function (select) {
++      if (
++        currentSelect === select ||
++        (skipIds && skipIds.includes(select.id))
++      ) {
++        return;
++      }
++
++      let option = select.querySelector(`option[value="${objId}"]`);
++
++      if (!option) {
++        option = new Option(newRepr, newId);
++        select.options.add(option);
++        // Update SelectBox cache for related fields.
++        if (
++          window.SelectBox !== undefined &&
++          !SelectBox.cache[currentSelect.id]
++        ) {
++          SelectBox.add_to_cache(select.id, option);
++          SelectBox.redisplay(select.id);
+         }
+-    }
++        return;
++      }
+ 
+-    function updateRelatedSelectsOptions(currentSelect, win, objId, newRepr, newId, skipIds = []) {
+-        // After create/edit a model from the options next to the current
+-        // select (+ or :pencil:) update ForeignKey PK of the rest of selects
+-        // in the page.
+-
+-        const path = win.location.pathname;
+-        // Extract the model from the popup url '.../<model>/add/' or
+-        // '.../<model>/<id>/change/' depending the action (add or change).
+-        const modelName = path.split('/')[path.split('/').length - (objId ? 4 : 3)];
+-        // Select elements with a specific model reference and context of "available-source".
+-        const selectsRelated = document.querySelectorAll(`[data-model-ref="${modelName}"] [data-context="available-source"]`);
+-
+-        selectsRelated.forEach(function(select) {
+-            if (currentSelect === select || skipIds && skipIds.includes(select.id)) {
+-                return;
+-            }
+-
+-            let option = select.querySelector(`option[value="${objId}"]`);
+-
+-            if (!option) {
+-                option = new Option(newRepr, newId);
+-                select.options.add(option);
+-                // Update SelectBox cache for related fields.
+-                if (window.SelectBox !== undefined && !SelectBox.cache[currentSelect.id]) {
+-                    SelectBox.add_to_cache(select.id, option);
+-                    SelectBox.redisplay(select.id);
+-                }
+-                return;
+-            }
+-
+-            option.textContent = newRepr;
+-            option.value = newId;
+-        });
+-    }
++      option.textContent = newRepr;
++      option.value = newId;
++    });
++  }
+ 
+-    function dismissAddRelatedObjectPopup(win, newId, newRepr) {
+-        const name = removePopupIndex(win.name);
+-        const elem = document.getElementById(name);
+-        if (elem) {
+-            const elemName = elem.nodeName.toUpperCase();
+-            if (elemName === 'SELECT') {
+-                elem.options[elem.options.length] = new Option(newRepr, newId, true, true);
+-                updateRelatedSelectsOptions(elem, win, null, newRepr, newId);
+-            } else if (elemName === 'INPUT') {
+-                if (elem.classList.contains('vManyToManyRawIdAdminField') && elem.value) {
+-                    elem.value += ',' + newId;
+-                } else {
+-                    elem.value = newId;
+-                }
+-            }
+-            // Trigger a change event to update related links if required.
+-            $(elem).trigger('change');
++  function dismissAddRelatedObjectPopup(win, newId, newRepr) {
++    const name = removePopupIndex(win.name);
++    const elem = document.getElementById(name);
++    if (elem) {
++      const elemName = elem.nodeName.toUpperCase();
++      if (elemName === "SELECT") {
++        elem.options[elem.options.length] = new Option(
++          newRepr,
++          newId,
++          true,
++          true
++        );
++        updateRelatedSelectsOptions(elem, win, null, newRepr, newId);
++      } else if (elemName === "INPUT") {
++        if (
++          elem.classList.contains("vManyToManyRawIdAdminField") &&
++          elem.value
++        ) {
++          elem.value += "," + newId;
+         } else {
+-            const toId = name + "_to";
+-            const toElem = document.getElementById(toId);
+-            const o = new Option(newRepr, newId);
+-            SelectBox.add_to_cache(toId, o);
+-            SelectBox.redisplay(toId);
+-            if (toElem && toElem.nodeName.toUpperCase() === 'SELECT') {
+-                const skipIds = [name + "_from"];
+-                updateRelatedSelectsOptions(toElem, win, null, newRepr, newId, skipIds);
+-            }
++          elem.value = newId;
+         }
+-        const index = relatedWindows.indexOf(win);
+-        if (index > -1) {
+-            relatedWindows.splice(index, 1);
+-        }
+-        win.close();
++      }
++      // Trigger a change event to update related links if required.
++      $(elem).trigger("change");
++    } else {
++      const toId = name + "_to";
++      const toElem = document.getElementById(toId);
++      const o = new Option(newRepr, newId);
++      SelectBox.add_to_cache(toId, o);
++      SelectBox.redisplay(toId);
++      if (toElem && toElem.nodeName.toUpperCase() === "SELECT") {
++        const skipIds = [name + "_from"];
++        updateRelatedSelectsOptions(toElem, win, null, newRepr, newId, skipIds);
++      }
+     }
++    const index = relatedWindows.indexOf(win);
++    if (index > -1) {
++      relatedWindows.splice(index, 1);
++    }
++    win.close();
++  }
+ 
+-    function dismissChangeRelatedObjectPopup(win, objId, newRepr, newId) {
+-        const id = removePopupIndex(win.name.replace(/^edit_/, ''));
+-        const selectsSelector = interpolate('#%s, #%s_from, #%s_to', [id, id, id]);
+-        const selects = $(selectsSelector);
+-        selects.find('option').each(function() {
+-            if (this.value === objId) {
+-                this.textContent = newRepr;
+-                this.value = newId;
+-            }
+-        }).trigger('change');
+-        updateRelatedSelectsOptions(selects[0], win, objId, newRepr, newId);
+-        selects.next().find('.select2-selection__rendered').each(function() {
+-            // The element can have a clear button as a child.
+-            // Use the lastChild to modify only the displayed value.
+-            this.lastChild.textContent = newRepr;
+-            this.title = newRepr;
+-        });
+-        const index = relatedWindows.indexOf(win);
+-        if (index > -1) {
+-            relatedWindows.splice(index, 1);
++  function dismissChangeRelatedObjectPopup(win, objId, newRepr, newId) {
++    const id = removePopupIndex(win.name.replace(/^edit_/, ""));
++    const selectsSelector = interpolate("#%s, #%s_from, #%s_to", [id, id, id]);
++    const selects = $(selectsSelector);
++    selects
++      .find("option")
++      .each(function () {
++        if (this.value === objId) {
++          this.textContent = newRepr;
++          this.value = newId;
+         }
+-        win.close();
++      })
++      .trigger("change");
++    updateRelatedSelectsOptions(selects[0], win, objId, newRepr, newId);
++    selects
++      .next()
++      .find(".select2-selection__rendered")
++      .each(function () {
++        // The element can have a clear button as a child.
++        // Use the lastChild to modify only the displayed value.
++        this.lastChild.textContent = newRepr;
++        this.title = newRepr;
++      });
++    const index = relatedWindows.indexOf(win);
++    if (index > -1) {
++      relatedWindows.splice(index, 1);
+     }
++    win.close();
++  }
+ 
+-    function dismissDeleteRelatedObjectPopup(win, objId) {
+-        const id = removePopupIndex(win.name.replace(/^delete_/, ''));
+-        const selectsSelector = interpolate('#%s, #%s_from, #%s_to', [id, id, id]);
+-        const selects = $(selectsSelector);
+-        selects.find('option').each(function() {
+-            if (this.value === objId) {
+-                $(this).remove();
+-            }
+-        }).trigger('change');
+-        const index = relatedWindows.indexOf(win);
+-        if (index > -1) {
+-            relatedWindows.splice(index, 1);
++  function dismissDeleteRelatedObjectPopup(win, objId) {
++    const id = removePopupIndex(win.name.replace(/^delete_/, ""));
++    const selectsSelector = interpolate("#%s, #%s_from, #%s_to", [id, id, id]);
++    const selects = $(selectsSelector);
++    selects
++      .find("option")
++      .each(function () {
++        if (this.value === objId) {
++          $(this).remove();
+         }
+-        win.close();
++      })
++      .trigger("change");
++    const index = relatedWindows.indexOf(win);
++    if (index > -1) {
++      relatedWindows.splice(index, 1);
+     }
++    win.close();
++  }
+ 
+-    window.showRelatedObjectLookupPopup = showRelatedObjectLookupPopup;
+-    window.dismissRelatedLookupPopup = dismissRelatedLookupPopup;
+-    window.showRelatedObjectPopup = showRelatedObjectPopup;
+-    window.updateRelatedObjectLinks = updateRelatedObjectLinks;
+-    window.dismissAddRelatedObjectPopup = dismissAddRelatedObjectPopup;
+-    window.dismissChangeRelatedObjectPopup = dismissChangeRelatedObjectPopup;
+-    window.dismissDeleteRelatedObjectPopup = dismissDeleteRelatedObjectPopup;
+-    window.dismissChildPopups = dismissChildPopups;
+-    window.relatedWindows = relatedWindows;
+-
+-    // Kept for backward compatibility
+-    window.showAddAnotherPopup = showRelatedObjectPopup;
+-    window.dismissAddAnotherPopup = dismissAddRelatedObjectPopup;
+-
+-    window.addEventListener('unload', function(evt) {
+-        window.dismissChildPopups();
+-    });
++  window.showRelatedObjectLookupPopup = showRelatedObjectLookupPopup;
++  window.dismissRelatedLookupPopup = dismissRelatedLookupPopup;
++  window.showRelatedObjectPopup = showRelatedObjectPopup;
++  window.updateRelatedObjectLinks = updateRelatedObjectLinks;
++  window.dismissAddRelatedObjectPopup = dismissAddRelatedObjectPopup;
++  window.dismissChangeRelatedObjectPopup = dismissChangeRelatedObjectPopup;
++  window.dismissDeleteRelatedObjectPopup = dismissDeleteRelatedObjectPopup;
++  window.dismissChildPopups = dismissChildPopups;
++
++  // Kept for backward compatibility
++  window.showAddAnotherPopup = showRelatedObjectPopup;
++  window.dismissAddAnotherPopup = dismissAddRelatedObjectPopup;
+ 
+-    $(document).ready(function() {
+-        setPopupIndex();
+-        $("a[data-popup-opener]").on('click', function(event) {
+-            event.preventDefault();
+-            opener.dismissRelatedLookupPopup(window, $(this).data("popup-opener"));
+-        });
+-        $('body').on('click', '.related-widget-wrapper-link[data-popup="yes"]', function(e) {
+-            e.preventDefault();
+-            if (this.href) {
+-                const event = $.Event('django:show-related', {href: this.href});
+-                $(this).trigger(event);
+-                if (!event.isDefaultPrevented()) {
+-                    showRelatedObjectPopup(this);
+-                }
+-            }
+-        });
+-        $('body').on('change', '.related-widget-wrapper select', function(e) {
+-            const event = $.Event('django:update-related');
+-            $(this).trigger(event);
+-            if (!event.isDefaultPrevented()) {
+-                updateRelatedObjectLinks(this);
+-            }
+-        });
+-        $('.related-widget-wrapper select').trigger('change');
+-        $('body').on('click', '.related-lookup', function(e) {
+-            e.preventDefault();
+-            const event = $.Event('django:lookup-related');
+-            $(this).trigger(event);
+-            if (!event.isDefaultPrevented()) {
+-                showRelatedObjectLookupPopup(this);
+-            }
+-        });
++  window.addEventListener("unload", function (evt) {
++    window.dismissChildPopups();
++  });
++
++  $(document).ready(function () {
++    setPopupIndex();
++    $("a[data-popup-opener]").on("click", function (event) {
++      event.preventDefault();
++      opener.dismissRelatedLookupPopup(window, $(this).data("popup-opener"));
++    });
++    $("body").on(
++      "click",
++      '.related-widget-wrapper-link[data-popup="yes"]',
++      function (e) {
++        e.preventDefault();
++        if (this.href) {
++          const event = $.Event("django:show-related", { href: this.href });
++          $(this).trigger(event);
++          if (!event.isDefaultPrevented()) {
++            showRelatedObjectPopup(this);
++          }
++        }
++      }
++    );
++    $("body").on("change", ".related-widget-wrapper select", function (e) {
++      const event = $.Event("django:update-related");
++      $(this).trigger(event);
++      if (!event.isDefaultPrevented()) {
++        updateRelatedObjectLinks(this);
++      }
++    });
++    $(".related-widget-wrapper select").trigger("change");
++    $("body").on("click", ".related-lookup", function (e) {
++      e.preventDefault();
++      const event = $.Event("django:lookup-related");
++      $(this).trigger(event);
++      if (!event.isDefaultPrevented()) {
++        showRelatedObjectLookupPopup(this);
++      }
+     });
++  });
+ }
+diff --git a/static/diploma/css/main.css b/static/diploma/css/main.css
+index 4360179..0effa10 100644
+--- a/static/diploma/css/main.css
++++ b/static/diploma/css/main.css
+@@ -26,4 +26,86 @@
+ @import 'pages/mine_map.css';
+ @import 'pages/diploma_home.css';
+ @import 'pages/personnel.css';
+-@import 'pages/equipment.css';
+\ No newline at end of file
++@import 'pages/equipment.css';
++
++/* ===== 5. ОПТИМІЗАЦІЯ ДЛЯ ВЕЛИКИХ ДИСПЛЕЇВ (Ultrawide / 4K) ===== */
++@media (min-width: 1920px) {
++    /* Обмежуємо ширину контенту всюди, окрім сторінки карти шахти */
++    body:not(.mine-map-page) .dashboard-main .container-fluid,
++    body:not(.mine-map-page) .dashboard-header .container-fluid {
++        max-width: 1800px;
++        margin: 0 auto;
++    }
++}
++
++/* ===== 6. ОПТИМІЗАЦІЯ ДЛЯ ПЛАНШЕТІВ ТА СЕНСОРНИХ ЕКРАНІВ ===== */
++@media (hover: none) and (pointer: coarse) {
++    /* Усуваємо "залипання" hover-ефектів після тапу пальцем на планшеті */
++    .status-card:hover, .alert-item:hover, .employee-card:hover, .btn-action:hover {
++        transform: none !important;
++    }
++    .status-card:active, .alert-item:active, .employee-card:active, .btn-action:active {
++        transform: scale(0.98) !important; /* Залишаємо лише ефект фізичного натискання (провалювання) */
++    }
++}
++
++/* ===== 7. ПРИМУСОВА ГОРИЗОНТАЛЬНА ОРІЄНТАЦІЯ ===== */
++.orientation-warning {
++    display: none;
++    position: fixed;
++    bottom: 20px; left: 50%;
++    transform: translateX(-50%);
++    background: rgba(15, 15, 21, 0.9);
++    border: 1px solid #4dabf7;
++    border-radius: 12px;
++    z-index: 9999;
++    color: #fff;
++    align-items: center;
++    padding: 12px 20px;
++    backdrop-filter: blur(10px);
++    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
++    pointer-events: none; /* КРИТИЧНО ВАЖЛИВО: Пропускає всі кліки крізь себе! */
++    gap: 15px;
++}
++
++.orientation-warning .rotate-icon {
++    font-size: 24px;
++    color: #4dabf7;
++    animation: rotateDevice 2s infinite ease-in-out;
++}
++
++@keyframes rotateDevice {
++    0% { transform: rotate(0deg); }
++    50% { transform: rotate(-90deg); }
++    100% { transform: rotate(0deg); }
++}
++
++/* Показуємо попередження лише на мобільних і планшетах у вертикальному (портретному) положенні */
++@media screen and (max-width: 1024px) and (orientation: portrait) {
++    .orientation-warning {
++        display: flex;
++    }
++}
++
++/* ===== 8. БАНЕР ВТРАТИ ЗВ'ЯЗКУ (OFFLINE) ===== */
++.offline-banner {
++    position: fixed;
++    top: 0; left: 0; right: 0;
++    background: #ef4444;
++    color: #fff;
++    text-align: center;
++    padding: 8px;
++    font-weight: 600;
++    font-size: 13px;
++    z-index: 100000;
++    display: flex;
++    justify-content: center;
++    align-items: center;
++    gap: 10px;
++    transform: translateY(-100%);
++    transition: transform 0.3s ease;
++    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
++}
++.offline-banner.active {
++    transform: translateY(0);
++}
+\ No newline at end of file
+diff --git a/static/diploma/css/pages/mine_map.css b/static/diploma/css/pages/mine_map.css
+index ec23c15..f329fcc 100644
+--- a/static/diploma/css/pages/mine_map.css
++++ b/static/diploma/css/pages/mine_map.css
+@@ -238,6 +238,8 @@
+ .map-canvas-area {
+     flex: 1; position: relative; overflow: hidden; cursor: grab;
+     background: radial-gradient(circle at center, #141414 0%, #0a0a0a 100%);
++    /* Критично важливо для жестів на планшеті (Pinch-to-zoom / Drag) */
++    touch-action: none;
+ }
+ .map-canvas-area:active { cursor: grabbing; }
+ canvas { display: block; width: 100%; height: 100%; }
+diff --git a/static/diploma/js/diploma.js b/static/diploma/js/diploma.js
+index e16ec35..8ae9d4e 100644
+--- a/static/diploma/js/diploma.js
++++ b/static/diploma/js/diploma.js
+@@ -11,7 +11,8 @@ class DashboardApp {
+             isMobileMenuOpen: false,
+             isMobileView: false,
+             notifications: [],
+-            isOnline: true
++            isOnline: navigator.onLine,
++            consecutiveErrors: 0
+         };
+ 
+         this.elements = {};
+@@ -456,10 +457,13 @@ class DashboardApp {
+         
+         if (isOnline) {
+             this.showNotification('Зʼєднання відновлено', 'success');
++            this.state.consecutiveErrors = 0;
++            this.toggleOfflineWarning(false);
+             this.restartRealTimeUpdates();
+         } else {
+             this.showNotification('Втрачено зʼєднання з інтернетом', 'warning');
+-            this.stopRealTimeUpdates();
++            this.toggleOfflineWarning(true);
++            // Ми свідомо НЕ зупиняємо фонове опитування, щоб система могла "самовилікуватись"
+         }
+         
+         this.updateSystemStatus();
+@@ -486,9 +490,23 @@ class DashboardApp {
+      */
+     async updateMetrics() {
+         try {
+-            const response = await fetch('/diploma/api/dashboard-stats/');
++            // Таймаут 4 секунди (щоб захиститися від "тихого" зависання інтернету)
++            const controller = new AbortController();
++            const timeoutId = setTimeout(() => controller.abort(), 4000);
++            
++            const response = await fetch('/diploma/api/dashboard-stats/', {
++                signal: controller.signal
++            });
++            clearTimeout(timeoutId);
++            
+             if (!response.ok) return null;
+             
++            if (this.state.consecutiveErrors > 0) {
++                this.state.consecutiveErrors = 0;
++                this.toggleOfflineWarning(false);
++                this.updateSystemStatus();
++            }
++
+             const data = await response.json();
+ 
+             // Допоміжна функція для візуальної анімації при зміні цифр
+@@ -584,7 +602,11 @@ class DashboardApp {
+             
+             return data; // Повертаємо дані для інших скриптів
+         } catch (error) {
+-            console.error('Помилка автоматичного оновлення показників:', error);
++            this.state.consecutiveErrors++;
++            if (this.state.consecutiveErrors >= 2) {
++                this.toggleOfflineWarning(true);
++                this.updateSystemStatus();
++            }
+             return null;
+         }
+     }
+@@ -743,7 +765,7 @@ class DashboardApp {
+         const statusText = document.querySelector('.footer-status span:last-child');
+         
+         if (statusIndicator && statusText) {
+-            if (this.state.isOnline) {
++            if (this.state.isOnline && this.state.consecutiveErrors < 2) {
+                 statusIndicator.classList.add('online');
+                 statusIndicator.classList.remove('offline');
+                 statusText.textContent = 'Система активна';
+@@ -856,6 +878,26 @@ class DashboardApp {
+         document.dispatchEvent(event);
+     }
+ 
++    /**
++     * Показати/приховати глобальний банер втрати зв'язку
++     */
++    toggleOfflineWarning(show) {
++        let banner = document.getElementById('global-offline-banner');
++        if (!banner) {
++            banner = document.createElement('div');
++            banner.id = 'global-offline-banner';
++            banner.className = 'offline-banner';
++            banner.innerHTML = '<i class="fas fa-wifi-slash" style="animation: pulseSOS 1s infinite;"></i> <span>КРИТИЧНО: Втрачено зв\'язок з сервером. Дані можуть бути неактуальними!</span>';
++            document.body.appendChild(banner);
++        }
++        
++        if (show) {
++            banner.classList.add('active');
++        } else {
++            banner.classList.remove('active');
++        }
++    }
++
+     /**
+      * Очищення ресурсів
+      */
+diff --git a/static/diploma/js/diploma_home.js b/static/diploma/js/diploma_home.js
+index d0f0361..fb6282f 100644
+--- a/static/diploma/js/diploma_home.js
++++ b/static/diploma/js/diploma_home.js
+@@ -173,6 +173,20 @@ document.addEventListener('DOMContentLoaded', function () {
+                     gasTrend.innerHTML = '<i class="fas fa-minus"></i>';
+                 }
+             }
++            
++            // Оновлюємо глобальний прапорець для захисту від закриття вкладки
++            window.hasCriticalAlertsForUnload = (data.new_alerts_count > 0);
++        }
++    });
++
++    // Захист від випадкового закриття вкладки при активній тривозі
++    window.addEventListener('beforeunload', function (e) {
++        if (window.hasCriticalAlertsForUnload) {
++            // Стандартний спосіб скасування закриття вкладки
++            e.preventDefault();
++            // Chrome/Edge вимагають встановлення returnValue
++            e.returnValue = 'Є необроблені критичні тривоги!';
++            return e.returnValue;
+         }
+     });
+ });
+\ No newline at end of file
+diff --git a/static/diploma/js/equipment.js b/static/diploma/js/equipment.js
+index 8958129..c94061f 100644
+--- a/static/diploma/js/equipment.js
++++ b/static/diploma/js/equipment.js
+@@ -132,7 +132,14 @@ class EquipmentPage {
+     startRealTelemetryUpdates() {
+         const updateTelemetry = async () => {
+             try {
+-                const response = await fetch('/diploma/api/equipment-telemetry/');
++                const controller = new AbortController();
++                const timeoutId = setTimeout(() => controller.abort(), 4000);
++                
++                const response = await fetch('/diploma/api/equipment-telemetry/', {
++                    signal: controller.signal
++                });
++                clearTimeout(timeoutId);
++                
+                 if (!response.ok) return;
+                 
+                 const data = await response.json();
+diff --git a/static/diploma/js/mine_map.js b/static/diploma/js/mine_map.js
+index aea9aad..2eb5281 100644
+--- a/static/diploma/js/mine_map.js
++++ b/static/diploma/js/mine_map.js
+@@ -79,8 +79,14 @@
+ 
+         const apiUrl = mapAreaEl.dataset.apiUrl;
+ 
+-        fetch(apiUrl)
+-            .then(res => res.json())
++        const controller = new AbortController();
++        const timeoutId = setTimeout(() => controller.abort(), 4000);
++
++        fetch(apiUrl, { signal: controller.signal })
++            .then(res => {
++                clearTimeout(timeoutId);
++                return res.json();
++            })
+             .then(data => {
+                 if (data.danger_tunnels) {
+                     dangerTunnels = data.danger_tunnels;
+diff --git a/static/diploma/js/personnel.js b/static/diploma/js/personnel.js
+index 8ee3fc5..ee40646 100644
+--- a/static/diploma/js/personnel.js
++++ b/static/diploma/js/personnel.js
+@@ -195,7 +195,14 @@ document.addEventListener('DOMContentLoaded', function() {
+ 
+     async function updateDeviceStatuses() {
+         try {
+-            const response = await fetch(API_URL);
++            const controller = new AbortController();
++            const timeoutId = setTimeout(() => controller.abort(), 6000);
++            
++            const response = await fetch(API_URL, {
++                signal: controller.signal
++            });
++            clearTimeout(timeoutId);
++            
+             if (!response.ok) {
+                 // Не виводимо помилку в консоль, щоб не засмічувати її при обриві з'єднання
+                 return;

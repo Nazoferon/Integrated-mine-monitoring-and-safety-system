@@ -79,8 +79,14 @@
 
         const apiUrl = mapAreaEl.dataset.apiUrl;
 
-        fetch(apiUrl)
-            .then(res => res.json())
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        fetch(apiUrl, { signal: controller.signal })
+            .then(res => {
+                clearTimeout(timeoutId);
+                return res.json();
+            })
             .then(data => {
                 if (data.danger_tunnels) {
                     dangerTunnels = data.danger_tunnels;
