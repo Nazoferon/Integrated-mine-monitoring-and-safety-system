@@ -1,0 +1,140 @@
+{% extends 'unfold/layouts/base.html' %}
+{% load i18n unfold static %}
+
+{% block title %} Дашборд | {{ site_title|default:'Глибина 4.0' }} {% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Глобальний контейнер */
+    .custom-dash-container { display: flex; flex-direction: column; gap: 2rem; margin-top: 1rem; }
+    
+    /* Сітки (Grids) */
+    .custom-dash-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.25rem; }
+    @media (min-width: 768px) { .custom-dash-grid { grid-template-columns: repeat(3, 1fr); } }
+    
+    .custom-dash-grid-2 { display: grid; grid-template-columns: repeat(1, 1fr); gap: 2rem; }
+    @media (min-width: 1024px) { .custom-dash-grid-2 { grid-template-columns: repeat(2, 1fr); } }
+
+    /* Карточки */
+    .dash-card {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    /* Темна тема (Unfold додає клас .dark на тег html) */
+    .dark .dash-card { background-color: #111827; border-color: #374151; }
+
+    /* Тексти */
+    .dash-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    .dark .dash-label { color: #9ca3af; }
+
+    .dash-value { font-size: 2.25rem; font-weight: 700; color: #111827; }
+    .dark .dash-value { color: #f9fafb; }
+
+    /* Кольорові акценти */
+    .text-danger { color: #dc2626 !important; }
+    .dark .text-danger { color: #ef4444 !important; }
+    .text-warning { color: #d97706 !important; }
+    .dark .text-warning { color: #fbbf24 !important; }
+
+    /* Списки останніх тривог */
+    .dash-list { list-style: none; padding: 0; margin: 0; }
+    .dash-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .dark .dash-list li { border-color: #374151; }
+    .dash-list li:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .dash-item-title { font-weight: 600; color: #111827; font-size: 0.875rem; }
+    .dark .dash-item-title { color: #f9fafb; }
+
+    .dash-item-sub { color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; }
+    .dark .dash-item-sub { color: #9ca3af; }
+
+    /* Бейдж часу */
+    .dash-time-badge {
+        background-color: #fee2e2;
+        color: #991b1b;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .dark .dash-time-badge { background-color: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-dash-container">
+    <!-- Статистика -->
+    <div class="custom-dash-grid">
+        <!-- Карточка 1 -->
+        <div class="dash-card">
+            <h3 class="dash-label">Працівників у шахті</h3>
+            <p class="dash-value">{{ online_staff_count }}</p>
+        </div>
+        <!-- Карточка 2 -->
+        <div class="dash-card">
+            <h3 class="dash-label">Активних тривог</h3>
+            <p class="dash-value text-danger">{{ active_alerts_count }}</p>
+        </div>
+        <!-- Карточка 3 -->
+        <div class="dash-card">
+            <h3 class="dash-label">Макс. рівень газу</h3>
+            <p class="dash-value text-warning">{{ max_gas }}</p>
+        </div>
+    </div>
+
+    <!-- Графік та списки -->
+    <div class="custom-dash-grid-2">
+        <!-- Графік -->
+        <div class="dash-card">
+            <h3 class="dash-label" style="font-size: 1rem; color: inherit; font-weight: 600; text-transform: none;">Динаміка інцидентів (7 днів)</h3>
+            {{ chart_labels|json_script:"chart-labels" }}
+            {{ chart_values|json_script:"chart-values" }}
+            <div style="height: 280px; position: relative;">
+                <canvas id="alertsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Останні тривоги -->
+        <div class="dash-card">
+            <h3 class="dash-label" style="font-size: 1rem; color: inherit; font-weight: 600; text-transform: none;">🚨 Останні тривоги</h3>
+            <ul class="dash-list">
+                {% for alert in latest_alerts %}
+                <li>
+                    <div>
+                        <div class="dash-item-title">{{ alert.employee }}</div>
+                        <div class="dash-item-sub">{{ alert.get_reason_display|default:alert.reason }}</div>
+                    </div>
+                    <span class="dash-time-badge">
+                        {{ alert.created_at|date:"d.m H:i" }}
+                    </span>
+                </li>
+                {% empty %}
+                <li style="color: #6b7280;">Активних тривог немає ✅</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'diploma/js/dashboard_charts.js' %}"></script>
+{% endblock %}

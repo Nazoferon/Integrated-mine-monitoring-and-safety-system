@@ -73,7 +73,7 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [], 
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -266,22 +266,31 @@ LOGGING = {
 UNFOLD = {
     "SITE_TITLE": "Глибина 4.0 - Адміністрування",
     "SITE_HEADER": "Глибина 4.0",
+    "DASHBOARD_CALLBACK": "diploma.dashboard.dashboard_callback",
     "SITE_ICON": {
         "light": lambda request: "/static/diploma/image/logo.ico",
         "dark": lambda request: "/static/diploma/image/logo.ico",
     },
     "COLORS": {
+        "font": {
+            "subtle-light": "107 114 128",
+            "subtle-dark": "156 163 175",
+            "default-light": "75 85 99",
+            "default-dark": "209 213 219",
+            "important-light": "17 24 39",
+            "important-dark": "243 244 246",
+        },
         "primary": {
-            "50": "#e3f2fd",
-            "100": "#c7e5fc",
-            "200": "#8ecbf9",
-            "300": "#4dabf7", # Ваш фірмовий блакитний колір
-            "400": "#339af0",
-            "500": "#228be6",
-            "600": "#1c7ed6",
-            "700": "#1971c2",
-            "800": "#1864ab",
-            "900": "#14558f",
+            "50": "227 242 253",
+            "100": "199 229 252",
+            "200": "142 203 249",
+            "300": "77 171 247", # #4dabf7 RGB
+            "400": "51 154 240",
+            "500": "34 139 230",
+            "600": "28 126 214",
+            "700": "25 113 194",
+            "800": "24 100 171",
+            "900": "20 85 143",
         },
     },
 }
