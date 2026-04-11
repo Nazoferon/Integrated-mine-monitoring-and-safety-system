@@ -282,7 +282,7 @@ def dashboard_stats_api(request):
     
     offline_emps = list(Employee.objects.exclude(safety_status='OFF_SHIFT').filter(
         device__isnull=False
-    ).annotate(
+    ).select_related('device').annotate(
         last_seen=Subquery(latest_time_subquery),
         latest_log_id=Subquery(latest_id_subquery)
     ).filter(last_seen__lt=three_mins_ago))
@@ -295,7 +295,7 @@ def dashboard_stats_api(request):
             last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
             has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
             if not has_offline_alert:
-                last_log = offline_logs_dict.get(emp.device_id)
+                last_log = offline_logs_dict.get(emp.device.id)
                 rep = last_log.connected_repeater if last_log else None
                 
                 if rep and rep.uid == 'AP-MAIN':

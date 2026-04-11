@@ -30,6 +30,7 @@ archives/
 
 # Cache files
 django_cache/
+logs/
 
 # Static files (collected)
 staticfiles/

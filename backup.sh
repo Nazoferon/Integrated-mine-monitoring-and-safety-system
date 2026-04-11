@@ -1,33 +1,29 @@
 #!/bin/bash
 
-# Налаштування
+# Шляхи
 BACKUP_DIR="/var/backups/django_project"
 PROJECT_DIR="/var/www/django_project"
-DATE=$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# PostgreSQL налаштування
-DB_NAME="django_project"
-DB_USER="bunb"
-DB_HOST="localhost"
-DB_PORT="5432"
+# Переходимо в директорію проєкту і активуємо віртуальне середовище
+cd "$PROJECT_DIR" || exit
+source "$PROJECT_DIR/venv/bin/activate"
 
-# Створюємо директорію для бекапів
-mkdir -p $BACKUP_DIR
+# 1. Дамп бази даних PostgreSQL (нативно)
+# Автоматично дістаємо пароль з файлу .env, щоб не вводити його вручну
+export PGPASSWORD=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_PASSWORD', ''))")
+pg_dump -U bunb -h localhost -w -F c django_project > "$BACKUP_DIR/db_backup_$TIMESTAMP.dump"
 
-# Бекап бази даних PostgreSQL
-pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -F c -f $BACKUP_DIR/db_backup_$DATE.dump
+# 2. Експорт даних Django у JSON
+python manage.py dumpdata > "$BACKUP_DIR/data_export_$TIMESTAMP.json"
 
-# Бекап медіа-файлів (якщо є)
-tar -czf $BACKUP_DIR/media_backup_$DATE.tar.gz $PROJECT_DIR/media/ 2>/dev/null || true
+# 3. Бекап медіа-файлів (фотографії працівників тощо)
+tar -czf "$BACKUP_DIR/media_backup_$TIMESTAMP.tar.gz" -C "$PROJECT_DIR" media/
 
-# Експорт даних Django у JSON
-cd $PROJECT_DIR
-source venv/bin/activate
-python manage.py dumpdata --indent=2 > $BACKUP_DIR/data_export_$DATE.json
+# 4. Видалення старих бекапів (старших за 7 днів)
+find "$BACKUP_DIR" -type f -name "*.dump" -mtime +7 -delete
+find "$BACKUP_DIR" -type f -name "*.json" -mtime +7 -delete
+find "$BACKUP_DIR" -type f -name "*.tar.gz" -mtime +7 -delete
 
-# Видаляємо старі бекапи (старіше 30 днів)
-find $BACKUP_DIR -name "*.dump" -mtime +30 -delete
-find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
-find $BACKUP_DIR -name "*.json" -mtime +30 -delete
+echo "Backup completed: $TIMESTAMP"
 
-echo "Backup completed: $DATE"

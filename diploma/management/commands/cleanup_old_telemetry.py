@@ -1,6 +1,7 @@
 import os
 import gzip
 import csv
+import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
@@ -66,7 +67,7 @@ class Command(BaseCommand):
                 file_path = os.path.join(archive_dir, file)
                 if os.path.isfile(file_path) and file.endswith('.csv.gz'):
                     # Отримуємо час модифікації файлу і перевіряємо чи він старіший за 180 днів
-                    file_mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+                    file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path), tz=datetime.timezone.utc)
                     if file_mtime < delete_cutoff:
                         os.remove(file_path)
                         self.stdout.write(self.style.WARNING(f"Видалено застарілий архів: {file}"))
