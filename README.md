@@ -131,8 +131,46 @@ docker compose logs -f web
 ---
 
 ## 📊 Діаграма архітектури
-
+```mermaid
+graph TB
+    subgraph "Шахта (IoT-рівень)"
+        ESP[ESP32 модулі]
+        AP[Wi-Fi AP / Репітери]
+        ESP --> AP
+    end
+    subgraph "Сервер"
+        API[Django + Gunicorn]
+        DB[(PostgreSQL)]
+        REDIS[(Redis Cache)]
+    end
+    subgraph "Диспетчер"
+        WEB[Web Dashboard]
+    end
+    AP --> API
+    API --> DB
+    API --> REDIS
+    WEB <--> API
+```
 **Рис. 1. Архітектура компонентів та логічна структура взаємодії модулів системи моніторингу.**
+
+```mermaid
+sequenceDiagram
+    participant ESP as ESP32
+    participant API as Django API
+    participant DB as PostgreSQL
+    participant CACHE as Redis
+    participant WEB as Web Client
+
+    ESP->>API: POST телеметрія
+    API->>CACHE: Оновлення/читання кешу
+    API->>DB: Запис телеметрії
+    WEB->>API: Запит стану/історії
+    API->>CACHE: Швидкі дані дашборду
+    API->>DB: Історичні дані
+    API-->>WEB: JSON/HTML відповідь
+
+```
+**Рис. 2. Потік даних**
 
 ---
 
