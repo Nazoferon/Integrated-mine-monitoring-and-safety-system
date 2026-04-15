@@ -1,68 +1,73 @@
-# ==============================================================================
-# 🚀 ІНСТРУКЦІЯ З РОЗГОРТАННЯ (DOCKER)
-# ==============================================================================
-# 1. Запустити проєкт у фоновому режимі (збірка + старт):
-#    docker-compose up -d --build
-#
-# 2. Подивитись логи сервера (щоб вийти, натисніть Ctrl+C):
-#    docker-compose logs -f web
-#
-# 3. Зупинити всі контейнери:
-#    docker-compose down
-#
-# 4. Перезапустити тільки бекенд (наприклад, після зміни коду):
-#    docker-compose restart web
-# ==============================================================================
-version: '3.8'
-
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=mine_db
-      - POSTGRES_USER=mine_user
-      - POSTGRES_PASSWORD=mine_super_password
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   web:
     build: .
-    # Команда автоматично застосовує міграції, збирає статику та запускає Gunicorn
-    command: >
-      bash -c "python manage.py migrate &&
-               python manage.py collectstatic --noinput &&
-               gunicorn django_project.wsgi:application --bind 0.0.0.0:8000 --workers 3"
-    volumes:
-      - .:/var/www/django_project
-      - static_volume:/var/www/django_project/static_root
-      - media_volume:/var/www/django_project/media
-      - archives_volume:/var/www/django_project/archives
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: myproject.settings
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    environment:
-      - DEBUG=0
-      - SECRET_KEY=ChangeThisSuperSecretKeyInProduction2026!
-      - DB_NAME=mine_db
-      - DB_USER=mine_user
-      - DB_PASSWORD=mine_super_password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-      - ESP32_API_KEY=SecretMineKey2026
-    depends_on:
-      - db
-      - redis
+    volumes:
+      - static_volume:/app/static_root
+      - media_volume:/app/media
+      - archives_volume:/app/archives
+
+  # Optional reverse proxy for local enterprise deployment
+  nginx:
+    image: nginx:1.27-alpine
     restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # create this file if you use nginx in compose
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # optional TLS certs (if internal CA / enterprise certs)
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+      - static_volume:/app/static_root:ro
+      - media_volume:/app/media:ro
 
 volumes:
   postgres_data:
+  redis_data:
   static_volume:
   media_volume:
   archives_volume:

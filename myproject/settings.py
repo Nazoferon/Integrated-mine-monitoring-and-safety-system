@@ -31,7 +31,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsafe-key')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 X_FRAME_OPTIONS = 'DENY'
 
-ALLOWED_HOSTS = ['bunb.pp.ua', 'www.bunb.pp.ua', '91.98.171.31']
+ALLOWED_HOSTS = [h.strip() for h in os.getenv(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1'
+).split(',') if h.strip()]
 CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']
 
 
@@ -95,12 +98,12 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_project',
-        'USER': 'bunb',
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'CONN_MAX_AGE': 60,
+        'NAME': os.getenv('DB_NAME', 'django_project'),
+        'USER': os.getenv('DB_USER', 'bunb'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
     }
 }
 

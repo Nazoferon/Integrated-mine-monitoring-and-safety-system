@@ -1,53 +1,73 @@
-# Django
-*.pyc
-*/__pycache__/
-*.pyo
-*.pyd
+# =========================
+# Python / Django
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
 .Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# Virtual environment
+# =========================
+# Virtual environments
+# =========================
 venv/
+.venv/
+env/
+
+# =========================
+# Environment / secrets
+# =========================
 .env
-settings_local.py
+.env.*
+!.env.example
 
-# settings project
-settings.py
-
-# Database
+# =========================
+# Databases / runtime data
+# =========================
 *.sqlite3
 *.db
 db.sqlite3
 
-# Backup files
-backup.sh
-portfolio_backup.json
-
-# Media files
-media/
-
-# Archives files
-archives/
-
-# Cache files
+# Django runtime/cache/logs
 django_cache/
 logs/
+*.log
 
-# Static files (collected)
-staticfiles/
+# User-generated/storage data
+media/
+archives/
+
+# Collected static
 static_root/
+staticfiles/
 
-# IDE
+# =========================
+# Docker local artifacts
+# =========================
+postgres_data/
+redis_data/
+
+# =========================
+# Frontend deps (optional)
+# =========================
+node_modules/
+
+# =========================
+# IDE / Editor
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Logs
-*.log
-
-# Logs changes
-*.dff
-
+# =========================
 # OS
+# =========================
 .DS_Store
 Thumbs.db

@@ -1,0 +1,277 @@
+[
+{
+  "model": "portfolio.category",
+  "pk": 1,
+  "fields": {
+    "name": "Мобільні додатки",
+    "slug": "mobile",
+    "icon_class": "fas fa-mobile-alt",
+    "order": 0
+  }
+},
+{
+  "model": "portfolio.category",
+  "pk": 2,
+  "fields": {
+    "name": "Веб-розробка",
+    "slug": "web",
+    "icon_class": "fas fa-globe",
+    "order": 0
+  }
+},
+{
+  "model": "portfolio.category",
+  "pk": 3,
+  "fields": {
+    "name": "Ігри та скрипти",
+    "slug": "games",
+    "icon_class": "fas fa-gamepad",
+    "order": 0
+  }
+},
+{
+  "model": "portfolio.category",
+  "pk": 4,
+  "fields": {
+    "name": "3D моделі",
+    "slug": "3d_models",
+    "icon_class": "fas fa-cube",
+    "order": 0
+  }
+},
+{
+  "model": "portfolio.category",
+  "pk": 5,
+  "fields": {
+    "name": "Інше (Боти та утиліти)",
+    "slug": "other",
+    "icon_class": "fas fa-tools",
+    "order": 0
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 1,
+  "fields": {
+    "category": 1,
+    "title": "OptiFI",
+    "description": "Android-застосунок для аналізу Wi-Fi мереж. Створює теплову карту покриття приміщення, візуалізує силу сигналу та надає рекомендації для оптимізації розташування роутерів.",
+    "image": "projects/icon.png",
+    "tech_stack": "Java, Android SDK, GPS",
+    "github_link": "https://github.com/Nazoferon/OptiFi",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:44:35.110Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 2,
+  "fields": {
+    "category": 1,
+    "title": "MapARGuide",
+    "description": "Навігаційна система з доповненою реальністю (AR). Працює в офлайн-режимі та дозволяє орієнтуватися у просторі, накладаючи віртуальні вказівники на зображення з камери реального світу.",
+    "image": "",
+    "tech_stack": "Java, AR Core, OpenGL",
+    "github_link": "https://github.com/Nazoferon/MapARGuide",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:45:24.802Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 3,
+  "fields": {
+    "category": 1,
+    "title": "Scanora",
+    "description": "Комплексне рішення для автоматизації складської логістики. Складається з мобільного клієнта (Android) для сканування товарів та серверної частини (C#) для централізованого управління запасами та звітності.",
+    "image": "projects/banner.png",
+    "tech_stack": "Java, REST API, TCP, C#",
+    "github_link": "https://github.com/Nazoferon/Scanora",
+    "demo_link": "",
+    "is_completed": false,
+    "created_at": "2026-01-21T15:46:47.452Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 4,
+  "fields": {
+    "category": 1,
+    "title": "CypherGuard",
+    "description": "Утиліта для шифрування та дешифрування текстових повідомлень. Підтримує класичні алгоритми (шифр Цезаря, Віженера) для захисту приватного листування та вивчення основ криптографії.",
+    "image": "projects/68747470733a2f2f692e6962622e636f2f736259547948762f69632d6c6f676f2e706e67.png",
+    "tech_stack": "Java, Cryptography",
+    "github_link": "https://github.com/Nazoferon/CypherGuard",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:47:47.091Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 5,
+  "fields": {
+    "category": 2,
+    "title": "AutopartsPRO",
+    "description": "Веб-платформа для управління магазином автозапчастин. Включає систему інтелектуального пошуку, управління складом, а також модуль рекомендацій для підбору сумісних деталей.",
+    "image": "",
+    "tech_stack": "Python, JavaScript, HTML/CSS",
+    "github_link": "https://github.com/Nazoferon/AutopartsPRO",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:48:24.972Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 6,
+  "fields": {
+    "category": 3,
+    "title": "GangHelper",
+    "description": "Розширена модифікація (скрипт) для GTA: San Andreas Multiplayer. Допомагає гравцям у фракціях відстежувати союзників та опонентів через візуальні оверлеї, а також надає зручний інтерфейс для швидких команд.",
+    "image": "projects/68747470733a2f2f692e6962622e636f2f76345239394a792f6d656e752e706e67.png",
+    "tech_stack": "Lua, SA:MP API",
+    "github_link": "https://github.com/Nazoferon/GangHelper",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:49:18.434Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 7,
+  "fields": {
+    "category": 4,
+    "title": "BMW 5 Series F11 Touring Part",
+    "description": "Інженерна 3D-модель запчастини (кліпса шторки багажника) для BMW 5 Series Touring. Розроблена для 3D-друку як заміна оригінальної деталі (OEM 51437232775).",
+    "image": "projects/51437232775.png",
+    "tech_stack": "Autodesk Fusion",
+    "github_link": "",
+    "demo_link": "https://www.printables.com/model/1558775-bmw-5-series-f11-touring-rear-cargo-cover-slide-cl",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:50:35.047Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 8,
+  "fields": {
+    "category": 4,
+    "title": "Zenit",
+    "description": "Деталізована 3D-модель фотокамери \"Зеніт\". Виконана з акцентом на реалістичні текстури та матеріали.",
+    "image": "projects/zenit.jpg",
+    "tech_stack": "Blender",
+    "github_link": "",
+    "demo_link": "https://skfb.ly/pFDOB",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:51:11.763Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 9,
+  "fields": {
+    "category": 4,
+    "title": "Sponge Bob",
+    "description": "Персонажна 3D-модель Губки Боба.",
+    "image": "projects/SpongeBob.png",
+    "tech_stack": "Blender",
+    "github_link": "",
+    "demo_link": "https://skfb.ly/pFDOR",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:51:36.626Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 10,
+  "fields": {
+    "category": 4,
+    "title": "Garage Rick (Rick and Morty)",
+    "description": "Сцена з гаражем Ріка Санчеза з мультсеріалу \"Рік і Морті\".",
+    "image": "projects/4k2.png",
+    "tech_stack": "Blender",
+    "github_link": "",
+    "demo_link": "https://skfb.ly/pFDP7",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:56:10.279Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 11,
+  "fields": {
+    "category": 4,
+    "title": "Electric Tower",
+    "description": "Low-poly модель електричної опори (ЛЕП) для використання в ігрових рушіях або сценах оточення.",
+    "image": "projects/Electric_tower.png",
+    "tech_stack": "Blender",
+    "github_link": "",
+    "demo_link": "https://skfb.ly/pFFLu",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:57:05.236Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 12,
+  "fields": {
+    "category": 5,
+    "title": "Nextcloud bot Python",
+    "description": "Телеграм-бот для інтеграції з хмарним сховищем Nextcloud. Дозволяє керувати файлами, створювати публічні посилання та адмініструвати хмару прямо з месенджера.",
+    "image": "",
+    "tech_stack": "Python, Telegram API",
+    "github_link": "https://github.com/Nazoferon/nextcloud_bot",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:58:10.844Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 13,
+  "fields": {
+    "category": 5,
+    "title": "VolynEnergyBot",
+    "description": "Бот для моніторингу графіків відключення електроенергії. Парсить дані з офіційного сайту обленерго та сповіщає користувача про статус світла за його адресою.",
+    "image": "",
+    "tech_stack": "Python, Telegram API, Parsing",
+    "github_link": "https://github.com/Nazoferon/VolynEnergyBot",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:58:47.291Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 14,
+  "fields": {
+    "category": 5,
+    "title": "HelpGrid",
+    "description": "Система автоматизації техпідтримки інтернет-провайдера. Дозволяє клієнтам перевіряти баланс, статус послуг та повідомляти про аварії, розвантажуючи кол-центр.",
+    "image": "",
+    "tech_stack": "Python, Telegram API, SQL",
+    "github_link": "https://github.com/Nazoferon/HelpGrid",
+    "demo_link": "",
+    "is_completed": true,
+    "created_at": "2026-01-21T15:59:17.056Z"
+  }
+},
+{
+  "model": "portfolio.project",
+  "pk": 15,
+  "fields": {
+    "category": 5,
+    "title": "ГЛИБИНА 4.0",
+    "description": "Концепт \"Цифрового двійника\" шахти. Програмний комплекс для моніторингу безпеки під землею в реальному часі: відстеження переміщення шахтарів, стану обладнання та рівня газів у штреках.",
+    "image": "projects/poster.png",
+    "tech_stack": "Python, Java, Node.js, SQL",
+    "github_link": "https://github.com/Nazoferon/Integrated-mine-monitoring-and-safety-system.git",
+    "demo_link": "",
+    "is_completed": false,
+    "created_at": "2026-01-21T16:00:01.874Z"
+  }
+}
+]
