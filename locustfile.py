@@ -13,17 +13,27 @@ ACTIVE_APS = list(InfrastructureDevice.objects.filter(is_active=True).values_lis
 if not ACTIVE_APS:
     ACTIVE_APS = [f"AP-TEST-{i}" for i in range(1, 6)]
 
+# ВАШ API КЛЮЧ 
+API_KEY = "SecretMineKey2026"
+
 class ESP32Device(HttpUser):
     # Кожна ESP32 відправляє дані приблизно раз на 4-6 секунд
     wait_time = between(4.0, 6.0)
     
+    def on_start(self):
+        # Додаємо API ключ у правильний заголовок X-API-Key
+        self.client.headers.update({
+            "X-API-Key": API_KEY,
+            "Content-Type": "application/json"
+        })
+
     @task
     def send_telemetry(self):
         # Випадково обираємо 1 з 500 пристроїв
         device_id = random.randint(1, 500)
         mac = f"TEST-MAC-{device_id:04d}"
         ap = random.choice(ACTIVE_APS)
-        
+
         payload = {
             "mac_address": mac,
             "ap_uid": ap,
@@ -42,6 +52,13 @@ class WebDashboardUser(HttpUser):
     # Імітуємо відкриті вкладки браузера диспетчерів (оновлення кожні 5 сек)
     wait_time = between(4.5, 5.5)
     
+    def on_start(self):
+        # Додаємо API ключ у правильний заголовок X-API-Key
+        self.client.headers.update({
+            "X-API-Key": API_KEY,
+            "Content-Type": "application/json"
+        })
+
     @task
     def get_dashboard_stats(self):
         self.client.get("/diploma/api/dashboard-stats/")
