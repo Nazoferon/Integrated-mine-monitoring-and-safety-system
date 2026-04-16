@@ -1,277 +1,275 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("✅ Скрипт керування персоналом завантажено");
+    console.log("✅ Скрипт керування персоналом завантажено (v2.0 - AJAX)");
 
-    // --- 1. ЛОГІКА ПОШУКУ ---
-    const searchInput = document.getElementById('searchInput');
-    const clearSearchBtn = document.getElementById('clearSearchBtn');
-    const cards = document.querySelectorAll('.employee-card');
-    const personnelCols = document.querySelectorAll('.personnel-col'); // Отримуємо колонки для сортування
-    const noResultsMsg = document.getElementById('noResultsMsg');
+    // --- 1. ГЛОБАЛЬНІ ЗМІННІ ТА СТАН ---
+    const elements = {
+        searchInput: document.getElementById('searchInput'),
+        clearSearchBtn: document.getElementById('clearSearchBtn'),
+        gridContainer: document.getElementById('personnelGrid'),
+        noResultsMsg: document.getElementById('noResultsMsg'),
+        paginationContainer: document.getElementById('pagination-container'),
+        personnelCounter: document.getElementById('personnel-counter'),
+        sortButtons: document.querySelectorAll('#btnSortStatus, #btnSortAlpha'),
+        viewGridBtn: document.getElementById('btnGrid'),
+        viewListBtn: document.getElementById('btnList'),
+    };
 
-    function filterEmployees() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        let visibleCards = 0;
+    let state = {
+        currentPage: 1,
+        searchQuery: '',
+        sortBy: 'status', // 'status' or 'name'
+        isLoading: false,
+        viewMode: localStorage.getItem('personnelViewStyle') || 'grid',
+    };
 
-        // Скидаємо будь-які активні сортування при пошуку
-        resetSortButtons();
+    let searchTimeout;
 
-        // Показуємо/ховаємо кнопку очищення
-        if (clearSearchBtn) {
-            if (searchInput.value.length > 0) {
-                clearSearchBtn.classList.add('visible');
-            } else {
-                clearSearchBtn.classList.remove('visible');
-            }
-        }
-
-        cards.forEach(card => {
-            const name = card.querySelector('.emp-name').textContent.toLowerCase();
-            const badge = card.querySelector('.detail-value').textContent.toLowerCase();
-            const position = card.querySelector('.emp-position').textContent.toLowerCase(); // Посада
-            const device = card.querySelector('.device-status span')?.textContent.toLowerCase() || ''; // Пристрій
-            const column = card.closest('.personnel-col'); // Отримуємо батьківську колонку
-
-            if (name.includes(searchTerm) || badge.includes(searchTerm) || position.includes(searchTerm) || device.includes(searchTerm)) {
-                if (column) column.style.display = ''; // Показуємо колонку
-                visibleCards++;
-            } else {
-                if (column) column.style.display = 'none'; // Ховаємо колонку
-            }
-        });
-
-        if (noResultsMsg) {
-            noResultsMsg.style.display = (visibleCards === 0 && cards.length > 0) ? 'block' : 'none';
-        }
-    }
-
-    // Функція очищення пошуку
-    function clearSearch() {
-        if (searchInput) {
-            searchInput.value = '';
-            searchInput.focus();
-            filterEmployees();
-        }
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('input', filterEmployees);
+    // --- 2. ОСНОВНА ФУНКЦІЯ ОТРИМАННЯ ДАНИХ ---
+    async function fetchPersonnel() {
+        if (state.isLoading) return;
+        state.isLoading = true;
         
-        // Очищення при натисканні Escape
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                clearSearch();
+        // Показуємо лоадер
+        elements.gridContainer.innerHTML = `
+            <div class="personnel-loader text-center py-5 w-100">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+            </div>`;
+        elements.noResultsMsg.style.display = 'none';
+        elements.paginationContainer.innerHTML = '';
+
+        const params = new URLSearchParams({
+            page: state.currentPage,
+            q: state.searchQuery,
+            sort: state.sortBy,
+        });
+
+        try {
+            const response = await fetch(`/diploma/api/personnel-list/?${params.toString()}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            const data = await response.json();
+            
+            // Оновлюємо DOM
+            elements.gridContainer.innerHTML = data.html || '';
+            
+            // Оновлюємо лічильник
+            elements.personnelCounter.textContent = `Знайдено співробітників: ${data.total_results}`;
+
+            // Показуємо повідомлення, якщо нічого не знайдено
+            if (data.total_results === 0) {
+                elements.noResultsMsg.style.display = 'block';
             }
+
+            // Рендеримо пагінацію
+            renderPagination(data.total_pages, data.current_page);
+
+        } catch (error) {
+            console.error("Fetch error:", error);
+            elements.gridContainer.innerHTML = `
+                <div class="personnel-loader text-center py-5 w-100">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                    <h4 class="mt-3 text-muted">Помилка завантаження даних</h4>
+                </div>`;
+        } finally {
+            state.isLoading = false;
+        }
+    }
+
+    // --- 3. РЕНДЕРИНГ ПАГІНАЦІЇ ---
+    function renderPagination(totalPages, currentPage) {
+        if (totalPages <= 1) {
+            elements.paginationContainer.innerHTML = '';
+            return;
+        }
+
+        let html = '<ul class="pagination custom-pagination">';
+        
+        // Кнопка "Назад"
+        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}">«</a>
+                 </li>`;
+        
+        // Генеруємо номери сторінок
+        const pagesToShow = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+        let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+
+        if (endPage - startPage + 1 < pagesToShow) {
+            startPage = Math.max(1, endPage - pagesToShow + 1);
+        }
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                     </li>`;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+        }
+
+        // Кнопка "Вперед"
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">»</a>
+                 </li>`;
+
+        html += '</ul>';
+        elements.paginationContainer.innerHTML = html;
+    }
+
+    // --- 4. ОБРОБНИКИ ПОДІЙ ---
+    function setupEventListeners() {
+        // Пошук
+        elements.searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            elements.clearSearchBtn.classList.toggle('visible', elements.searchInput.value.length > 0);
+            searchTimeout = setTimeout(() => {
+                state.searchQuery = elements.searchInput.value;
+                state.currentPage = 1;
+                fetchPersonnel();
+            }, 300); // Затримка для уникнення зайвих запитів
+        });
+
+        elements.clearSearchBtn.addEventListener('click', () => {
+            elements.searchInput.value = '';
+            elements.clearSearchBtn.classList.remove('visible');
+            state.searchQuery = '';
+            state.currentPage = 1;
+            fetchPersonnel();
+            elements.searchInput.focus();
+        });
+
+        // Сортування
+        elements.sortButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sortBy = btn.dataset.sort;
+                if (state.sortBy !== sortBy) {
+                    state.sortBy = sortBy;
+                    state.currentPage = 1;
+                    updateSortButtons();
+                    fetchPersonnel();
+                }
+            });
+        });
+
+        // Пагінація (делегування подій)
+        elements.paginationContainer.addEventListener('click', e => {
+            e.preventDefault();
+            const target = e.target.closest('a');
+            if (!target || target.parentElement.classList.contains('disabled') || target.parentElement.classList.contains('active')) {
+                return;
+            }
+            state.currentPage = parseInt(target.dataset.page);
+            fetchPersonnel();
+        });
+
+        // Перемикання вигляду
+        elements.viewGridBtn.addEventListener('click', () => setView('grid'));
+        elements.viewListBtn.addEventListener('click', () => setView('list'));
+    }
+
+    // --- 5. ДОПОМІЖНІ ФУНКЦІЇ UI ---
+    function updateSortButtons() {
+        elements.sortButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.sort === state.sortBy);
         });
     }
-
-    // Обробник для кнопки очищення
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', clearSearch);
-    }
-
-    // --- 2. ЛОГІКА ПЕРЕМИКАННЯ ВИГЛЯДУ (СІТКА / СПИСОК) ---
-    const gridBtn = document.getElementById('btnGrid');
-    const listBtn = document.getElementById('btnList');
-    const gridContainer = document.getElementById('personnelGrid');
 
     function setView(viewType) {
-        if (!gridContainer || !listBtn || !gridBtn) return;
-
+        state.viewMode = viewType;
         if (viewType === 'list') {
-            gridContainer.classList.add('list-view');
-            listBtn.classList.add('active');
-            gridBtn.classList.remove('active');
+            elements.gridContainer.classList.add('list-view');
+            elements.viewListBtn.classList.add('active');
+            elements.viewGridBtn.classList.remove('active');
         } else {
-            gridContainer.classList.remove('list-view');
-            gridBtn.classList.add('active');
-            listBtn.classList.remove('active');
+            elements.gridContainer.classList.remove('list-view');
+            elements.viewGridBtn.classList.add('active');
+            elements.viewListBtn.classList.remove('active');
         }
         localStorage.setItem('personnelViewStyle', viewType);
     }
 
-    if (gridBtn && listBtn) {
-        gridBtn.addEventListener('click', () => setView('grid'));
-        listBtn.addEventListener('click', () => setView('list'));
-
-        const savedView = localStorage.getItem('personnelViewStyle') || 'grid';
-        setView(savedView);
+    // --- 6. ІНІЦІАЛІЗАЦІЯ ---
+    function init() {
+        setupEventListeners();
+        updateSortButtons();
+        setView(state.viewMode);
+        fetchPersonnel(); // Перше завантаження даних
+        
+        // Старий функціонал оновлення статусів можна залишити, він працює незалежно
+        startStatusUpdater();
     }
+    
+    // --- 7. ОНОВЛЕННЯ СТАТУСІВ (старий код, адаптований) ---
+    function startStatusUpdater() {
+        const API_URL = '/diploma/personnel-status-api/';
+        const UPDATE_INTERVAL = 7000;
 
-    // --- 3. ЛОГІКА СОРТУВАННЯ ---
-    const sortAlphaBtn = document.getElementById('btnSortAlpha');
-    const sortStatusBtn = document.getElementById('btnSortStatus'); // Нова кнопка сортування за статусом
-    const personnelGrid = document.getElementById('personnelGrid');
-    let currentSort = {
-        field: null, // 'name' або 'status'
-        order: 'asc' // 'asc' або 'desc'
-    };
-
-    // Скидання активних класів з кнопок сортування
-    function resetSortButtons() {
-        [sortAlphaBtn, sortStatusBtn].forEach(btn => {
-            if (btn) btn.classList.remove('active');
-        });
-    }
-
-    // Функція сортування
-    function sortPersonnel(field) {
-        resetSortButtons(); // Скидаємо інші кнопки
-
-        const isCurrentField = currentSort.field === field;
-        if (isCurrentField) {
-            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSort.field = field;
-            // ЗАВЖДИ починаємо з 'asc' при першому кліку на нове поле,
-            // оскільки 'desc' для статусу є сортуванням за замовчуванням.
-            // Це дасть миттєвий візуальний відгук.
-            currentSort.order = 'asc';
-        }
-
-        const sortedCards = Array.from(personnelCols).sort((a, b) => {
-            let valA, valB;
-
-            if (field === 'name') {
-                valA = a.querySelector('.emp-name').textContent.trim();
-                valB = b.querySelector('.emp-name').textContent.trim();
-                return currentSort.order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            } else if (field === 'status') {
-                // Сортування за рівнем безпеки (SOS найвищий пріоритет)
-                const getStatusWeight = (cardEl) => {
-                    const badge = cardEl.querySelector('.emp-status .badge');
-                    if (!badge) return 0;
-                    if (badge.classList.contains('bg-danger')) return 4; // SOS
-                    if (badge.classList.contains('bg-warning')) return 3; // WARNING
-                    if (badge.classList.contains('bg-success')) return 2; // OK
-                    if (badge.classList.contains('bg-secondary')) return 1; // Не на зміні
-                    return 0; // Дефолт (Без пристрою, якщо немає інших класів)
-                };
+        async function updateDeviceStatuses() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) return;
                 
-                valA = getStatusWeight(a);
-                valB = getStatusWeight(b);
+                const data = await response.json();
+                const statuses = data.device_statuses;
+                if (!statuses) return;
 
-                // Якщо ваги однакові, сортуємо за прізвищем як допоміжний критерій
-                if (valA === valB) {
-                    const nameA = a.querySelector('.emp-name').textContent.trim();
-                    const nameB = b.querySelector('.emp-name').textContent.trim();
-                    return nameA.localeCompare(nameB); // Завжди asc для допоміжного
-                }
+                document.querySelectorAll('.employee-card[data-mac-address]').forEach(card => {
+                    const mac = card.dataset.macAddress;
+                    const statusInfo = statuses[mac];
+                    if (!statusInfo) return;
 
-                return currentSort.order === 'asc' ? valA - valB : valB - valA;
-            }
-            return 0;
-        });
+                    const statusDiv = card.querySelector('.device-status');
+                    const statusSpan = statusDiv.querySelector('span');
+                    const statusDot = statusDiv.querySelector('.status-dot');
+                    const locationValue = card.querySelector('.location-value');
 
-        // Додаємо відсортовані картки назад в DOM
-        sortedCards.forEach(col => personnelGrid.appendChild(col));
+                    const isCurrentlyActive = statusDiv.classList.contains('status-active');
+                    const shouldBeActive = statusInfo.is_active;
 
-        // Оновлюємо іконку та активний клас для поточної кнопки сортування
-        const currentBtn = field === 'name' ? sortAlphaBtn : sortStatusBtn;
-        if (currentBtn) {
-            currentBtn.classList.add('active');
-            const icon = currentBtn.querySelector('i');
-            if (icon) {
-                if (field === 'name') {
-                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-alpha-down me-2' : 'fas fa-sort-alpha-up-alt me-2';
-                } else if (field === 'status') {
-                    // Використовуємо правильні іконки для висхідного/низхідного сортування
-                    icon.className = currentSort.order === 'asc' ? 'fas fa-sort-amount-up me-2' : 'fas fa-sort-amount-down me-2';
-                }
-            }
-        }
-    }
-
-    // Обробники для кнопок сортування
-    if (sortAlphaBtn) {
-        sortAlphaBtn.addEventListener('click', () => sortPersonnel('name'));
-    }
-    if (sortStatusBtn) {
-        sortStatusBtn.addEventListener('click', () => sortPersonnel('status'));
-    }
-
-    // --- 4. АВТОМАТИЧНЕ ОНОВЛЕННЯ СТАТУСІВ ---
-    const API_URL = '/diploma/personnel-status-api/';
-    const UPDATE_INTERVAL = 7000; // Оновлюємо кожні 7 секунд
-
-    async function updateDeviceStatuses() {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
-            
-            const response = await fetch(API_URL, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                // Не виводимо помилку в консоль, щоб не засмічувати її при обриві з'єднання
-                return;
-            }
-            const data = await response.json();
-            const statuses = data.device_statuses;
-
-            if (!statuses) return;
-
-            // Проходимо по всіх картках співробітників, які мають MAC
-            document.querySelectorAll('.employee-card[data-mac-address]').forEach(card => {
-                const mac = card.dataset.macAddress;
-                const statusInfo = statuses[mac];
-                
-                if (!statusInfo) return; // Немає даних для цього MAC
-
-                const statusDiv = card.querySelector('.device-status');
-                const statusSpan = statusDiv.querySelector('span');
-                const statusDot = statusDiv.querySelector('.status-dot');
-
-                const isCurrentlyActive = statusDiv.classList.contains('status-active');
-                const shouldBeActive = statusInfo.is_active;
-
-                const locationValue = card.querySelector('.location-value');
-                const currentLocationStr = locationValue ? locationValue.textContent.trim() : '';
-                const newLocationUID = statusInfo.location || 'Невідомо';
-                
-                const locationChanged = shouldBeActive && (!currentLocationStr.includes(newLocationUID));
-
-                // Оновлюємо якщо змінився статус або локація
-                if (isCurrentlyActive !== shouldBeActive || locationChanged) {
-                    statusDiv.classList.add('updating'); // Додаємо клас для анімації
-
-                    // Через невеликий проміжок часу оновлюємо класи та текст
-                    setTimeout(() => {
-                        if (shouldBeActive) {
-                            statusDiv.className = 'device-status status-active';
-                            statusDot.className = 'status-dot dot-active';
-                            statusSpan.textContent = statusInfo.inventory_number;
-                            statusDiv.title = '';
-                            
-                            if (locationValue) {
-                                locationValue.innerHTML = statusInfo.location ? 
-                                    `<a href="/diploma/mine_map/?focus_ap=${statusInfo.location}" class="location-link" title="Показати на карті"><i class="fas fa-map-marker-alt text-danger"></i> ${statusInfo.location}</a>` : 
-                                    '<span class="text-muted">Невідомо</span>';
+                    if (isCurrentlyActive !== shouldBeActive) {
+                        statusDiv.classList.add('updating');
+                        setTimeout(() => {
+                            if (shouldBeActive) {
+                                statusDiv.className = 'device-status status-active';
+                                statusDot.className = 'status-dot dot-active';
+                                statusSpan.textContent = statusInfo.inventory_number;
+                                statusDiv.title = '';
+                            } else {
+                                statusDiv.className = 'device-status status-device-inactive';
+                                statusDot.className = 'status-dot dot-device-inactive';
+                                statusSpan.textContent = `${statusInfo.inventory_number} (Неактивний)`;
+                                statusDiv.title = 'Пристрій неактивний';
                             }
-                        } else {
-                            statusDiv.className = 'device-status status-device-inactive';
-                            statusDot.className = 'status-dot dot-device-inactive';
-                            statusSpan.textContent = `${statusInfo.inventory_number} (Неактивний)`;
-                            statusDiv.title = 'Пристрій неактивний';
-                            
-                            if (locationValue) {
-                                locationValue.innerHTML = '<span class="text-muted">Невідомо</span>';
-                            }
+                            statusDiv.classList.remove('updating');
+                        }, 500);
+                    }
+                    
+                    // Оновлення локації
+                    if (locationValue) {
+                        const newLocationHTML = statusInfo.location ? 
+                            `<a href="/diploma/mine_map/?focus_ap=${statusInfo.location}" class="location-link" title="Показати на карті"><i class="fas fa-map-marker-alt text-danger"></i> ${statusInfo.location}</a>` : 
+                            '<span class="text-muted">Невідомо</span>';
+                        
+                        if (locationValue.innerHTML !== newLocationHTML) {
+                            locationValue.innerHTML = newLocationHTML;
                         }
-                        statusDiv.classList.remove('updating');
-                    }, 500);
-                }
-            });
-
-        } catch (error) {
-            // Ігноруємо помилки fetch, щоб не засмічувати консоль при обриві з'єднання
-        } finally {
-            // Рекурсивний виклик тільки після завершення поточного запиту
-            setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
+                    }
+                });
+            } catch (error) {
+                // ігноруємо помилки
+            } finally {
+                setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
+            }
         }
+        setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
     }
 
-    // Запускаємо перше оновлення
-    setTimeout(updateDeviceStatuses, UPDATE_INTERVAL);
+    init();
 });

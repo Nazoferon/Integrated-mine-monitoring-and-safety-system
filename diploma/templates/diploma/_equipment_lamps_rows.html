@@ -1,0 +1,43 @@
+{% for item in items %}
+<tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-battery="{% if not item.is_active %}0{% elif item.latest_log %}{{ item.latest_log.battery_level }}{% else %}0{% endif %}"
+  data-status="{% if item.is_active %}1{% else %}0{% endif %}" data-firmware="{{ item.firmware_version }}">
+  <td class="search-target font-weight-bold text-primary">
+    <i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number|default:"Без номера" }}
+  </td>
+  <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
+  <td class="search-target">
+    {% if item.assigned_to %}
+    {{ item.assigned_to.last_name }} {{ item.assigned_to.first_name|first }}.
+    <span class="text-muted badge-number">({{ item.assigned_to.badge_number }})</span>
+    {% else %}
+    <span class="text-warning">На складі</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="telemetry-online">
+      <div class="battery-wrapper" title="Рівень заряду: {{ item.latest_log.battery_level|default:0 }}%">
+        <div class="battery-level {% if item.latest_log.battery_level|default:0 >= 50 %}bat-high{% elif item.latest_log.battery_level|default:0 >= 20 %}bat-med{% else %}bat-low{% endif %}"></div>
+      </div>
+    </div>
+    <div class="telemetry-offline">
+      <span class="text-muted"><i class="fas fa-battery-empty"></i> Офлайн</span>
+    </div>
+  </td>
+  <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
+  <td>
+    <div class="status-indicator on">
+      <div class="status-dot"></div> Online
+    </div>
+    <div class="status-indicator off">
+      <div class="status-dot"></div> Offline
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" class="text-center text-muted py-4">
+    <i class="fas fa-folder-open fa-2x mb-2"></i><br>
+    Обладнання не знайдено
+  </td>
+</tr>
+{% endfor %}

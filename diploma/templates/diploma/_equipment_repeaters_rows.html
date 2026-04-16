@@ -1,0 +1,35 @@
+{% for item in items %}
+<tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-uid="{{ item.uid }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}">
+  <td class="search-target font-weight-bold text-success">
+    <i class="fas fa-broadcast-tower mr-2"></i> {{ item.uid|default:"Без ID" }}
+  </td>
+  <td class="search-target"><span class="mac-address">{{ item.wifi_bssid|default:"Unknown" }}</span></td>
+  <td class="search-target">{{ item.map_location.name }}</td>
+  <td>{{ item.x }}, {{ item.y }}</td>
+  <td>
+    <div class="telemetry-online">
+      <span class="text-success clients-wrapper" title="{% if item.clients_count > 0 %}Підключені:&#10;{{ item.clients_list_str }}{% else %}Немає підключень{% endif %}">
+        <i class="fas fa-users"></i> Клієнтів: <span class="sim-clients">{{ item.clients_count|default:"0" }}</span>
+      </span>
+    </div>
+    <div class="telemetry-offline">
+      <span class="text-muted">Офлайн</span>
+    </div>
+  </td>
+  <td>
+    <div class="status-indicator on">
+      <div class="status-dot"></div> Signal OK
+    </div>
+    <div class="status-indicator off">
+      <div class="status-dot"></div> No Signal
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" class="text-center text-muted py-4">
+    <i class="fas fa-folder-open fa-2x mb-2"></i><br>
+    Репітери не завантажено з MineCAD
+  </td>
+</tr>
+{% endfor %}

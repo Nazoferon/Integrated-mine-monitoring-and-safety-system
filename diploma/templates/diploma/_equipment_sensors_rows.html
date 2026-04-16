@@ -1,0 +1,35 @@
+{% for item in items %}
+<tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}"
+  data-firmware="{{ item.firmware_version }}">
+  <td class="search-target font-weight-bold text-primary">
+    <i class="fas fa-box text-secondary mr-2"></i> {{item.inventory_number }}
+  </td>
+  <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
+  <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
+  <td>
+    <div class="telemetry-online live-telemetry">
+      <span class="text-warning"><i class="fas fa-wind"></i> <span class="sim-gas">{{ item.latest_log.gas_level|default:"--" }}</span> LEL</span> | 
+      <span class="text-info"><i class="fas fa-temperature-half"></i> <span class="sim-temp">{{ item.latest_log.temperature|default:"--" }}</span>°C</span>
+    </div>
+    <div class="telemetry-offline">
+      <span class="text-muted">Офлайн</span>
+    </div>
+  </td>
+  <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
+  <td>
+    <div class="status-indicator on">
+      <div class="status-dot"></div> Online
+    </div>
+    <div class="status-indicator off">
+      <div class="status-dot"></div> Offline
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" class="text-center text-muted py-4">
+    <i class="fas fa-folder-open fa-2x mb-2"></i><br>
+    Датчики не знайдено
+  </td>
+</tr>
+{% endfor %}

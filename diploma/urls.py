@@ -30,6 +30,8 @@ urlpatterns = [
     path('api/reports-data/', views.reports_data_api, name='reports_data_api'),
     path('alert/<int:alert_id>/api/', views.alert_telemetry_api, name='alert_telemetry_api'),
     path('api/equipment-telemetry/', views.equipment_telemetry_api, name='equipment_telemetry_api'),
+    path('api/equipment-list/', views.equipment_list_api, name='equipment_list_api'),
+    path('api/personnel-list/', views.personnel_list_api, name='personnel_list_api'),
     path('personnel-status-api/', views.personnel_status_api, name='personnel_status_api'),
     
     # API для симулятора

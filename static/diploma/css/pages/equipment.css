@@ -96,6 +96,10 @@
 /* Статус Офлайн: червона крапка */
 .status-indicator.off .status-dot { background-color: #ff4444 !important; }
 
+.clients-wrapper {
+    cursor: help;
+}
+
 /* --- БАТАРЕЯ --- */
 .battery-wrapper {
     width: 60px; height: 14px; border: 1px solid #555; border-radius: 3px;
@@ -227,4 +231,37 @@
         font-size: 12px;
         white-space: nowrap;
     }
+}
+
+/* ================================================
+   Стилі для Пагінації
+   ================================================ */
+.custom-pagination .page-item .page-link {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    color: #aaa;
+    margin: 0 3px;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+}
+
+.custom-pagination .page-item .page-link:hover {
+    background-color: #333;
+    border-color: #4dabf7;
+    color: #fff;
+}
+
+.custom-pagination .page-item.active .page-link {
+    background-color: #4dabf7;
+    border-color: #4dabf7;
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(77, 171, 247, 0.3);
+}
+
+.custom-pagination .page-item.disabled .page-link {
+    background-color: #222;
+    border-color: #333;
+    color: #666;
+    pointer-events: none;
 }

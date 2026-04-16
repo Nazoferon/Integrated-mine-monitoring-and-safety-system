@@ -25,6 +25,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // --- ОНОВЛЕННЯ ЗНАЧЕНЬ ПОВЗУНКІВ ---
+    function setupSliderListeners() {
+        const sliders = {
+            'simBattery': { el: 'valBattery', unit: '%' },
+            'simTemp': { el: 'valTemp', unit: ' °C' },
+            'simRssi': { el: 'valRssi', unit: ' dBm' }
+        };
+
+        for (const sliderId in sliders) {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                const displayEl = document.getElementById(sliders[sliderId].el);
+                const unit = sliders[sliderId].unit;
+                // Оновлюємо значення при завантаженні сторінки
+                displayEl.innerText = slider.value + unit;
+                // Додаємо слухача для майбутніх змін
+                slider.addEventListener('input', function() {
+                    displayEl.innerText = this.value + unit;
+                });
+            }
+        }
+    }
+
     const simGas = document.getElementById('simGas');
     const valGas = document.getElementById('valGas');
     const simGasIcon = document.getElementById('simGasIcon');
@@ -32,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (simGas) {
         simGas.addEventListener('input', function() {
             const val = parseFloat(this.value);
-            valGas.innerText = val + ' % LEL';
+            // Використовуємо toFixed(1) для значень з десятковою частиною
+            valGas.innerText = val.toFixed(1) + ' % LEL';
             
             valGas.classList.remove('text-success', 'border-success', 'text-warning', 'border-warning', 'text-danger', 'border-danger');
             simGasIcon.className = 'fas';
@@ -48,6 +72,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 simGasIcon.classList.add('fa-cloud', 'text-success');
             }
         });
+        // Ініціалізуємо значення при завантаженні
+        simGas.dispatchEvent(new Event('input'));
     }
 
     function collectData() {
@@ -132,4 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showStatus("⏳ Авто-симуляція активна (відправка кожні 5 секунд)...");
         }
     });
+
+    // Ініціалізація всіх повзунків
+    setupSliderListeners();
 });

@@ -1,242 +1,239 @@
-class EquipmentPage {
-    constructor() {
-        this.sortState = {
-            column: null,
-            direction: 'none' // 'asc', 'desc'
-        };
-        this.elements = {};
-        this.init();
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("✅ Скрипт сторінки обладнання завантажено (v3.0 - AJAX)");
 
-    init() {
-        console.log("✅ Скрипт сторінки обладнання завантажено (v2.0)");
-        this.cacheElements();
-        this.setupEventListeners();
-        this.buildSearchCache();
-        this.setInitialBatteryLevels();
-        this.startRealTelemetryUpdates();
-    }
+    const elements = {
+        searchInput: document.getElementById('eqSearchInput'),
+        clearSearchBtn: document.getElementById('clearEqSearchBtn'),
+        tabs: document.querySelectorAll('#eqTabs .nav-link'),
+        tabContents: document.querySelectorAll('.tab-pane'),
+        tabsContentContainer: document.getElementById('eqTabsContent'),
+    };
 
-    cacheElements() {
-        this.elements = {
-            searchInput: document.getElementById('eqSearchInput'),
-            clearSearchBtn: document.getElementById('clearEqSearchBtn'),
-            allRows: document.querySelectorAll('.tech-row'),
-            sortableHeaders: document.querySelectorAll('.sortable')
-        };
-    }
+    let state = {
+        activeTab: 'lamps',
+        searchQuery: '',
+        currentPage: 1,
+        sort: {
+            lamps: { by: 'status', dir: 'desc' },
+            sensors: { by: 'status', dir: 'desc' },
+            repeaters: { by: 'status', dir: 'desc' },
+        },
+        isLoading: false,
+    };
 
-    setupEventListeners() {
-        if (this.elements.searchInput) {
-            this.elements.searchInput.addEventListener('input', () => this.filterEquipment());
-            this.elements.searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') this.clearSearch();
+    let searchTimeout;
+
+    async function fetchEquipment() {
+        if (state.isLoading) return;
+        state.isLoading = true;
+
+        const currentTabPane = document.getElementById(state.activeTab);
+        const tableBody = currentTabPane.querySelector('tbody');
+        const paginationContainer = currentTabPane.querySelector('.pagination-container');
+
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></td></tr>`;
+        if (paginationContainer) paginationContainer.innerHTML = '';
+
+        const params = new URLSearchParams({
+            tab: state.activeTab,
+            q: state.searchQuery,
+            page: state.currentPage,
+            sort: state.sort[state.activeTab].by,
+            dir: state.sort[state.activeTab].dir,
+        });
+
+        try {
+            const response = await fetch(`/diploma/api/equipment-list/?${params.toString()}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json();
+            tableBody.innerHTML = data.html;
+
+            // Встановлюємо початкову ширину для індикаторів батареї
+            tableBody.querySelectorAll('.tech-row').forEach(row => {
+                const batteryLevelEl = row.querySelector('.battery-level');
+                if (batteryLevelEl) {
+                    batteryLevelEl.style.width = (row.dataset.battery || '0') + '%';
+                }
             });
-        }
 
-        if (this.elements.clearSearchBtn) {
-            this.elements.clearSearchBtn.addEventListener('click', () => this.clearSearch());
-        }
+            if (paginationContainer) {
+                renderPagination(paginationContainer, data);
+            }
 
-        this.elements.sortableHeaders.forEach(header => {
-            header.addEventListener('click', (e) => this.handleSort(e));
-        });
+        } catch (error) {
+            console.error("Fetch error:", error);
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Помилка завантаження даних</td></tr>`;
+        } finally {
+            state.isLoading = false;
+        }
     }
 
-    // Створюємо кеш пошукового тексту для кращої продуктивності
-    buildSearchCache() {
-        this.elements.allRows.forEach(row => {
-            row.dataset.searchableText = Array.from(row.querySelectorAll('.search-target'))
-                .map(td => td.textContent.toLowerCase())
-                .join(' ');
-        });
+    function renderPagination(container, data) {
+        const { total_pages, current_page } = data;
+        if (total_pages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '<ul class="pagination custom-pagination">';
+        html += `<li class="page-item ${current_page === 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${current_page - 1}">«</a></li>`;
+
+        const pagesToShow = 5;
+        let startPage = Math.max(1, current_page - Math.floor(pagesToShow / 2));
+        let endPage = Math.min(total_pages, startPage + pagesToShow - 1);
+
+        if (endPage - startPage + 1 < pagesToShow) {
+            startPage = Math.max(1, endPage - pagesToShow + 1);
+        }
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<li class="page-item ${i === current_page ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+        }
+
+        if (endPage < total_pages) {
+            if (endPage < total_pages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${total_pages}">${total_pages}</a></li>`;
+        }
+
+        html += `<li class="page-item ${current_page === total_pages ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${current_page + 1}">»</a></li>`;
+        html += '</ul>';
+        container.innerHTML = html;
     }
 
-    setInitialBatteryLevels() {
-        this.elements.allRows.forEach(row => {
-            const batteryLevel = row.querySelector('.battery-level');
-            // Застосовуємо точну ширину батареї (з data-battery), якщо пристрій онлайн
-            if (batteryLevel && row.dataset.battery !== undefined && !row.classList.contains('offline-device')) {
-                batteryLevel.style.width = row.dataset.battery + '%';
+    function setupEventListeners() {
+        elements.searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            elements.clearSearchBtn.classList.toggle('visible', elements.searchInput.value.length > 0);
+            searchTimeout = setTimeout(() => {
+                state.searchQuery = elements.searchInput.value;
+                state.currentPage = 1;
+                fetchEquipment();
+            }, 350);
+        });
+
+        elements.clearSearchBtn.addEventListener('click', () => {
+            elements.searchInput.value = '';
+            elements.clearSearchBtn.classList.remove('visible');
+            state.searchQuery = '';
+            state.currentPage = 1;
+            fetchEquipment();
+            elements.searchInput.focus();
+        });
+
+        elements.tabs.forEach(tab => {
+            tab.addEventListener('show.bs.tab', event => {
+                state.activeTab = event.target.dataset.bsTarget.replace('#', '');
+                state.currentPage = 1;
+                state.searchQuery = '';
+                elements.searchInput.value = '';
+                elements.clearSearchBtn.classList.remove('visible');
+                updateSortHeaders();
+                fetchEquipment();
+            });
+        });
+
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', () => {
+                const sortBy = header.dataset.sortBy;
+                const currentSort = state.sort[state.activeTab];
+
+                if (currentSort.by === sortBy) {
+                    currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+                } else {
+                    currentSort.by = sortBy;
+                    currentSort.dir = 'desc';
+                }
+                state.currentPage = 1;
+                updateSortHeaders();
+                fetchEquipment();
+            });
+        });
+
+        elements.tabsContentContainer.addEventListener('click', e => {
+            const link = e.target.closest('.page-link');
+            if (!link) return;
+            e.preventDefault();
+            const page = link.dataset.page;
+            if (page && !link.parentElement.classList.contains('disabled') && !link.parentElement.classList.contains('active')) {
+                state.currentPage = parseInt(page);
+                fetchEquipment();
+            }
+        });
+    }
+    
+    function updateSortHeaders() {
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.classList.remove('sort-asc', 'sort-desc');
+            const sortBy = header.dataset.sortBy;
+            const currentSort = state.sort[state.activeTab];
+            if (currentSort.by === sortBy) {
+                header.classList.add(currentSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
             }
         });
     }
 
-    filterEquipment() {
-        const term = this.elements.searchInput.value.toLowerCase().trim();
-        this.elements.clearSearchBtn.classList.toggle('visible', term.length > 0);
-
-        this.elements.allRows.forEach(row => {
-            const isVisible = row.dataset.searchableText.includes(term);
-            row.style.display = isVisible ? '' : 'none';
-        });
-    }
-
-    clearSearch() {
-        if (this.elements.searchInput) {
-            this.elements.searchInput.value = '';
-            this.filterEquipment();
-            this.elements.searchInput.focus();
-        }
-    }
-
-    handleSort(e) {
-        const header = e.currentTarget;
-        const sortBy = header.dataset.sortBy;
-        if (!sortBy) return;
-
-        // Визначаємо напрямок сортування
-        if (this.sortState.column === sortBy && this.sortState.direction === 'desc') {
-            this.sortState.direction = 'asc';
-        } else {
-            this.sortState.direction = 'desc';
-        }
-        this.sortState.column = sortBy;
-
-        // Оновлюємо стилі заголовків
-        this.elements.sortableHeaders.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
-        header.classList.add(this.sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
-
-        // Отримуємо тіло таблиці та рядки
-        const tableBody = header.closest('table').querySelector('tbody');
-        const rows = Array.from(tableBody.querySelectorAll('tr.tech-row'));
-
-        // Сортуємо
-        rows.sort((rowA, rowB) => {
-            const valueA = this.getSortValue(rowA, sortBy);
-            const valueB = this.getSortValue(rowB, sortBy);
-
-            if (valueA < valueB) return this.sortState.direction === 'asc' ? -1 : 1;
-            if (valueA > valueB) return this.sortState.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-
-        // Вставляємо відсортовані рядки назад
-        rows.forEach(row => tableBody.appendChild(row));
-    }
-
-    getSortValue(row, sortBy) {
-        const value = row.dataset[sortBy.toLowerCase()] || '';
-
-        // Для прошивки повертаємо рядок, який можна сортувати лексикографічно,
-        // перетворивши версію "1.2.10" на "001.002.010" для коректного порівняння.
-        if (sortBy === 'firmware' && value) {
-            return value.split('.').map(part => part.padStart(3, '0')).join('.');
-        }
-
-        // Для інших значень (батарея, статус) пробуємо перетворити на число.
-        const numValue = parseFloat(value);
-        return isNaN(numValue) ? value : numValue;
-    }
-
-    startRealTelemetryUpdates() {
+    function startRealTelemetryUpdates() {
         const updateTelemetry = async () => {
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
-                
-                const response = await fetch('/diploma/api/equipment-telemetry/', {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                
+                const response = await fetch('/diploma/api/equipment-telemetry/');
                 if (!response.ok) return;
                 
                 const data = await response.json();
-                let needsResort = false;
                 
-                this.elements.allRows.forEach(row => {
+                document.querySelectorAll('.tech-row').forEach(row => {
                     const mac = row.dataset.mac;
                     const uid = row.dataset.uid;
-                    const wasOffline = row.classList.contains('offline-device');
+                    const deviceData = mac ? data.devices?.[mac] : data.repeaters?.[uid];
+                    const isNowActive = !!deviceData;
 
-                    // Визначаємо чи є цей пристрій в списку активних
-                    let isNowActive = false;
-                    let deviceData = null;
+                    row.classList.toggle('offline-device', !isNowActive);
 
-                    if (mac && data.devices && data.devices[mac]) {
-                        isNowActive = true;
-                        deviceData = data.devices[mac];
-                    } else if (uid && data.repeaters && data.repeaters[uid]) {
-                        isNowActive = true;
-                        deviceData = data.repeaters[uid];
-                    }
-
-                    // --- ВІЗУАЛЬНА ЗМІНА СТАТУСУ ---
-                    if (isNowActive && wasOffline) {
-                        row.classList.remove('offline-device');
-                        row.dataset.status = "1";
-                        needsResort = true;
-                        
-                    } else if (!isNowActive && !wasOffline) {
-                        row.classList.add('offline-device');
-                        row.dataset.status = "0";
-                        row.dataset.battery = "0"; // Скидаємо для правильного сортування
-                        needsResort = true;
-                    }
-
-                    // --- ОНОВЛЕННЯ ТЕЛЕМЕТРІЇ (ТІЛЬКИ ОНЛАЙН) ---
                     if (isNowActive) {
-                        // Оновлення коногонок та датчиків
-                        if (mac) {
-                            const batteryLevel = row.querySelector('.battery-level');
-                            if (batteryLevel) {
+                        if (mac) { // Lamps and Sensors
+                            const batteryLevelEl = row.querySelector('.battery-level');
+                            if (batteryLevelEl) {
                                 const level = deviceData.battery;
-                                batteryLevel.style.width = level + '%';
-                                const wrapper = row.querySelector('.battery-wrapper');
-                                if (wrapper) wrapper.title = `Рівень заряду: ${level}%`;
-                                
-                                batteryLevel.className = 'battery-level';
-                                if (level >= 50) batteryLevel.classList.add('bat-high');
-                                else if (level >= 20) batteryLevel.classList.add('bat-med');
-                                else batteryLevel.classList.add('bat-low');
-                                
-                                row.dataset.battery = level; // Для сортування
+                                batteryLevelEl.style.width = level + '%';
+                                batteryLevelEl.parentElement.title = `Рівень заряду: ${level}%`;
+                                batteryLevelEl.className = 'battery-level';
+                                if (level >= 50) batteryLevelEl.classList.add('bat-high');
+                                else if (level >= 20) batteryLevelEl.classList.add('bat-med');
+                                else batteryLevelEl.classList.add('bat-low');
                             }
-
                             const gasSpan = row.querySelector('.sim-gas');
-                            const tempSpan = row.querySelector('.sim-temp');
                             if (gasSpan) gasSpan.textContent = deviceData.gas;
+                            const tempSpan = row.querySelector('.sim-temp');
                             if (tempSpan) tempSpan.textContent = deviceData.temp !== null ? deviceData.temp : '--';
                         }
-
-                        // Оновлення репітерів
-                        if (uid) {
+                        if (uid) { // Repeaters
                             const clientsSpan = row.querySelector('.sim-clients');
+                            if (clientsSpan) clientsSpan.textContent = deviceData.clients;
                             const clientsWrapper = row.querySelector('.clients-wrapper');
-                            if (clientsSpan) {
-                                clientsSpan.textContent = deviceData.clients;
-                            }
-                            if (clientsWrapper) {
-                                clientsWrapper.title = deviceData.clients > 0 ? `Підключені:\n${deviceData.clients_list}` : 'Немає підключень';
-                            }
+                            if (clientsWrapper) clientsWrapper.title = deviceData.clients > 0 ? `Підключені:\n${deviceData.clients_list}` : 'Немає підключень';
                         }
                     }
                 });
-
-                // Якщо статус змінився і таблиця відсортована користувачем — пересортовуємо
-                if (needsResort && this.sortState.column) {
-                    const activeHeader = Array.from(this.elements.sortableHeaders).find(
-                        h => h.dataset.sortBy === this.sortState.column
-                    );
-                    if (activeHeader) {
-                        // Тимчасово інвертуємо напрямок, щоб він зберігся після кліку (auto-resort)
-                        this.sortState.direction = this.sortState.direction === 'asc' ? 'desc' : 'asc';
-                        this.handleSort({ currentTarget: activeHeader });
-                    }
-                }
             } catch (error) {
-                console.error("Помилка оновлення телеметрії:", error);
+                // Ignore fetch errors
             } finally {
                 setTimeout(updateTelemetry, 5000);
             }
         };
-
-        // Запускаємо перше оновлення
         setTimeout(updateTelemetry, 5000);
     }
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-    new EquipmentPage();
+    function init() {
+        setupEventListeners();
+        updateSortHeaders();
+        fetchEquipment();
+        startRealTelemetryUpdates();
+    }
+
+    init();
 });

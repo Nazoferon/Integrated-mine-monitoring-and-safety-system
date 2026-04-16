@@ -4,7 +4,7 @@
 {% block title %}Обладнання - Глибина 4.0{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'diploma/css/pages/equipment.css' %}">
+<link rel="stylesheet" href="{% static 'diploma/css/pages/equipment.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -25,11 +25,10 @@
 <div class="nav nav-pills row mb-4" id="eqTabs" role="tablist">
 
   <div class="col-12 col-md-4 mb-3 mb-md-0" role="presentation">
-    <button class="nav-link active w-100 h-100 p-0 text-start custom-tab-btn" id="lamps-tab" data-bs-toggle="pill"
-      data-bs-target="#lamps" type="button" role="tab">
+    <button class="nav-link active w-100 h-100 p-0 text-start custom-tab-btn" id="lamps-tab" data-bs-toggle="pill" data-bs-target="#lamps" type="button" role="tab">
       <div class="stat-card h-100 m-0">
         <div class="stat-info">
-          <h3>{{ lamps|length }}</h3>
+          <h3>{{ lamps_count }}</h3>
           <p>Мобільні (Коногонки)</p>
         </div>
         <i class="fas fa-hard-hat stat-icon"></i>
@@ -38,11 +37,10 @@
   </div>
 
   <div class="col-12 col-md-4 mb-3 mb-md-0" role="presentation">
-    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="sensors-tab" data-bs-toggle="pill"
-      data-bs-target="#sensors" type="button" role="tab">
+    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="sensors-tab" data-bs-toggle="pill" data-bs-target="#sensors" type="button" role="tab">
       <div class="stat-card h-100 m-0">
         <div class="stat-info">
-          <h3>{{ sensors|length }}</h3>
+          <h3>{{ sensors_count }}</h3>
           <p>Стаціонарні датчики</p>
         </div>
         <i class="fas fa-temperature-high stat-icon"></i>
@@ -51,11 +49,10 @@
   </div>
 
   <div class="col-12 col-md-4 mb-3 mb-md-0" role="presentation">
-    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="network-tab" data-bs-toggle="pill"
-      data-bs-target="#network" type="button" role="tab">
+    <button class="nav-link w-100 h-100 p-0 text-start custom-tab-btn" id="network-tab" data-bs-toggle="pill" data-bs-target="#repeaters" type="button" role="tab">
       <div class="stat-card h-100 m-0">
         <div class="stat-info">
-          <h3>{{ repeaters|length }}</h3>
+          <h3>{{ repeaters_count }}</h3>
           <p>Мережа (Wi-Fi)</p>
         </div>
         <i class="fas fa-wifi stat-icon"></i>
@@ -86,49 +83,11 @@
           </tr>
         </thead>
         <tbody>
-          {% for item in lamps %}
-          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-battery="{% if not item.is_active %}0{% elif item.latest_log %}{{ item.latest_log.battery_level }}{% else %}0{% endif %}"
-            data-status="{% if item.is_active %}1{% else %}0{% endif %}" data-firmware="{{ item.firmware_version }}">
-            <td class="search-target font-weight-bold text-primary">
-              <i class="fas fa-box text-secondary mr-2"></i> {{ item.inventory_number|default:"Без номера" }}
-            </td>
-            <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
-            <td class="search-target">
-              {% if item.assigned_to %}
-              {{ item.assigned_to.last_name }} {{ item.assigned_to.first_name|first }}.
-              <span class="text-muted badge-number">({{ item.assigned_to.badge_number }})</span>
-              {% else %}
-              <span class="text-warning">На складі</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="telemetry-online">
-                <div class="battery-wrapper" title="Рівень заряду: {{ item.latest_log.battery_level|default:0 }}%">
-                  <div class="battery-level {% if item.latest_log.battery_level|default:0 >= 50 %}bat-high{% elif item.latest_log.battery_level|default:0 >= 20 %}bat-med{% else %}bat-low{% endif %}"></div>
-                </div>
-              </div>
-              <div class="telemetry-offline">
-                <span class="text-muted"><i class="fas fa-battery-empty"></i> Офлайн</span>
-              </div>
-            </td>
-            <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
-            <td>
-              <div class="status-indicator on">
-                <div class="status-dot"></div> Online
-              </div>
-              <div class="status-indicator off">
-                <div class="status-dot"></div> Offline
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted py-4">Обладнання не знайдено</td>
-          </tr>
-          {% endfor %}
+          <!-- Рядки таблиці будуть завантажені сюди через AJAX -->
         </tbody>
       </table>
     </div>
+    <div class="pagination-container d-flex justify-content-center mt-3"></div>
   </div>
 
   <div class="tab-pane fade" id="sensors" role="tabpanel">
@@ -149,44 +108,14 @@
           </tr>
         </thead>
         <tbody>
-          {% for item in sensors %}
-          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-mac="{{ item.mac_address }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}"
-            data-firmware="{{ item.firmware_version }}">
-            <td class="search-target font-weight-bold text-primary">
-              <i class="fas fa-box text-secondary mr-2"></i> {{item.inventory_number }}
-            </td>
-            <td class="search-target"><span class="mac-address">{{ item.mac_address }}</span></td>
-            <td><i class="fas fa-map-marker-alt text-danger"></i> {{ item.static_x }}, {{ item.static_y }}</td>
-            <td>
-              <div class="telemetry-online live-telemetry">
-                <span class="text-warning"><i class="fas fa-wind"></i> <span class="sim-gas">{{ item.latest_log.gas_level|default:"--" }}</span> LEL</span> | 
-                <span class="text-info"><i class="fas fa-temperature-half"></i> <span class="sim-temp">{{ item.latest_log.temperature|default:"--" }}</span>°C</span>
-              </div>
-              <div class="telemetry-offline">
-                <span class="text-muted">Офлайн</span>
-              </div>
-            </td>
-            <td><span class="fw-badge">v{{ item.firmware_version }}</span></td>
-            <td>
-              <div class="status-indicator on">
-                <div class="status-dot"></div> Online
-              </div>
-              <div class="status-indicator off">
-                <div class="status-dot"></div> Offline
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted py-4">Датчики не знайдено</td>
-          </tr>
-          {% endfor %}
+          <!-- Рядки таблиці будуть завантажені сюди через AJAX -->
         </tbody>
       </table>
     </div>
+    <div class="pagination-container d-flex justify-content-center mt-3"></div>
   </div>
 
-  <div class="tab-pane fade" id="network" role="tabpanel">
+  <div class="tab-pane fade" id="repeaters" role="tabpanel">
     <div class="table-responsive">
       <table class="tech-table">
         <thead>
@@ -195,52 +124,24 @@
             <th>BSSID (MAC)</th>
             <th>Локація (Карта)</th>
             <th>Координати</th>
-            <th>Підключені клієнти</th>
+            <th class="sortable" title="Сортувати по клієнтах" data-sort-by="clients">
+              Підключені клієнти <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
+            </th>
             <th class="sortable" title="Сортувати по статусу" data-sort-by="status">
               Статус мережі <i class="fas fa-sort"></i><i class="fas fa-sort-up"></i><i class="fas fa-sort-down"></i>
             </th>
           </tr>
         </thead>
         <tbody>
-          {% for item in repeaters %}
-          <tr class="tech-row {% if not item.is_active %}offline-device{% endif %}" data-uid="{{ item.uid }}" data-status="{% if item.is_active %}1{% else %}0{% endif %}">
-            <td class="search-target font-weight-bold text-success">
-              <i class="fas fa-broadcast-tower mr-2"></i> {{ item.uid|default:"Без ID" }}
-            </td>
-            <td class="search-target"><span class="mac-address">{{ item.wifi_bssid|default:"Unknown" }}</span></td>
-            <td class="search-target">{{ item.map_location.name }}</td>
-            <td>{{ item.x }}, {{ item.y }}</td>
-            <td>
-              <div class="telemetry-online">
-                <span class="text-success clients-wrapper" style="cursor: help;" title="{% if item.clients_count > 0 %}Підключені:&#10;{{ item.clients_list }}{% else %}Немає підключень{% endif %}">
-                  <i class="fas fa-users"></i> Клієнтів: <span class="sim-clients">{{ item.clients_count|default:"0" }}</span>
-                </span>
-              </div>
-              <div class="telemetry-offline">
-                <span class="text-muted">Офлайн</span>
-              </div>
-            </td>
-            <td>
-              <div class="status-indicator on">
-                <div class="status-dot"></div> Signal OK
-              </div>
-              <div class="status-indicator off">
-                <div class="status-dot"></div> No Signal
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted py-4">Репітери не завантажено з MineCAD</td>
-          </tr>
-          {% endfor %}
+          <!-- Рядки таблиці будуть завантажені сюди через AJAX -->
         </tbody>
       </table>
     </div>
+    <div class="pagination-container d-flex justify-content-center mt-3"></div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'diploma/js/equipment.js' %}?v=1"></script>
+<script src="{% static 'diploma/js/equipment.js' %}?v=3"></script>
 {% endblock %}

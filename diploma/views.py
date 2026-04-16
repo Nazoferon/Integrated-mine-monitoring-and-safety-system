@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger, UnorderedObjectListWarning
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.csrf import csrf_exempt 
@@ -14,6 +15,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from functools import wraps
 
+import warnings
 from .forms import UserForm, ProfileForm
 from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog, FirmwareUpdate, OTALog
 
@@ -102,78 +104,21 @@ def diploma_home(request):
 
 @login_required
 def personnel_list(request):
-    """Список персоналу."""
-    # 1. Підзапит для отримання ID останнього логу (щоб уникнути N+1 проблеми)
-    latest_log_subquery = TelemetryLog.objects.filter(
-        device__assigned_to=OuterRef('pk')
-    ).order_by('-timestamp').values('id')[:1]
-
-    employees = list(Employee.objects.all_with_device_status().annotate(
-        status_order=Case(
-            When(device__is_active=True, then=Value(1)),
-            When(device__is_active=False, then=Value(2)),
-            default=Value(3),
-            output_field=IntegerField()
-        ),
-        latest_log_id=Subquery(latest_log_subquery)
-    ).order_by('status_order', 'last_name', 'first_name'))
-    
-    # 2. Отримуємо всі логи ОДНИМ запитом
-    log_ids = [emp.latest_log_id for emp in employees if getattr(emp, 'latest_log_id', None)]
-    logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids).select_related('connected_repeater')}
-
-    recent_time = timezone.now() - timezone.timedelta(minutes=5)
-    for emp in employees:
-        emp.latest_location = None
-        if hasattr(emp, 'device') and emp.device.is_active:
-            last_log = logs_dict.get(emp.device.id)
-            if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
-                emp.latest_location = last_log.connected_repeater.uid
-                
-    return render(request, 'diploma/personnel.html', {
-        'employees': employees,
-        'total_employees': len(employees)
-    })
+    """Список персоналу (тепер завантажується через API)."""
+    return render(request, 'diploma/personnel.html')
 
 
 @login_required
 def equipment_list(request):
-    """Парк обладнання (коногонки, датчики, репітери)."""
-    latest_log_subquery = TelemetryLog.objects.filter(
-        device=OuterRef('pk')
-    ).order_by('-timestamp').values('id')[:1]
-
-    lamps = list(MinerDevice.objects.filter(is_static=False).select_related('assigned_to').annotate(latest_log_id=Subquery(latest_log_subquery)).order_by('-is_active', 'inventory_number'))
-    sensors = list(MinerDevice.objects.filter(is_static=True).annotate(latest_log_id=Subquery(latest_log_subquery)).order_by('-is_active', 'inventory_number'))
-    repeaters = list(InfrastructureDevice.objects.select_related('map_location').order_by('-is_active', 'uid'))
-
-    log_ids = [d.latest_log_id for d in lamps + sensors if getattr(d, 'latest_log_id', None)]
-    logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids)}
-
-    recent_time = timezone.now() - timezone.timedelta(minutes=5)
-
-    for device in lamps + sensors:
-        device.latest_log = logs_dict.get(device.id)
-
-    # Підрахунок клієнтів: беремо імена/номери з ОСТАННЬОГО логу
-    repeater_clients = {rep.id: [] for rep in repeaters}
-    for device in lamps + sensors:
-        if device.latest_log and device.latest_log.timestamp >= recent_time:
-            rep_id = device.latest_log.connected_repeater_id
-            if rep_id in repeater_clients:
-                name = f"{device.assigned_to.last_name} {device.assigned_to.first_name[0]}." if device.assigned_to else device.inventory_number
-                repeater_clients[rep_id].append(name)
-
-    for rep in repeaters:
-        rep.clients_count = len(repeater_clients[rep.id])
-        rep.clients_list = "\n".join(repeater_clients[rep.id])
-
-    # Сортування: AP-MAIN завжди перший, потім решта за кількістю клієнтів (за спаданням)
-    repeaters.sort(key=lambda r: (0 if r.uid == "AP-MAIN" else 1, -r.clients_count))
-
+    """Парк обладнання (тепер завантажується через API)."""
+    lamps_count = MinerDevice.objects.filter(is_static=False).count()
+    sensors_count = MinerDevice.objects.filter(is_static=True).count()
+    repeaters_count = InfrastructureDevice.objects.count()
+    
     return render(request, 'diploma/equipment.html', {
-        'lamps': lamps, 'sensors': sensors, 'repeaters': repeaters,
-        'total_devices': len(lamps) + len(sensors) + len(repeaters)
+        'lamps_count': lamps_count,
+        'sensors_count': sensors_count,
+        'repeaters_count': repeaters_count,
     })
 
 
@@ -368,6 +313,196 @@ def dashboard_stats_api(request):
         'alerts_html': alerts_html, # Додаємо HTML до відповіді
         'recent_staff': recent_staff_data,
     })
+
+@login_required
+def equipment_list_api(request):
+    """API для динамічного завантаження, пошуку та сортування обладнання."""
+    
+    # 1. Отримуємо параметри
+    tab = request.GET.get('tab', 'lamps')
+    search_query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'status')
+    sort_dir = request.GET.get('dir', 'desc')
+    page_number = request.GET.get('page', 1)
+    
+    qs = None
+    template_name = ''
+    
+    # Ігноруємо попередження про пагінацію для невпорядкованих запитів, оскільки ми завжди задаємо порядок
+    warnings.filterwarnings('ignore', category=UnorderedObjectListWarning)
+
+    # 2. Вибираємо запит в залежності від вкладки
+    if tab == 'lamps':
+        latest_log_battery = TelemetryLog.objects.filter(device=OuterRef('pk')).order_by('-timestamp').values('battery_level')[:1]
+        qs = MinerDevice.objects.filter(is_static=False).select_related('assigned_to').annotate(
+            latest_battery=Subquery(latest_log_battery)
+        )
+        template_name = 'diploma/_equipment_lamps_rows.html'
+        
+        if search_query:
+            qs = qs.filter(
+                Q(inventory_number__icontains=search_query) | Q(mac_address__icontains=search_query) |
+                Q(assigned_to__last_name__icontains=search_query) | Q(assigned_to__first_name__icontains=search_query) |
+                Q(assigned_to__badge_number__icontains=search_query)
+            )
+            
+        order_field = '-is_active'
+        if sort_by == 'battery': order_field = 'latest_battery'
+        elif sort_by == 'firmware': order_field = 'firmware_version'
+        elif sort_by == 'status': order_field = 'is_active'
+        
+        order_prefix = '-' if sort_dir == 'desc' else ''
+        qs = qs.order_by(f'{order_prefix}{order_field}', 'inventory_number')
+
+    elif tab == 'sensors':
+        qs = MinerDevice.objects.filter(is_static=True)
+        template_name = 'diploma/_equipment_sensors_rows.html'
+        
+        if search_query:
+            qs = qs.filter(Q(inventory_number__icontains=search_query) | Q(mac_address__icontains=search_query))
+            
+        order_field = '-is_active'
+        if sort_by == 'firmware': order_field = 'firmware_version'
+        elif sort_by == 'status': order_field = 'is_active'
+
+        order_prefix = '-' if sort_dir == 'desc' else ''
+        qs = qs.order_by(f'{order_prefix}{order_field}', 'inventory_number')
+
+    elif tab == 'repeaters':
+        recent_time = timezone.now() - timezone.timedelta(minutes=5)
+        client_subquery = TelemetryLog.objects.filter(
+            connected_repeater=OuterRef('pk'),
+            timestamp__gte=recent_time,
+            device__is_static=False
+        ).order_by().values('connected_repeater').annotate(c=Count('device_id', distinct=True)).values('c')
+
+        qs = InfrastructureDevice.objects.select_related('map_location').annotate(
+            is_main=Case(When(uid='AP-MAIN', then=Value(0)), default=Value(1), output_field=IntegerField()),
+            clients_count=Subquery(client_subquery, output_field=IntegerField())
+        )
+        template_name = 'diploma/_equipment_repeaters_rows.html'
+        
+        if search_query:
+            qs = qs.filter(Q(uid__icontains=search_query) | Q(wifi_bssid__icontains=search_query))
+        
+        order_prefix = '-' if sort_dir == 'desc' else ''
+        if sort_by == 'clients':
+            qs = qs.order_by(f'{order_prefix}clients_count', 'uid')
+        elif sort_by == 'status':
+            qs = qs.order_by(f'{order_prefix}is_active', 'uid')
+        else: # Сортування за замовчуванням
+            qs = qs.order_by('is_main', '-clients_count')
+
+    if qs is None:
+        return JsonResponse({'error': 'Invalid tab'}, status=400)
+
+    # 3. Пагінація
+    paginator = Paginator(qs, 15)
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.page(1)
+
+    # 4. Додаткова обробка телеметрії для поточної сторінки
+    context_data = {'items': page_obj.object_list}
+    
+    if tab in ['lamps', 'sensors']:
+        latest_log_subquery = TelemetryLog.objects.filter(device=OuterRef('pk')).order_by('-timestamp').values('id')[:1]
+        items_on_page = list(page_obj.object_list.annotate(latest_log_id=Subquery(latest_log_subquery)))
+        log_ids = [d.latest_log_id for d in items_on_page if getattr(d, 'latest_log_id', None)]
+        logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids)}
+        for device in items_on_page:
+            device.latest_log = logs_dict.get(device.id)
+        context_data['items'] = items_on_page
+        
+    elif tab == 'repeaters':
+        # Отримуємо список клієнтів для тултіпів
+        repeater_ids_on_page = [r.id for r in page_obj.object_list]
+        recent_time = timezone.now() - timezone.timedelta(minutes=5)
+        
+        latest_logs = TelemetryLog.objects.filter(
+            connected_repeater_id__in=repeater_ids_on_page,
+            timestamp__gte=recent_time,
+            device__is_static=False
+        ).order_by('device_id', '-timestamp').distinct('device_id').select_related('device__assigned_to')
+
+        client_lists = {rep_id: [] for rep_id in repeater_ids_on_page}
+        for log in latest_logs:
+            device = log.device
+            name = f"{device.assigned_to.last_name} {device.assigned_to.first_name[0]}." if device.assigned_to else device.inventory_number
+            client_lists[log.connected_repeater_id].append(name)
+
+        for rep in page_obj.object_list:
+            rep.clients_list_str = "\n".join(client_lists.get(rep.id, []))
+
+    # 5. Рендеримо HTML та повертаємо JSON
+    html = render_to_string(template_name, context_data)
+    
+    return JsonResponse({
+        'html': html, 'total_pages': paginator.num_pages, 'current_page': page_obj.number,
+        'total_results': paginator.count, 'has_next': page_obj.has_next()
+    })
+
+@login_required
+def personnel_list_api(request):
+    """API для динамічного завантаження, пошуку та сортування персоналу."""
+    
+    # 1. Отримуємо параметри з GET-запиту
+    search_query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'status') # 'status' or 'name'
+    
+    # 2. Базовий запит
+    base_qs = Employee.objects.all_with_device_status()
+
+    # 3. Застосовуємо пошук
+    if search_query:
+        base_qs = base_qs.filter(
+            Q(last_name__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(badge_number__icontains=search_query) |
+            Q(position__icontains=search_query)
+        )
+
+    # 4. Застосовуємо сортування
+    if sort_by == 'name':
+        # Сортування за прізвищем, потім за ім'ям
+        employees_qs = base_qs.order_by('last_name', 'first_name')
+    else: # 'status' or default
+        # Сортування за статусом (активні вгорі), потім за прізвищем
+        employees_qs = base_qs.annotate(
+            status_order=Case(
+                When(device__is_active=True, then=Value(1)),
+                When(device__is_active=False, then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField()
+            )
+        ).order_by('status_order', 'last_name', 'first_name')
+
+    # 5. Пагінація
+    paginator = Paginator(employees_qs, 12) # 12 карток на сторінку
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        page_obj = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        # Якщо сторінка не є числом або порожня, повертаємо першу
+        page_obj = paginator.page(1)
+
+    # 6. Оптимізація для отримання локації (як було раніше)
+    latest_log_subquery = TelemetryLog.objects.filter(device__assigned_to=OuterRef('pk')).order_by('-timestamp').values('id')[:1]
+    employees_on_page = list(page_obj.object_list.annotate(latest_log_id=Subquery(latest_log_subquery)))
+    log_ids = [emp.latest_log_id for emp in employees_on_page if getattr(emp, 'latest_log_id', None)]
+    logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids).select_related('connected_repeater')}
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+    for emp in employees_on_page:
+        emp.latest_location = None
+        if hasattr(emp, 'device') and emp.device.is_active:
+            last_log = logs_dict.get(emp.device.id)
+            if last_log and last_log.connected_repeater and last_log.timestamp >= recent_time:
+                emp.latest_location = last_log.connected_repeater.uid
+    
+    html = render_to_string('diploma/_personnel_cards.html', {'employees': employees_on_page, 'request': request})
+    return JsonResponse({'html': html, 'has_next': page_obj.has_next(), 'total_pages': paginator.num_pages, 'current_page': page_obj.number, 'total_results': paginator.count})
 
 def alert_telemetry_api(request, alert_id):
     """Повертає свіжу телеметрію для конкретної тривоги."""
