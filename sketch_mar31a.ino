@@ -69,7 +69,7 @@ const char* OTA_CHECK_ENDPOINT = "/diploma/api/ota/check/";
 const char* OTA_LOG_ENDPOINT = "/diploma/api/ota/log/";
 const char* API_KEY = "SecretMineKey2026"; // Ключ доступу до API сервера
 
-#define FIRMWARE_VERSION "1.0.1"
+#define FIRMWARE_VERSION "1.0.0"
 
 // --- ТАЙМЕРИ ТА ІНТЕРВАЛИ ---
 #define DATA_SEND_INTERVAL_MS 10000UL         // Інтервал відправки телеметрії (10 сек)
@@ -95,6 +95,25 @@ const char* API_KEY = "SecretMineKey2026"; // Ключ доступу до API �
 #define PIN_BUZZER 4
 #define PIN_DHT 13
 #define PIN_BATTERY_ADC 35
+
+// --- ІКОНКИ ДЛЯ ДИСПЛЕЯ (16x16 пікселів) ---
+// Іконка "Газ" (Стилізована хмарка)
+const unsigned char icon_gas[] PROGMEM = {
+  0x00,0x00, 0x07,0xe0, 0x0f,0xf0, 0x1f,0xf8, 0x3f,0xfc, 0x3f,0xfc, 0x7f,0xfe, 0x7f,0xfe,
+  0x7f,0xfe, 0x7f,0xfe, 0x3f,0xfc, 0x3f,0xfc, 0x1f,0xf8, 0x0f,0xf0, 0x07,0xe0, 0x00,0x00
+};
+
+// Іконка "Температура" (Термометр)
+const unsigned char icon_temp[] PROGMEM = {
+  0x01,0x80, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40,
+  0x03,0xc0, 0x06,0x60, 0x06,0x60, 0x06,0x60, 0x07,0xe0, 0x03,0xc0, 0x00,0x00, 0x00,0x00
+};
+
+// Іконка "Рух" (Людина у русі)
+const unsigned char icon_motion[] PROGMEM = {
+  0x01,0x80, 0x01,0x80, 0x00,0x00, 0x03,0xc0, 0x07,0xe0, 0x03,0xc0, 0x01,0x80, 0x03,0xc0,
+  0x06,0x60, 0x04,0x20, 0x0c,0x30, 0x08,0x10, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00
+};
 
 // --- СТАНИ СИСТЕМИ ---
 enum SystemState {
@@ -210,7 +229,14 @@ int getCleanGas() {
 // 🔋 ВІДСОТОК ЗАРЯДУ
 // ==========================================
 int getBatteryPct() {
-  return constrain(map(analogRead(PIN_BATTERY_ADC), 3100, 4095, 0, 100), 0, 100);
+  int raw = analogRead(PIN_BATTERY_ADC);
+  
+  // Якщо сире значення дуже низьке (АЦП висить у повітрі / живлення від USB)
+  if (raw < 1000) {
+    return 100; // Повертаємо 100%, щоб телеметрія не показувала 0
+  }
+  
+  return constrain(map(raw, 3100, 4095, 0, 100), 0, 100);
 }
 
 // ==========================================
@@ -287,6 +313,14 @@ void processTelemetryQueue() {
 
   if (httpCode == 200 || httpCode == 201) {
     telemetryQueue.pop();
+    String payload = http.getString();
+    StaticJsonDocument<128> respDoc;
+    if (!deserializeJson(respDoc, payload)) {
+      if (respDoc["command"] == "REBOOT") {
+        Serial.println("Reboot command received from server (queue)!");
+        esp_restart();
+      }
+    }
     // Видаляємо успішно відправлене
   }
   http.end();
@@ -372,6 +406,42 @@ void drawProgressBar(int x, int y, int w, int h, float pct) {
 
 void drawVLine(int x, int y1, int y2) {
   display.drawLine(x, y1, x, y2, SSD1306_WHITE);
+}
+
+void drawStatusIconsBlack(int x, int y, int pct, int rssi, bool isOffline) {
+  // 1. Малюємо батарею (праворуч)
+  display.drawRect(x, y, 14, 8, SSD1306_BLACK); // Корпус
+  display.fillRect(x + 14, y + 2, 2, 4, SSD1306_BLACK); // Пімпка
+  
+  int fillWidth = map(pct, 0, 100, 0, 10);
+  if (fillWidth > 0) {
+    display.fillRect(x + 2, y + 2, fillWidth, 4, SSD1306_BLACK); // Рівень заряду
+  }
+
+  // 2. Малюємо значок сигналу (лівіше від батареї)
+  int wifiX = x - 20; 
+  if (isOffline) {
+    // Якщо немає мережі, малюємо хрестик або пишемо "X"
+    display.setTextSize(1);
+    display.setCursor(wifiX + 4, y);
+    display.print("x");
+  } else {
+    // Рахуємо "палички" зв'язку
+    int bars = 0;
+    if (rssi > -65) bars = 4;
+    else if (rssi > -75) bars = 3;
+    else if (rssi > -85) bars = 2;
+    else bars = 1;
+
+    for (int i = 0; i < 4; i++) {
+      int barHeight = 2 + (i * 2); // Висота стовпчика: 2, 4, 6, 8
+      if (i < bars) {
+        display.fillRect(wifiX + (i * 4), y + 8 - barHeight, 3, barHeight, SSD1306_BLACK);
+      } else {
+        display.drawRect(wifiX + (i * 4), y + 8 - barHeight, 3, barHeight, SSD1306_BLACK);
+      }
+    }
+  }
 }
 
 // ==========================================
@@ -1207,45 +1277,38 @@ void loop() {
         if (!needUiUpdate) break;
 
         display.clearDisplay();
-        char rssiStr[12];
-        sprintf(rssiStr, "%ddBm", WiFi.RSSI());
-        drawYellowHeader("ГЛИБИНА 4.0", WiFi.status() == WL_CONNECTED ? rssiStr : "ОФЛАЙН");
+        // Малюємо заголовок без тексту праворуч
+        drawYellowHeader("ГЛИБИНА 4.0", nullptr);
+        
+        // Малюємо значки (координати X=108, Y=4 ідеально впишуться в правий кут жовтої зони)
+        drawStatusIconsBlack(108, 4, getBatteryPct(), WiFi.RSSI(), WiFi.status() != WL_CONNECTED);
 
         display.setTextColor(SSD1306_WHITE);
         display.setTextSize(1);
 
-        drawVLine(47, 17, 51);
-        drawVLine(92, 17, 51);
-        // --- Колонка 1: CO газ ---
-        display.setCursor(2, 18);
-        display.print(utf8ukr("МЕТАН"));
-        display.setTextSize(2);
-        display.setCursor(2, 27);
-        if (gasVal < 10) display.print("  ");
-        else if (gasVal < 100) display.print(" ");
-        display.print(gasVal);
-        display.setTextSize(1);
-        display.setCursor(2, 44);
-        display.print("%LEL");
-        // --- Колонка 2: Температура + Вологість ---
-        display.setCursor(51, 18);
-        display.print(utf8ukr("ТЕМП"));
-        display.setTextSize(2);
-        display.setCursor(51, 27);
-        if (cachedTemp >= 0 && cachedTemp < 10) display.print(" ");
-        display.print(cachedTemp, 1);
-        display.setTextSize(1);
-        display.setCursor(51, 44);
-        display.print("H:");
-        display.print((int)cachedHum);
-        display.print("%");
+        drawVLine(47, 17, 51); // Розділювач 1 [cite: 223]
+        drawVLine(92, 17, 51); // Розділювач 2 [cite: 223]
 
-        // --- Колонка 3: Рух ---
-        display.setCursor(96, 18);
-        display.print(utf8ukr("РУХ"));
+        // --- Колонка 1: CO газ (Іконка + Цифри) ---
+        display.drawBitmap(16, 18, icon_gas, 16, 16, SSD1306_WHITE);
         display.setTextSize(2);
-        display.setCursor(96, 27);
-        display.print((millis() - lastVibrationMs < 2000) ? "OK" : "--");
+        display.setCursor(2, 36);
+        if (gasVal < 10) display.print("  "); // Центрування [cite: 225]
+        else if (gasVal < 100) display.print(" "); // Центрування [cite: 225]
+        display.print(gasVal); // [cite: 225]
+
+        // --- Колонка 2: Температура (Іконка + Цифри) ---
+        display.drawBitmap(63, 18, icon_temp, 16, 16, SSD1306_WHITE);
+        display.setTextSize(2);
+        display.setCursor(51, 36);
+        if (cachedTemp >= 0 && cachedTemp < 10) display.print(" "); // [cite: 227]
+        display.print((int)cachedTemp); // Округлюємо до цілого для економії місця
+
+        // --- Колонка 3: Рух (Іконка + Статус) ---
+        display.drawBitmap(104, 18, icon_motion, 16, 16, SSD1306_WHITE);
+        display.setTextSize(2);
+        display.setCursor(96, 36);
+        display.print((millis() - lastVibrationMs < 2000) ? "OK" : "--"); // [cite: 229]
         display.setTextSize(1);
 
         display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
@@ -1258,11 +1321,26 @@ void loop() {
             display.setCursor(2, 55); display.print(utf8ukr("ПОВЕРНІТЬСЯ НА БАЗУ!"));
           }
         } else if (immobilityWarning) {
+          // Текст, який блимає [cite: 232]
           if ((millis() / 400) % 2 == 0) {
             display.setCursor(2, 55);
-            display.print(utf8ukr("!! РУХАЙТЕСЯ !!"));
+            display.print(utf8ukr("!! РУХАЙТЕСЯ !!")); // [cite: 233]
           }
-          drawProgressBar(95, 54, 31, 8, (float)(millis() - warningStartMs) / SOS_GRACE_PERIOD_MS);
+          
+          // --- ЕФЕКТ РАМКИ, ЩО ЗВУЖУЄТЬСЯ ---
+          // Рахуємо відсоток заповнення таймера (від 0.0 до 1.0)
+          float warningPct = (float)(millis() - warningStartMs) / SOS_GRACE_PERIOD_MS; // [cite: 233]
+          
+          // Максимальна товщина рамки (наприклад, 12 пікселів)
+          int maxBorderThickness = 12; 
+          int currentBorder = (int)(maxBorderThickness * warningPct);
+          
+          // Малюємо рамку, яка стає товщою з кожною мілісекундою
+          // Рамка малюється лише у "робочій" зоні (нижче жовтого хедера)
+          for (int i = 0; i < currentBorder; i++) {
+              display.drawRect(i, 16 + i, 128 - (i * 2), 48 - (i * 2), SSD1306_WHITE);
+          }
+          
         } else if (btnPressStart > 0) {
           display.setCursor(2, 55);
           display.print("SOS:");

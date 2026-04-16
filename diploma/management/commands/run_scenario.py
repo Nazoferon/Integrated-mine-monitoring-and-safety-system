@@ -36,34 +36,45 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Знаходимо першого ліпшого працівника з пристроєм та активний репітер
-        device = MinerDevice.objects.filter(is_static=False, assigned_to__isnull=False, is_active=True).first()
         ap = InfrastructureDevice.objects.filter(is_active=True).first()
+        device = MinerDevice.objects.filter(is_static=False, assigned_to__isnull=False, is_active=True).first()
         
-        if not device or not ap:
-            self.stdout.write(self.style.WARNING("⚠️ Не знайдено активних пристроїв або репітерів. Створюємо тестові дані..."))
-            
+        created_for_scenario = False
+        if not ap:
+            self.stdout.write(self.style.WARNING("⚠️ Не знайдено жодного репітера на карті. Створюємо тестовий..."))
             mine_map, _ = MineMap.objects.get_or_create(name="Основний горизонт")
-            
             ap, _ = InfrastructureDevice.objects.get_or_create(
                 uid="AP-SCENARIO-TEST",
                 defaults={'map_location': mine_map, 'x': 0, 'y': 0}
             )
             ap.is_active = True
             ap.save()
+        else:
+            self.stdout.write(self.style.SUCCESS(f"✅ Використовуємо реальний репітер з карти: {ap.uid}"))
             
+        if not device:
+            self.stdout.write(self.style.WARNING("⚠️ Не знайдено активного працівника з пристроєм. Створюємо тестового..."))
+            created_for_scenario = True
             emp, _ = Employee.objects.get_or_create(
                 first_name="Іван",
                 last_name="Сценарій",
                 position="GOV"
             )
             
-            device, _ = MinerDevice.objects.get_or_create(mac_address="SC:EN:AR:IO:00:01")
-            device.is_static = False
-            device.assigned_to = emp
-            device.is_active = True
-            device.save()
-            
-            self.stdout.write(self.style.SUCCESS("✅ Тестові дані успішно створено!"))
+            device, created = MinerDevice.objects.get_or_create(
+                mac_address="SC:EN:AR:IO:00:01",
+                defaults={
+                    'is_static': False,
+                    'assigned_to': emp,
+                    'is_active': True
+                }
+            )
+            if not created:
+                device.is_static = False
+                device.assigned_to = emp
+                device.is_active = True
+                device.save()
+            self.stdout.write(self.style.SUCCESS("✅ Тестового працівника створено!"))
 
         mac = device.mac_address
         ap_uid = ap.uid

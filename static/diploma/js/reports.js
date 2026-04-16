@@ -342,7 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Пропускаємо рядок "Даних не знайдено" (який має colspan)
             if (cells.length === 1 && cells[0].hasAttribute('colspan')) return; 
             
-            const rowData = selectedIndices.map(index => cells[index].innerText.trim().replace(/\n/g, ' '));
+            const rowData = selectedIndices.map(index => {
+                const cell = cells[index];
+                // The fix is here: check if `cell` exists before accessing `innerText`.
+                // If it doesn't exist, return an empty string.
+                return cell ? cell.innerText.trim().replace(/\n/g, ' ') : '';
+            });
             rows.push(rowData);
         });
 

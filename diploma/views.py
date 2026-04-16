@@ -735,6 +735,7 @@ def simulator_view(request):
 
 @csrf_exempt
 @api_key_required
+@transaction.atomic
 def api_receive_telemetry(request):
     """API для прийому POST-запитів від ESP32 з дедуплікацією тривог."""
     if request.method == 'POST':
@@ -760,6 +761,13 @@ def api_receive_telemetry(request):
 
             if not device:
                 return JsonResponse({'status': 'error', 'message': f'Пристрій з MAC {mac_address} не зареєстровано'}, status=404)
+
+            # Перевіряємо, чи є команда на перезавантаження
+            command = None
+            if device.pending_reboot:
+                command = "REBOOT"
+                device.pending_reboot = False
+                device.save()
 
             # --- ОНОВЛЕННЯ СТАТУСУ АКТИВНОСТІ ПРИСТРОЮ ---
             # Якщо пристрій вийшов на зв'язок і був неактивним, робимо його активним.
@@ -808,7 +816,7 @@ def api_receive_telemetry(request):
                             active_alert.reason = alert_reason
                             active_alert.save()
                             
-                    return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.'})
+                    return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.', 'command': command})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
 
             ap = InfrastructureDevice.objects.filter(Q(wifi_bssid__iexact=ap_uid) | Q(uid__iexact=ap_uid)).first()
@@ -842,7 +850,7 @@ def api_receive_telemetry(request):
                         employee.safety_status = 'OK'
                 employee.save()
                 
-                return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device'})
+                return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device', 'command': command})
 
             # --- ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ ---
             if battery <= 10:
@@ -917,7 +925,7 @@ def api_receive_telemetry(request):
                     employee.safety_status = 'OK'
 
             employee.save()
-            return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'success', 'command': command})
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

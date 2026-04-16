@@ -55,10 +55,16 @@ class EmployeeAdmin(ModelAdmin):
 
 @admin.register(MinerDevice)
 class MinerDeviceAdmin(ModelAdmin):
-    list_display = ('inventory_number', 'show_type', 'assigned_to', 'mac_address', 'show_active')
-    list_filter = ('is_static', 'is_active')
+    list_display = ('inventory_number', 'show_type', 'assigned_to', 'mac_address', 'show_active', 'pending_reboot')
+    list_filter = ('is_static', 'is_active', 'pending_reboot')
     search_fields = ('inventory_number', 'mac_address')
     readonly_fields = ('inventory_number',)
+    actions = ['request_reboot']
+
+    @action(description="🔄 Відправити команду на перезавантаження (ESP32)")
+    def request_reboot(self, request, queryset):
+        updated_count = queryset.update(pending_reboot=True)
+        self.message_user(request, f"Команду на перезавантаження надіслано для {updated_count} пристроїв. Вони перезавантажаться при наступному сеансі зв'язку.", level="SUCCESS")
 
     @display(description="Тип", label=True)
     def show_type(self, obj):
@@ -70,7 +76,7 @@ class MinerDeviceAdmin(ModelAdmin):
     
     fieldsets = (
         ('Основне', {
-            'fields': ('mac_address', 'inventory_number', 'firmware_version', 'is_active')
+            'fields': ('mac_address', 'inventory_number', 'firmware_version', 'is_active', 'pending_reboot')
         }),
         ('Режим роботи', {
             'fields': ('is_static', 'assigned_to'),

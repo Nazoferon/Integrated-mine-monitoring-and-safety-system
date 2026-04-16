@@ -173,20 +173,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     gasTrend.innerHTML = '<i class="fas fa-minus"></i>';
                 }
             }
-            
-            // Оновлюємо глобальний прапорець для захисту від закриття вкладки
-            window.hasCriticalAlertsForUnload = (data.new_alerts_count > 0);
-        }
-    });
-
-    // Захист від випадкового закриття вкладки при активній тривозі
-    window.addEventListener('beforeunload', function (e) {
-        if (window.hasCriticalAlertsForUnload) {
-            // Стандартний спосіб скасування закриття вкладки
-            e.preventDefault();
-            // Chrome/Edge вимагають встановлення returnValue
-            e.returnValue = 'Є необроблені критичні тривоги!';
-            return e.returnValue;
         }
     });
 });

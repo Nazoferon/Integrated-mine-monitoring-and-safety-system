@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import os
 from django.core.validators import RegexValidator
+from django.contrib.postgres.indexes import BrinIndex
 from uuid import uuid4
 import math
 
@@ -195,6 +196,7 @@ class MinerDevice(models.Model):
         related_name='device', verbose_name="Видано (кому)"
     )
     is_active = models.BooleanField(default=True)
+    pending_reboot = models.BooleanField(default=False, verbose_name="Очікує перезавантаження")
 
     # --- 2. ЛОГІКА ПЕРЕВІРКИ (VALIDATION) ---
     def clean(self):
@@ -229,7 +231,8 @@ class MinerDevice(models.Model):
 # --- 4. ТЕЛЕМЕТРІЯ ---
 class TelemetryLog(models.Model):
     device = models.ForeignKey(MinerDevice, on_delete=models.CASCADE, related_name='logs')
-    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Прибираємо db_index=True, оскільки ми замінимо його на BRIN індекс нижче
+    timestamp = models.DateTimeField(auto_now_add=True)
     connected_repeater = models.ForeignKey(InfrastructureDevice, on_delete=models.SET_NULL, null=True, blank=True)
     wifi_signal_strength = models.IntegerField(default=0, verbose_name="RSSI")
     temperature = models.FloatField(null=True)
@@ -245,6 +248,8 @@ class TelemetryLog(models.Model):
         indexes = [
             # Складений індекс для надшвидкого пошуку "останнього логу конкретного пристрою"
             models.Index(fields=['device', '-timestamp']),
+            # BRIN-індекс для надшвидкої вибірки часових рядів (займає мінімум місця в RAM)
+            BrinIndex(fields=['timestamp']),
         ]
         
     def __str__(self): 

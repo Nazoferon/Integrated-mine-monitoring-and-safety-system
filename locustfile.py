@@ -1,5 +1,17 @@
 from locust import HttpUser, task, between
 import random
+import os
+import django
+
+# Ініціалізуємо Django для доступу до реальних репітерів з БД
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+django.setup()
+from diploma.models import InfrastructureDevice
+
+# Отримуємо всі активні репітери (щоб Locust кидав телеметрію на реальну карту)
+ACTIVE_APS = list(InfrastructureDevice.objects.filter(is_active=True).values_list('uid', flat=True))
+if not ACTIVE_APS:
+    ACTIVE_APS = [f"AP-TEST-{i}" for i in range(1, 6)]
 
 class ESP32Device(HttpUser):
     # Кожна ESP32 відправляє дані приблизно раз на 4-6 секунд
@@ -10,7 +22,7 @@ class ESP32Device(HttpUser):
         # Випадково обираємо 1 з 500 пристроїв
         device_id = random.randint(1, 500)
         mac = f"TEST-MAC-{device_id:04d}"
-        ap = f"AP-TEST-{random.randint(1, 5)}"
+        ap = random.choice(ACTIVE_APS)
         
         payload = {
             "mac_address": mac,
