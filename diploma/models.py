@@ -331,3 +331,20 @@ class OTALog(models.Model):
 
     def __str__(self):
         return f"{self.device.inventory_number} -> v{self.version} [{self.status}]"
+
+# --- СИГНАЛИ ДЛЯ ІНВАЛІДАЦІЇ КЕШУ ---
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+
+@receiver([post_save, post_delete], sender=Employee)
+def clear_employee_cache(sender, **kwargs):
+    cache.delete('total_employees')
+
+@receiver([post_save, post_delete], sender=MinerDevice)
+def clear_device_cache_miner(sender, **kwargs):
+    cache.delete('total_devices')
+
+@receiver([post_save, post_delete], sender=InfrastructureDevice)
+def clear_device_cache_infra(sender, **kwargs):
+    cache.delete('total_devices')
