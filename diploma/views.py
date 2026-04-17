@@ -52,24 +52,34 @@ def get_zone_microclimate():
     # Отримуємо тільки НАЙСВІЖІШИЙ запис від КОЖНОГО пристрою за останні 5 хв
     latest_logs = TelemetryLog.objects.filter(
         timestamp__gte=recent_time
-    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('connected_repeater', 'connected_repeater__map_location')
+    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('device', 'connected_repeater', 'connected_repeater__map_location')
     
     zones = {}
     for log in latest_logs:
         loc_name = log.connected_repeater.location_in_mine if log.connected_repeater else "Невідомо"
         if loc_name not in zones:
-            zones[loc_name] = {'temp': [], 'hum': [], 'gas': []}
+            zones[loc_name] = {'temp': [], 'hum': [], 'gas': [], 'people_count': 0, 'power_loss': False}
         if log.temperature is not None: zones[loc_name]['temp'].append(log.temperature)
         if log.humidity is not None: zones[loc_name]['hum'].append(log.humidity)
         zones[loc_name]['gas'].append(log.gas_level)
         
+        # 1. Рахуємо людей (коногонки, прив'язані до працівника)
+        if not log.device.is_static and log.device.assigned_to_id:
+            zones[loc_name]['people_count'] += 1
+            
+        # 2. Перевіряємо живлення 220V стаціонарних датчиків (якщо заряд впав нижче 99%)
+        if log.device.is_static and log.battery_level < 99:
+            zones[loc_name]['power_loss'] = True
+            
     result = []
     for loc, data in zones.items():
         result.append({
             'location': loc,
             'avg_temp': round(sum(data['temp'])/len(data['temp']), 1) if data['temp'] else 0.0,
             'avg_hum': round(sum(data['hum'])/len(data['hum']), 1) if data['hum'] else 0.0,
-            'max_gas': round(max(data['gas']), 1) if data['gas'] else 0.0
+            'max_gas': round(max(data['gas']), 1) if data['gas'] else 0.0,
+            'people_count': data['people_count'],
+            'power_loss': data['power_loss']
         })
     # Сортуємо: спочатку найбільш загазовані та проблемні штреки
     return sorted(result, key=lambda x: x['max_gas'], reverse=True)
@@ -272,8 +282,8 @@ def dashboard_stats_api(request):
                 last_log = offline_logs_dict.get(emp.device.id)
                 rep = last_log.connected_repeater if last_log else None
                 
-                if rep and rep.uid == 'AP-MAIN':
-                    # ЗАХИСТ: Не ставимо OFF_SHIFT, якщо є відкрита КРИТИЧНА тривога (щоб не "загубити" людину під час евакуації)
+                if rep and rep.uid == 'AP-SURFACE':
+                    # Якщо пристрій пропав зі зв'язку на ПОВЕРХНІ (в ламповій), вважаємо що зміна закінчена
                     has_critical = SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(status='WARNING').exists()
                     if not has_critical:
                         emp.safety_status = 'OFF_SHIFT'
@@ -350,6 +360,15 @@ def dashboard_stats_api(request):
     
     reconnected_names = list(set([f"{a.employee.first_name} {a.employee.last_name}" for a in reconnected_alerts if a.employee]))
 
+    # --- НОВЕ: Сповіщення про відновлення живлення 220V ---
+    power_restored_alerts = SecurityAlert.objects.filter(
+        reason__icontains="Аварія живлення",
+        status='RESOLVED',
+        resolved_at__gte=recently_resolved_time
+    ).select_related('connected_repeater')
+    
+    power_restored_zones = list(set([a.connected_repeater.location_in_mine if a.connected_repeater else "Невідомо" for a in power_restored_alerts]))
+
     return JsonResponse({
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
@@ -361,6 +380,7 @@ def dashboard_stats_api(request):
         'alerts_html': alerts_html, # Додаємо HTML до відповіді
         'recent_staff': recent_staff_data,
         'reconnected_names': reconnected_names,
+        'power_restored_zones': power_restored_zones,
     })
 
 @login_required
@@ -1000,6 +1020,29 @@ def api_receive_telemetry(request):
                             active_alert.reason = alert_reason
                             active_alert.save()
                             
+                    # ТРИВОГА ДЛЯ СТАЦІОНАРНОГО ДАТЧИКА (ЖИВЛЕННЯ 220V)
+                    if battery < 99:
+                        power_alert_reason = f"Аварія живлення 220V! Датчик працює від АКБ ({battery}%)"
+                        recent_bat_time = timezone.now() - timezone.timedelta(hours=8)
+                        has_power_alert = SecurityAlert.objects.filter(device=device, reason__icontains="Аварія живлення").filter(
+                            Q(is_resolved=False) | Q(created_at__gte=recent_bat_time)
+                        ).exists()
+                        if not has_power_alert:
+                            SecurityAlert.objects.create(
+                                employee=None, device=device, connected_repeater=ap,
+                                reason=power_alert_reason, status='WARNING'
+                            )
+                    else:
+                        # АВТО-ЗАКРИТТЯ тривоги про "Втрату живлення"
+                        power_alerts = SecurityAlert.objects.filter(device=device, is_resolved=False, reason__icontains="Аварія живлення")
+                        if power_alerts.exists():
+                            power_alerts.update(
+                                status='RESOLVED',
+                                is_resolved=True,
+                                resolved_at=timezone.now(),
+                                rescue_notes="Автоматично: Живлення 220V відновлено."
+                            )
+                            
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.', 'command': command})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
 
@@ -1028,7 +1071,24 @@ def api_receive_telemetry(request):
                     rescue_notes="Автоматично: Зв'язок відновлено."
                 )
             
-            # 3. ЛОГІКА СКАСУВАННЯ ТРИВОГИ З ПРИСТРОЮ
+            # 3. ЛОГІКА ЗАВЕРШЕННЯ ЗМІНИ (Лампова / Док-станція)
+            if reason_text == 'END_SHIFT':
+                if ap and ap.uid == 'AP-SURFACE':
+                    # ПЕРЕВІРКА: Чи є не закриті КРИТИЧНІ тривоги?
+                    has_critical = SecurityAlert.objects.filter(employee=employee, is_resolved=False).exclude(status='WARNING').exists()
+                    if has_critical:
+                        return JsonResponse({'status': 'error', 'message': 'Помилка: Є відкрита КРИТИЧНА тривога! Диспетчер повинен закрити інцидент.'}, status=400)
+                    if employee.safety_status != 'OFF_SHIFT':
+                        employee.safety_status = 'OFF_SHIFT'
+                        employee.save()
+                    # Вимикаємо пристрій, оскільки він на зарядці
+                    device.is_active = False
+                    device.save()
+                    return JsonResponse({'status': 'success', 'message': 'Пристрій на зарядці. Зміну завершено.', 'command': command})
+                else:
+                    return JsonResponse({'status': 'error', 'message': 'Завершення зміни можливе ТІЛЬКИ в Ламповій (AP-SURFACE). Шахтар ще під землею!'}, status=400)
+
+            # 4. ЛОГІКА СКАСУВАННЯ ТРИВОГИ З ПРИСТРОЮ
             if reason_text == 'SOS_CANCELLED':
                 active_alert = SecurityAlert.objects.filter(employee=employee, is_resolved=False).first()
                 if active_alert:
@@ -1046,7 +1106,7 @@ def api_receive_telemetry(request):
                 
                 return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device', 'command': command})
 
-            # --- ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ ---
+            # 5. ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ
             if battery <= 10:
                 # Ігноруємо низький заряд, якщо працівник знаходиться в Руддворі (AP-MAIN)
                 if not (ap and ap.uid == 'AP-MAIN'):

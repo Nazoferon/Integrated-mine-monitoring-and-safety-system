@@ -150,6 +150,15 @@
                       <i class="fas fa-search-location zone-link-icon"></i>
                   </div>
                   <div class="zone-metrics">
+                      {% if zone.power_loss %}
+                          <span class="metric-pill power-danger pulse-danger" title="Втрата живлення 220V! Датчик на АКБ"><i class="fas fa-bolt"></i> АКБ</span>
+                      {% endif %}
+                      {% if zone.people_count > 0 %}
+                          <span class="metric-pill people-pill" title="Працівників у зоні"><i class="fas fa-users"></i> {{ zone.people_count }}</span>
+                      {% else %}
+                          <span class="metric-pill people-empty" title="Людей немає, моніторинг активний"><i class="fas fa-user-slash"></i> 0</span>
+                      {% endif %}
+                      
                       <span class="metric-pill {% if zone.max_gas >= 50 %}gas-danger{% elif zone.max_gas >= 10 %}gas-warning{% else %}gas-safe{% endif %}" title="Максимальний рівень метану">
                           <i class="fas fa-fire"></i> {{ zone.max_gas }}%
                       </span>

@@ -281,6 +281,9 @@
 .gas-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 .gas-safe { background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); }
 .env-pill { background: rgba(0, 0, 0, 0.3); color: #d1d5db; border: 1px solid rgba(255, 255, 255, 0.05); }
+.people-pill { background: rgba(77, 171, 247, 0.15); color: #4dabf7; border: 1px solid rgba(77, 171, 247, 0.3); }
+.people-empty { background: rgba(255, 255, 255, 0.05); color: #6b7280; border: 1px solid rgba(255, 255, 255, 0.1); }
+.power-danger { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
 
 .zone-link-icon {
     opacity: 0;

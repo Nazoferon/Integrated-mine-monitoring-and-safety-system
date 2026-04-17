@@ -1150,8 +1150,8 @@ class MineCAD(QMainWindow):
                     # Вибрати штрек, але не той, звідки прийшли (якщо можливо)
                     available_tunnels = nearest.connected_tunnels[:]
                     if len(available_tunnels) > 1 and "last_tunnel" in data:
-                      if data["last_tunnel"] in available_tunnels:
-                          available_tunnels.remove(data["last_tunnel"])
+                        if data["last_tunnel"] in available_tunnels:
+                            available_tunnels.remove(data["last_tunnel"])
                     
                     tun = random.choice(available_tunnels)
                     data["last_tunnel"] = tun
@@ -1231,24 +1231,24 @@ class MineCAD(QMainWindow):
         return None
 
     def upload_to_server(self):
-      # 1. Формуємо дані так само, як для експорту в файл
-      data = self.export_data()
+        # 1. Формуємо дані так само, як для експорту в файл
+        data = self.export_data()
 
-      # 2. Питаємо адресу сервера (щоб не хардкодити)
-      url, ok = QInputDialog.getText(self, "Upload", "Адреса сервера API:", text="https://bunb.pp.ua/diploma/api/upload-map/")
+        # 2. Питаємо адресу сервера (щоб не хардкодити)
+        url, ok = QInputDialog.getText(self, "Upload", "Адреса сервера API:", text="https://bunb.pp.ua/diploma/api/upload-map/")
 
-      if ok and url:
-          try:
-              headers = {"X-API-Key": os.environ.get("ESP32_API_KEY", "SecretMineKey2026")}
-              response = requests.post(url, json=data, headers=headers, timeout=5)
-              if response.status_code == 200:
-                  res_json = response.json()
-                  msg = res_json.get('message') or f"Синхронізовано {res_json.get('sync', 0)} репітерів."
-                  QMessageBox.information(self, "Успіх", f"Дані відправлено. Сервер: {msg}")
-              else:
-                  QMessageBox.warning(self, "Помилка", f"Сервер повернув код {response.status_code}:\n{response.text}")
-          except Exception as e:
-              QMessageBox.critical(self, "Помилка з'єднання", str(e))
+        if ok and url:
+            try:
+                headers = {"X-API-Key": os.environ.get("ESP32_API_KEY", "SecretMineKey2026")}
+                response = requests.post(url, json=data, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    res_json = response.json()
+                    msg = res_json.get('message') or f"Синхронізовано {res_json.get('sync', 0)} репітерів."
+                    QMessageBox.information(self, "Успіх", f"Дані відправлено. Сервер: {msg}")
+                else:
+                    QMessageBox.warning(self, "Помилка", f"Сервер повернув код {response.status_code}:\n{response.text}")
+            except Exception as e:
+                QMessageBox.critical(self, "Помилка з'єднання", str(e))
     
     def eventFilter(self, src, evt):
         if src == self.view.viewport():
@@ -1290,8 +1290,7 @@ class MineCAD(QMainWindow):
                         pt = snap if snap else pos
                         self.miner_path_points.append(pt)
                         if len(self.miner_path_points) > 1:
-                            l = self.scene.addLine(QLineF(self.miner_path_points[-2], pt), 
-                                                 QPen(QColor(255, 255, 0, 100), 2))
+                            l = self.scene.addLine(QLineF(self.miner_path_points[-2], pt), QPen(QColor(255, 255, 0, 100), 2))
                             l.setZValue(500)
                         return True
 

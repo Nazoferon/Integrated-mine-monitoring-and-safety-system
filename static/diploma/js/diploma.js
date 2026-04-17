@@ -583,6 +583,20 @@ class DashboardApp {
                 });
             }
 
+            // --- НОВЕ: Сповіщення про відновлення живлення 220V ---
+            if (!this.state.recentPowerRestores) this.state.recentPowerRestores = [];
+            if (data.power_restored_zones && data.power_restored_zones.length > 0) {
+                data.power_restored_zones.forEach(zone => {
+                    if (!this.state.recentPowerRestores.includes(zone)) {
+                        this.showNotification(`⚡ Живлення 220V відновлено: ${zone}`, 'success');
+                        this.state.recentPowerRestores.push(zone);
+                        setTimeout(() => {
+                            this.state.recentPowerRestores = this.state.recentPowerRestores.filter(z => z !== zone);
+                        }, 10000);
+                    }
+                });
+            }
+
             // --- ГЛОБАЛЬНА СИСТЕМА ТРИВОГИ (SOS) ---
             if (data.new_alerts_count > 0) {
                 // Якщо банер ще не створено
@@ -661,6 +675,11 @@ class DashboardApp {
                 statusColor = 'bg-warning';
                 gasPillClass = 'gas-warning';
             }
+            
+            let powerHtml = zone.power_loss ? `<span class="metric-pill power-danger pulse-danger" title="Втрата живлення 220V! Датчик на АКБ"><i class="fas fa-bolt"></i> АКБ</span>` : '';
+            let peopleHtml = zone.people_count > 0 
+                ? `<span class="metric-pill people-pill" title="Працівників у зоні"><i class="fas fa-users"></i> ${zone.people_count}</span>`
+                : `<span class="metric-pill people-empty" title="Людей немає, моніторинг активний"><i class="fas fa-user-slash"></i> 0</span>`;
 
             html += `
                 <div class="zone-item" data-url="/diploma/mine_map/?focus_loc=${encodeURIComponent(zone.location).replace(/'/g, "%27")}" onclick="window.location.href=this.dataset.url" title="Показати на карті">
@@ -670,6 +689,8 @@ class DashboardApp {
                         <i class="fas fa-search-location zone-link-icon"></i>
                     </div>
                     <div class="zone-metrics">
+                        ${powerHtml}
+                        ${peopleHtml}
                         <span class="metric-pill ${gasPillClass}" title="Максимальний рівень метану">
                             <i class="fas fa-fire"></i> ${zone.max_gas}%
                         </span>

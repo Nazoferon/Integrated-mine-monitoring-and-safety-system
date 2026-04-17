@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSos = document.getElementById('btnSendSos');
     const btnCancelSos = document.getElementById('btnCancelSos');
     const btnAutoPing = document.getElementById('btnAutoPing');
+    const btnEndShift = document.getElementById('btnEndShift');
     const statusDiv = document.getElementById('simStatus');
 
     let autoInterval = null;
@@ -144,6 +145,18 @@ document.addEventListener('DOMContentLoaded', function() {
             sendTelemetry(data);
         }
     });
+
+    if (btnEndShift) {
+        btnEndShift.addEventListener('click', () => {
+            const data = collectData();
+            if (data) {
+                data.is_sos = false;
+                data.reason = "END_SHIFT";
+                data.battery = 100; // Імітуємо підключення до зарядного пристрою
+                sendTelemetry(data);
+            }
+        });
+    }
 
     btnAutoPing.addEventListener('click', () => {
         if (autoInterval) {
