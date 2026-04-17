@@ -169,8 +169,11 @@ class Employee(models.Model):
             lat_last = translit.get(last_initial, last_initial)
             lat_first = translit.get(first_initial, first_initial)
             
-            # Отримуємо наступний ID (спрощений варіант)
-            next_id = Employee.objects.count() + 1
+            # Надійне отримання наступного ID (навіть якщо були видалення)
+            last_emp = Employee.objects.order_by('-id').first()
+            next_id = 1
+            if last_emp:
+                next_id = last_emp.id + 1
             
             # Формуємо жетон: EXPLODER-GN-001
             self.badge_number = f"{self.position}-{lat_last}{lat_first}-{next_id:03d}"

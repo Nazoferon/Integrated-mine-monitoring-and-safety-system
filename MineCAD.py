@@ -1234,10 +1234,12 @@ class MineCAD(QMainWindow):
         # 1. Формуємо дані так само, як для експорту в файл
         data = self.export_data()
 
-        # 2. Питаємо адресу сервера (щоб не хардкодити)
-        url, ok = QInputDialog.getText(self, "Upload", "Адреса сервера API:", text="https://bunb.pp.ua/diploma/api/upload-map/")
+        # 2. Питаємо адресу сервера і запам'ятовуємо її
+        last_url = getattr(self, 'last_server_url', "https://bunb.pp.ua/diploma/api/upload-map/")
+        url, ok = QInputDialog.getText(self, "Upload", "Адреса сервера API:", text=last_url)
 
         if ok and url:
+            self.last_server_url = url
             try:
                 headers = {"X-API-Key": os.environ.get("ESP32_API_KEY", "SecretMineKey2026")}
                 response = requests.post(url, json=data, headers=headers, timeout=5)
