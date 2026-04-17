@@ -249,3 +249,68 @@
     .dashboard-grid { grid-template-columns: 1fr; }
     .map-preview-wrapper { height: 300px; }
 }
+
+/* --- ВІДЖЕТ МІКРОКЛІМАТУ ЗОН --- */
+.zone-list { display: flex; flex-direction: column; gap: 5px; }
+.zone-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 7px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.zone-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(77, 171, 247, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.zone-info { display: flex; align-items: center; gap: 8px; }
+.zone-name { font-weight: 600; font-size: 0.85rem; color: #e0e0e0; }
+.zone-metrics { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.metric-pill {
+    padding: 2px 6px; border-radius: 6px; font-size: 0.75rem;
+    font-weight: 600; display: flex; align-items: center; gap: 4px;
+    line-height: 1.2;
+}
+.gas-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+.gas-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+.gas-safe { background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); }
+.env-pill { background: rgba(0, 0, 0, 0.3); color: #d1d5db; border: 1px solid rgba(255, 255, 255, 0.05); }
+
+.zone-link-icon {
+    opacity: 0;
+    transition: 0.2s;
+    color: #4dabf7;
+    font-size: 0.85rem;
+    width: 0;
+    overflow: hidden;
+}
+.zone-item:hover .zone-link-icon {
+    opacity: 1;
+    width: auto;
+    margin-left: 5px;
+}
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.pulse-danger {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    animation: pulse-red-small 1.5s infinite;
+}
+@keyframes pulse-red-small {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+.zone-widget-card::-webkit-scrollbar { width: 6px; }
+.zone-widget-card::-webkit-scrollbar-track { background: transparent; }
+.zone-widget-card::-webkit-scrollbar-thumb { background-color: #444; border-radius: 10px; }

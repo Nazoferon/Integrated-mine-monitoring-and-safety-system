@@ -46,6 +46,34 @@ def get_active_map():
             cache.set(cache_key, map_obj, 3600)  # Кешуємо на 1 годину
     return map_obj
 
+def get_zone_microclimate():
+    """Обчислює актуальний мікроклімат, згрупований по локаціях (штреках) за останні 5 хв."""
+    recent_time = timezone.now() - timezone.timedelta(minutes=5)
+    # Отримуємо тільки НАЙСВІЖІШИЙ запис від КОЖНОГО пристрою за останні 5 хв
+    latest_logs = TelemetryLog.objects.filter(
+        timestamp__gte=recent_time
+    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('connected_repeater', 'connected_repeater__map_location')
+    
+    zones = {}
+    for log in latest_logs:
+        loc_name = log.connected_repeater.location_in_mine if log.connected_repeater else "Невідомо"
+        if loc_name not in zones:
+            zones[loc_name] = {'temp': [], 'hum': [], 'gas': []}
+        if log.temperature is not None: zones[loc_name]['temp'].append(log.temperature)
+        if log.humidity is not None: zones[loc_name]['hum'].append(log.humidity)
+        zones[loc_name]['gas'].append(log.gas_level)
+        
+    result = []
+    for loc, data in zones.items():
+        result.append({
+            'location': loc,
+            'avg_temp': round(sum(data['temp'])/len(data['temp']), 1) if data['temp'] else 0.0,
+            'avg_hum': round(sum(data['hum'])/len(data['hum']), 1) if data['hum'] else 0.0,
+            'max_gas': round(max(data['gas']), 1) if data['gas'] else 0.0
+        })
+    # Сортуємо: спочатку найбільш загазовані та проблемні штреки
+    return sorted(result, key=lambda x: x['max_gas'], reverse=True)
+
 # --- ОСНОВНІ СТОРІНКИ ---
 
 
@@ -91,6 +119,7 @@ def diploma_home(request):
     context = {
         'online_count': online_staff.count(),
         'warning_count': alerts_count,
+        'zone_microclimate': get_zone_microclimate(),
         'recent_staff': recent_staff_qs,
         'active_alerts': active_alerts_query.select_related('employee', 'device', 'connected_repeater').order_by('-created_at')[:5],
         'critical_alerts_count': active_alerts_query.exclude(status='WARNING').count(),
@@ -244,16 +273,24 @@ def dashboard_stats_api(request):
                 rep = last_log.connected_repeater if last_log else None
                 
                 if rep and rep.uid == 'AP-MAIN':
-                    emp.safety_status = 'OFF_SHIFT'
-                    emp.save()
-                    if getattr(emp, 'device', None):
-                        emp.device.is_active = False
-                        emp.device.save()
-                    continue
+                    # ЗАХИСТ: Не ставимо OFF_SHIFT, якщо є відкрита КРИТИЧНА тривога (щоб не "загубити" людину під час евакуації)
+                    has_critical = SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(status='WARNING').exists()
+                    if not has_critical:
+                        emp.safety_status = 'OFF_SHIFT'
+                        emp.save()
+                        if getattr(emp, 'device', None):
+                            emp.device.is_active = False
+                            emp.device.save()
+                        continue
+                    
+                # АНАЛІЗ БАТАРЕЇ: Підказка диспетчеру, якщо пристрій міг просто розрядитись
+                bat_info = ""
+                if last_log and last_log.battery_level <= 15:
+                    bat_info = f" (Останній заряд: {last_log.battery_level}%, можливо розрядився)"
                     
                 SecurityAlert.objects.create(
                     employee=emp, device=emp.device, connected_repeater=rep,
-                    reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}", status='WARNING'
+                    reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}{bat_info}", status='WARNING'
                 )
                 if emp.safety_status == 'OK':
                     emp.safety_status = 'WARNING'
@@ -303,6 +340,16 @@ def dashboard_stats_api(request):
             'location': location_uid
         })
 
+    # --- НОВЕ: Сповіщення про відновлення зв'язку ---
+    recently_resolved_time = timezone.now() - timezone.timedelta(seconds=7)
+    reconnected_alerts = SecurityAlert.objects.filter(
+        reason__icontains="Втрата зв'язку",
+        status='RESOLVED',
+        resolved_at__gte=recently_resolved_time
+    ).select_related('employee')
+    
+    reconnected_names = list(set([f"{a.employee.first_name} {a.employee.last_name}" for a in reconnected_alerts if a.employee]))
+
     return JsonResponse({
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
@@ -310,8 +357,10 @@ def dashboard_stats_api(request):
         'online_count': online_count,
         'warning_count': warning_count,
         'new_alerts_count': new_alerts_count,
+        'zones_data': get_zone_microclimate(),
         'alerts_html': alerts_html, # Додаємо HTML до відповіді
         'recent_staff': recent_staff_data,
+        'reconnected_names': reconnected_names,
     })
 
 @login_required
@@ -968,6 +1017,16 @@ def api_receive_telemetry(request):
                 humidity=humidity,
                 is_moving=is_moving
             )
+            
+            # --- АВТО-ЗАКРИТТЯ тривоги про "Втрату зв'язку", якщо пристрій знову вийшов на зв'язок ---
+            offline_alerts = SecurityAlert.objects.filter(employee=employee, is_resolved=False, reason__icontains="Втрата зв'язку")
+            if offline_alerts.exists():
+                offline_alerts.update(
+                    status='RESOLVED',
+                    is_resolved=True,
+                    resolved_at=timezone.now(),
+                    rescue_notes="Автоматично: Зв'язок відновлено."
+                )
             
             # 3. ЛОГІКА СКАСУВАННЯ ТРИВОГИ З ПРИСТРОЮ
             if reason_text == 'SOS_CANCELLED':

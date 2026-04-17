@@ -125,41 +125,47 @@
           <span>Переглянути всіх</span>
           <i class="fas fa-arrow-right"></i>
         </a>
+        
       </div>
     </div>
 
     <div class="card dashboard-card environment-card">
-      <div class="card-header">
-        <h2 class="card-title"><i class="fas fa-chart-line"></i> Показники Середовища</h2>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title" style="margin-bottom: 0;"><i class="fas fa-wind text-info"></i> Мікроклімат зон</h2>
+        <small class="text-muted" id="zone-update-time" style="font-size: 0.75rem;">Оновлено щойно</small>
       </div>
-      <div class="card-body">
-        <div class="metric-grid">
-          <div class="metric-item">
-            <div class="metric-value">{{ avg_temp|floatformat:1 }}°C</div>
-            <div class="metric-label">Температура</div>
-            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0.0°C</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-value">{{ avg_hum|floatformat:0 }}%</div>
-            <div class="metric-label">Вологість</div>
-            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-value">{{ gas_level }}</div>
-            <div class="metric-label">Метан (LEL)</div>
-            <div class="metric-trend {% if gas_level > 250 %}up{% else %}stable{% endif %}">
-              {% if gas_level > 250 %}
-              <i class="fas fa-arrow-up icon-danger"></i>
-              {% else %}
-              <i class="fas fa-minus"></i>
-              {% endif %}
-            </div>
-          </div>
-          <!-- <div class="metric-item">
-            <div class="metric-value">98.2%</div>
-            <div class="metric-label">Кисень</div>
-            <div class="metric-trend stable"><i class="fas fa-minus"></i> 0%</div>
-          </div> -->
+      <div class="card-body p-2 zone-widget-card" style="max-height: 380px; overflow-y: auto;">
+        <div class="zone-list" id="zone-microclimate-list">
+            {% for zone in zone_microclimate %}
+                <div class="zone-item" data-url="{% url 'mine_map' %}?focus_loc={{ zone.location|urlencode }}" onclick="window.location.href=this.dataset.url" title="Показати на карті">
+                  <div class="zone-info">
+                      {% if zone.max_gas >= 50 %}
+                          <span class="status-indicator bg-danger pulse-danger"></span>
+                      {% elif zone.max_gas >= 10 %}
+                          <span class="status-indicator bg-warning"></span>
+                      {% else %}
+                          <span class="status-indicator bg-success"></span>
+                      {% endif %}
+                      <span class="zone-name">{{ zone.location }}</span>
+                      <i class="fas fa-search-location zone-link-icon"></i>
+                  </div>
+                  <div class="zone-metrics">
+                      <span class="metric-pill {% if zone.max_gas >= 50 %}gas-danger{% elif zone.max_gas >= 10 %}gas-warning{% else %}gas-safe{% endif %}" title="Максимальний рівень метану">
+                          <i class="fas fa-fire"></i> {{ zone.max_gas }}%
+                      </span>
+                      <span class="metric-pill env-pill" title="Середня температура">
+                          <i class="fas fa-thermometer-half text-info"></i> {{ zone.avg_temp }}°C
+                      </span>
+                      <span class="metric-pill env-pill" title="Середня вологість">
+                          <i class="fas fa-tint text-primary"></i> {{ zone.avg_hum }}%
+                      </span>
+                  </div>
+                </div>
+            {% empty %}
+                <div class="text-muted text-center py-4">
+                  <i class="fas fa-satellite-dish fs-3 mb-2 opacity-50"></i><br>Дані телеметрії відсутні
+                </div>
+            {% endfor %}
         </div>
       </div>
     </div>

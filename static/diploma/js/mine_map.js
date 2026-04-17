@@ -313,6 +313,7 @@
         setTimeout(() => {
             const urlParams = new URLSearchParams(window.location.search);
             const focusAp = urlParams.get('focus_ap');
+            const focusLoc = urlParams.get('focus_loc');
             let focused = false;
 
             if (focusAp) {
@@ -330,6 +331,24 @@
                 if (targetAp) {
                     selectObject('device', targetAp);
                     flyTo(targetAp.x * 10, targetAp.y * 10, 2.5, 1000); // Кінематографічний наліт
+                    focused = true;
+                }
+            }
+            else if (focusLoc) {
+                let targetTunnel = null;
+                if (mapData.tunnels) {
+                    targetTunnel = mapData.tunnels.find(t => t.name === focusLoc);
+                }
+                if (targetTunnel) {
+                    const tIdx = mapData.tunnels.indexOf(targetTunnel);
+                    if (tIdx >= 0) {
+                        // Розгортаємо список пристроїв штреку у бічній панелі зліва
+                        const treeEl = document.getElementById(`tree-tunnel-${tIdx}`);
+                        if (treeEl) treeEl.classList.add('expanded');
+                    }
+                    selectObject('tunnel', targetTunnel);
+                    // Фокусуємось на центрі обраного штреку (зум 2.0)
+                    flyTo((targetTunnel.x1 + targetTunnel.x2) / 2 * 10, (targetTunnel.y1 + targetTunnel.y2) / 2 * 10, 2.0, 1000);
                     focused = true;
                 }
             }

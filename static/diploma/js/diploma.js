@@ -564,6 +564,25 @@ class DashboardApp {
                 if (alertsContainer) alertsContainer.innerHTML = data.alerts_html;
             }
 
+            // --- НОВЕ: Оновлення зон мікроклімату ---
+            if (data.zones_data) {
+                this.updateZoneMicroclimate(data.zones_data);
+            }
+
+            // --- НОВЕ: Сповіщення про відновлення зв'язку ---
+            if (!this.state.recentReconnects) this.state.recentReconnects = [];
+            if (data.reconnected_names && data.reconnected_names.length > 0) {
+                data.reconnected_names.forEach(name => {
+                    if (!this.state.recentReconnects.includes(name)) {
+                        this.showNotification(`📡 Зв'язок відновлено: ${name}`, 'success');
+                        this.state.recentReconnects.push(name);
+                        setTimeout(() => {
+                            this.state.recentReconnects = this.state.recentReconnects.filter(n => n !== name);
+                        }, 10000); // Очищаємо кеш через 10 сек
+                    }
+                });
+            }
+
             // --- ГЛОБАЛЬНА СИСТЕМА ТРИВОГИ (SOS) ---
             if (data.new_alerts_count > 0) {
                 // Якщо банер ще не створено
@@ -610,6 +629,68 @@ class DashboardApp {
                 this.updateSystemStatus();
             }
             return null;
+        }
+    }
+
+    /**
+     * Функція для рендерингу оновлених зон мікроклімату
+     */
+    updateZoneMicroclimate(zonesData) {
+        const listContainer = document.getElementById('zone-microclimate-list');
+        if (!listContainer) return;
+
+        if (!zonesData || zonesData.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-muted text-center py-4">
+                    <i class="fas fa-satellite-dish fs-3 mb-2 opacity-50"></i><br>Дані телеметрії відсутні
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        zonesData.forEach(zone => {
+            let statusColor = 'bg-success';
+            let pulseClass = '';
+            let gasPillClass = 'gas-safe';
+            
+            if (zone.max_gas >= 50) {
+                statusColor = 'bg-danger';
+                pulseClass = 'pulse-danger';
+                gasPillClass = 'gas-danger';
+            } else if (zone.max_gas >= 10) {
+                statusColor = 'bg-warning';
+                gasPillClass = 'gas-warning';
+            }
+
+            html += `
+                <div class="zone-item" data-url="/diploma/mine_map/?focus_loc=${encodeURIComponent(zone.location).replace(/'/g, "%27")}" onclick="window.location.href=this.dataset.url" title="Показати на карті">
+                    <div class="zone-info">
+                        <span class="status-indicator ${statusColor} ${pulseClass}"></span>
+                        <span class="zone-name">${zone.location}</span>
+                        <i class="fas fa-search-location zone-link-icon"></i>
+                    </div>
+                    <div class="zone-metrics">
+                        <span class="metric-pill ${gasPillClass}" title="Максимальний рівень метану">
+                            <i class="fas fa-fire"></i> ${zone.max_gas}%
+                        </span>
+                        <span class="metric-pill env-pill" title="Середня температура">
+                            <i class="fas fa-thermometer-half text-info"></i> ${zone.avg_temp}°C
+                        </span>
+                        <span class="metric-pill env-pill" title="Середня вологість">
+                            <i class="fas fa-tint text-primary"></i> ${zone.avg_hum}%
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+
+        listContainer.innerHTML = html;
+        
+        const timeEl = document.getElementById('zone-update-time');
+        if (timeEl) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            timeEl.innerText = `Оновлено: ${timeString}`;
         }
     }
 
