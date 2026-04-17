@@ -597,6 +597,20 @@ class DashboardApp {
                 });
             }
 
+            // --- НОВЕ: Сповіщення про відновлення інфраструктури ---
+            if (!this.state.recentInfraRestores) this.state.recentInfraRestores = [];
+            if (data.infra_restored_zones && data.infra_restored_zones.length > 0) {
+                data.infra_restored_zones.forEach(zone => {
+                    if (!this.state.recentInfraRestores.includes(zone)) {
+                        this.showNotification(`📡 Репітер ${zone} відновив роботу!`, 'success');
+                        this.state.recentInfraRestores.push(zone);
+                        setTimeout(() => {
+                            this.state.recentInfraRestores = this.state.recentInfraRestores.filter(z => z !== zone);
+                        }, 10000);
+                    }
+                });
+            }
+
             // --- ГЛОБАЛЬНА СИСТЕМА ТРИВОГИ (SOS) ---
             if (data.new_alerts_count > 0) {
                 // Якщо банер ще не створено

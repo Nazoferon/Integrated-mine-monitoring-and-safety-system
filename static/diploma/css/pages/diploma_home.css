@@ -162,7 +162,10 @@
 .icon-danger { color: #e74c3c; }
 
 /* --- ПЕРСОНАЛ --- */
-.staff-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
+.staff-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; max-height: 380px; overflow-y: auto; padding-right: 5px; }
+.staff-list::-webkit-scrollbar { width: 6px; }
+.staff-list::-webkit-scrollbar-track { background: transparent; }
+.staff-list::-webkit-scrollbar-thumb { background-color: #444; border-radius: 10px; }
 .staff-item {
     display: flex; align-items: center; gap: 15px; padding: 12px;
     border-radius: 12px; background: rgba(255, 255, 255, 0.02); transition: 0.3s;

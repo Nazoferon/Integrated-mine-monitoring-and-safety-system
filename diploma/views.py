@@ -111,10 +111,19 @@ def diploma_home(request):
         device__assigned_to=OuterRef('pk')
     ).order_by('-timestamp').values('id')[:1]
 
-    recent_staff_qs = online_staff.select_related('device').annotate(
-        latest_log_id=Subquery(latest_log_subquery)
-    ).order_by('-last_update')[:4]
+    all_recent_staff = list(online_staff.select_related('device').annotate(
+        latest_log_id=Subquery(latest_log_subquery),
+        status_order=Case(
+            When(safety_status='SOS', then=Value(1)),
+            When(safety_status='WARNING', then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField()
+        )
+    ).order_by('status_order', '-last_update'))
     
+    problem_staff = [emp for emp in all_recent_staff if emp.safety_status in ['SOS', 'WARNING']]
+    recent_staff_qs = problem_staff if len(problem_staff) >= 4 else all_recent_staff[:4]
+
     log_ids = [emp.latest_log_id for emp in recent_staff_qs if emp.latest_log_id]
     logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=log_ids).select_related('connected_repeater')}
 
@@ -275,15 +284,27 @@ def dashboard_stats_api(request):
         offline_log_ids = [emp.latest_log_id for emp in offline_emps if emp.latest_log_id]
         offline_logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=offline_log_ids).select_related('connected_repeater')}
         
+        from collections import defaultdict
+        newly_offline = []
+        
         for emp in offline_emps:
             last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
+            last_log = offline_logs_dict.get(emp.device.id)
+            rep = last_log.connected_repeater if last_log else None
+            
             has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
-            if not has_offline_alert:
-                last_log = offline_logs_dict.get(emp.device.id)
-                rep = last_log.connected_repeater if last_log else None
+            has_infra_alert = SecurityAlert.objects.filter(connected_repeater=rep, reason__icontains="Аварія інфраструктури", is_resolved=False).exists() if rep else False
+            
+            if not has_offline_alert and not has_infra_alert:
+                newly_offline.append((emp, last_log, rep))
                 
-                if rep and rep.uid == 'AP-SURFACE':
-                    # Якщо пристрій пропав зі зв'язку на ПОВЕРХНІ (в ламповій), вважаємо що зміна закінчена
+        repeater_groups = defaultdict(list)
+        for emp, last_log, rep in newly_offline:
+            repeater_groups[rep].append((emp, last_log))
+            
+        for rep, emps_data in repeater_groups.items():
+            if rep and rep.uid == 'AP-SURFACE':
+                for emp, _ in emps_data:
                     has_critical = SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(status='WARNING').exists()
                     if not has_critical:
                         emp.safety_status = 'OFF_SHIFT'
@@ -291,17 +312,55 @@ def dashboard_stats_api(request):
                         if getattr(emp, 'device', None):
                             emp.device.is_active = False
                             emp.device.save()
-                        continue
+                continue
+
+            # Рахуємо ВСІХ офлайн-працівників на цьому репітері, а не тільки щойно відключених
+            all_offline_at_this_repeater = [
+                e for e in offline_emps 
+                if offline_logs_dict.get(e.device.id) and offline_logs_dict.get(e.device.id).connected_repeater == rep
+            ]
+            num_total_offline = len(all_offline_at_this_repeater)
+            
+            infra_alert_created = False
+            # Умова спрацьовує, якщо ЗАГАЛЬНА кількість офлайн-працівників на репітері >= 3
+            if rep and num_total_offline >= 3:
+                # Перевіряємо, чи немає вже активної групової тривоги для цього репітера
+                has_infra_alert = SecurityAlert.objects.filter(connected_repeater=rep, reason__icontains="Аварія інфраструктури", is_resolved=False).exists()
+                if not has_infra_alert:
+                    first_emp, _ = emps_data[0]
+                    reason = f"🚨 Аварія інфраструктури! Знеструмлено репітер {rep.uid}. Втрачено зв'язок з {num_total_offline} працівниками."
+                    SecurityAlert.objects.create(
+                        employee=None, device=first_emp.device, connected_repeater=rep,
+                        reason=reason, status='NEW'
+                    )
                     
-                # АНАЛІЗ БАТАРЕЇ: Підказка диспетчеру, якщо пристрій міг просто розрядитись
-                bat_info = ""
-                if last_log and last_log.battery_level <= 15:
-                    bat_info = f" (Останній заряд: {last_log.battery_level}%, можливо розрядився)"
-                    
-                SecurityAlert.objects.create(
-                    employee=emp, device=emp.device, connected_repeater=rep,
-                    reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}{bat_info}", status='WARNING'
-                )
+                    # Очищення: знаходимо та закриваємо індивідуальні тривоги, що могли бути створені хвилину тому
+                    one_minute_ago = timezone.now() - timezone.timedelta(minutes=1)
+                    employee_ids_in_group = [e.id for e in all_offline_at_this_repeater]
+                    SecurityAlert.objects.filter(
+                        employee_id__in=employee_ids_in_group,
+                        reason__icontains="Втрата зв'язку",
+                        created_at__gte=one_minute_ago,
+                        is_resolved=False
+                    ).update(
+                        status='RESOLVED', is_resolved=True, resolved_at=timezone.now(),
+                        rescue_notes=f"Перевизначено груповою тривогою по репітеру {rep.uid}."
+                    )
+                
+                infra_alert_created = True
+
+            # Створюємо індивідуальні тривоги тільки якщо групова не була створена
+            for emp, last_log in emps_data:
+                if not infra_alert_created:
+                    bat_info = ""
+                    if last_log and last_log.battery_level <= 15:
+                        bat_info = f" (Останній заряд: {last_log.battery_level}%, можливо розрядився)"
+                        
+                    SecurityAlert.objects.create(
+                        employee=emp, device=emp.device, connected_repeater=rep,
+                        reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}{bat_info}", status='WARNING'
+                    )
+                
                 if emp.safety_status == 'OK':
                     emp.safety_status = 'WARNING'
                     emp.save()
@@ -325,9 +384,21 @@ def dashboard_stats_api(request):
     })
 
     # Збираємо останніх активних працівників для віджета "Персонал у шахті"
-    recent_staff = Employee.objects.exclude(safety_status='OFF_SHIFT').annotate(
-        latest_log_id=Subquery(latest_id_subquery)
-    ).select_related('device').order_by('-last_update')[:4]
+    all_recent_staff = list(Employee.objects.exclude(safety_status='OFF_SHIFT').annotate(
+        latest_log_id=Subquery(latest_id_subquery),
+        status_order=Case(
+            When(safety_status='SOS', then=Value(1)),
+            When(safety_status='WARNING', then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField()
+        )
+    ).select_related('device').order_by('status_order', '-last_update'))
+    
+    problem_staff = [emp for emp in all_recent_staff if emp.safety_status in ['SOS', 'WARNING']]
+    if len(problem_staff) >= 4:
+        recent_staff = problem_staff
+    else:
+        recent_staff = all_recent_staff[:4]
     
     recent_staff_log_ids = [emp.latest_log_id for emp in recent_staff if emp.latest_log_id]
     recent_logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=recent_staff_log_ids).select_related('connected_repeater')}
@@ -369,6 +440,15 @@ def dashboard_stats_api(request):
     
     power_restored_zones = list(set([a.connected_repeater.location_in_mine if a.connected_repeater else "Невідомо" for a in power_restored_alerts]))
 
+    # --- НОВЕ: Сповіщення про відновлення інфраструктури ---
+    infra_restored_alerts = SecurityAlert.objects.filter(
+        reason__icontains="Аварія інфраструктури",
+        status='RESOLVED',
+        resolved_at__gte=recently_resolved_time
+    ).select_related('connected_repeater')
+    
+    infra_restored_zones = list(set([a.connected_repeater.uid for a in infra_restored_alerts if a.connected_repeater]))
+
     return JsonResponse({
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
@@ -381,6 +461,7 @@ def dashboard_stats_api(request):
         'recent_staff': recent_staff_data,
         'reconnected_names': reconnected_names,
         'power_restored_zones': power_restored_zones,
+        'infra_restored_zones': infra_restored_zones,
     })
 
 @login_required
@@ -1043,6 +1124,17 @@ def api_receive_telemetry(request):
                                 rescue_notes="Автоматично: Живлення 220V відновлено."
                             )
                             
+                    # АВТО-ЗАКРИТТЯ Аварії інфраструктури від стаціонарного датчика
+                    if ap:
+                        infra_alerts = SecurityAlert.objects.filter(connected_repeater=ap, is_resolved=False, reason__icontains="Аварія інфраструктури")
+                        if infra_alerts.exists():
+                            infra_alerts.update(
+                                status='RESOLVED',
+                                is_resolved=True,
+                                resolved_at=timezone.now(),
+                                rescue_notes="Автоматично: Репітер відновив роботу (отримано телеметрію від датчика)."
+                            )
+                            
                     return JsonResponse({'status': 'success', 'message': 'Static sensor telemetry logged.', 'command': command})
                 return JsonResponse({'status': 'error', 'message': f'Пристрій {device.inventory_number} не прив\'язаний до працівника'}, status=400)
 
@@ -1070,6 +1162,17 @@ def api_receive_telemetry(request):
                     resolved_at=timezone.now(),
                     rescue_notes="Автоматично: Зв'язок відновлено."
                 )
+                
+            # --- АВТО-ЗАКРИТТЯ Аварії інфраструктури, якщо хоча б один пристрій пробився через цей репітер ---
+            if ap:
+                infra_alerts = SecurityAlert.objects.filter(connected_repeater=ap, is_resolved=False, reason__icontains="Аварія інфраструктури")
+                if infra_alerts.exists():
+                    infra_alerts.update(
+                        status='RESOLVED',
+                        is_resolved=True,
+                        resolved_at=timezone.now(),
+                        rescue_notes="Автоматично: Репітер відновив роботу (отримано телеметрію)."
+                    )
             
             # 3. ЛОГІКА ЗАВЕРШЕННЯ ЗМІНИ (Лампова / Док-станція)
             if reason_text == 'END_SHIFT':
@@ -1171,14 +1274,17 @@ def api_receive_telemetry(request):
                     active_alert.save()
                 
                 # Ставимо візуальний статус працівнику
-                employee.safety_status = 'SOS' if (is_sos or gas_level >= 50) else 'WARNING'
+                new_status = 'SOS' if (is_sos or gas_level >= 50) else 'WARNING'
+                if employee.safety_status != new_status:
+                    employee.safety_status = new_status
+                    employee.save()
             else:
                 # Будь-який нормальний пакет даних від пристрою означає, що працівник на зміні
                 # ОНОВЛЕНО: Скидаємо статус на OK ТІЛЬКИ якщо немає не закритих інцидентів
                 if not SecurityAlert.objects.filter(employee=employee, is_resolved=False).exists():
-                    employee.safety_status = 'OK'
-
-            employee.save()
+                    if employee.safety_status != 'OK':
+                        employee.safety_status = 'OK'
+                        employee.save()
             return JsonResponse({'status': 'success', 'command': command})
 
         except Exception as e:
@@ -1343,5 +1449,4 @@ def personnel_status_api(request):
             }
             
         return JsonResponse({'device_statuses': statuses})
-
     return JsonResponse({'error': 'GET method required'}, status=405)
