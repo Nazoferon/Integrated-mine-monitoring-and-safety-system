@@ -527,7 +527,7 @@ def equipment_list_api(request):
         ).order_by().values('connected_repeater').annotate(c=Count('device_id', distinct=True)).values('c')
 
         qs = InfrastructureDevice.objects.select_related('map_location').annotate(
-            is_main=Case(When(uid='AP-MAIN', then=Value(0)), default=Value(1), output_field=IntegerField()),
+            is_main=Case(When(uid='AP-SURFACE', then=Value(0)), default=Value(1), output_field=IntegerField()),
             clients_count=Subquery(client_subquery, output_field=IntegerField())
         )
         template_name = 'diploma/_equipment_repeaters_rows.html'
@@ -1211,8 +1211,8 @@ def api_receive_telemetry(request):
 
             # 5. ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ
             if battery <= 10:
-                # Ігноруємо низький заряд, якщо працівник знаходиться в Руддворі (AP-MAIN)
-                if not (ap and ap.uid == 'AP-MAIN'):
+                # Ігноруємо низький заряд, якщо працівник знаходиться в Ламповій (AP-SURFACE)
+                if not (ap and ap.uid == 'AP-SURFACE'):
                     # Шукаємо активну тривогу АБО закриту за останні 8 годин (щоб не спамити до кінця зміни)
                     recent_bat_time = timezone.now() - timezone.timedelta(hours=8)
                     has_bat_alert = SecurityAlert.objects.filter(employee=employee, reason__icontains="Низький заряд").filter(

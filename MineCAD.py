@@ -203,7 +203,9 @@ class WifiIconItem(QGraphicsItem):
         self.range_circle.setPen(QPen(QColor(0, 255, 0, 80), 1, Qt.PenStyle.DashLine))
         self.range_circle.setVisible(False)
         self.circle = QGraphicsEllipseItem(-8, -8, 16, 16, self)
-        if uid == "AP-MAIN":
+        if uid == "AP-SURFACE":
+            self.circle.setBrush(QBrush(QColor("#00c851")))
+        elif uid == "AP-MAIN":
             self.circle.setBrush(QBrush(QColor("#ff4444")))
         else:
             self.circle.setBrush(QBrush(QColor("yellow")))
@@ -229,7 +231,9 @@ class WifiIconItem(QGraphicsItem):
     def set_label_text(self, text):
         self.uid = text
         self.label.setText(text)
-        if text == "AP-MAIN":
+        if text == "AP-SURFACE":
+            self.circle.setBrush(QBrush(QColor("#00c851")))
+        elif text == "AP-MAIN":
             self.circle.setBrush(QBrush(QColor("#ff4444")))
         else:
             self.circle.setBrush(QBrush(QColor("yellow")))
@@ -245,7 +249,9 @@ class WifiIconItem(QGraphicsItem):
 
     def hoverLeaveEvent(self, event):
         self.setCursor(Qt.CursorShape.ArrowCursor)
-        if self.uid == "AP-MAIN":
+        if self.uid == "AP-SURFACE":
+            self.circle.setBrush(QBrush(QColor("#00c851")))
+        elif self.uid == "AP-MAIN":
             self.circle.setBrush(QBrush(QColor("#ff4444")))
         else:
             self.circle.setBrush(QBrush(QColor("yellow")))
@@ -566,7 +572,7 @@ class InspectorPanel(QWidget):
         self.inp_name.setEnabled(True)
         if itype == MineItemType.DEVICE: 
             self.inp_name.setText(item.uid)
-            if item.uid == "AP-MAIN":
+            if item.uid in ["AP-MAIN", "AP-SURFACE"]:
                 self.inp_name.setEnabled(False)
                 self.btn_delete.setEnabled(False)
         elif itype == MineItemType.TUNNEL: self.inp_name.setText(item.tunnel_name)

@@ -490,14 +490,21 @@
 
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = d.id === 'AP-MAIN' ? '#ff4444' : '#00ffff';
+        if (d.id === 'AP-SURFACE') {
+            ctx.fillStyle = '#00c851'; // Зелений для Лампової
+        } else {
+            ctx.fillStyle = d.id === 'AP-MAIN' ? '#ff4444' : '#00ffff';
+        }
         ctx.fill();
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
         ctx.stroke();
 
         if (scale > 0.6 || isSelected) {
-            ctx.fillStyle = isSelected ? '#4dabf7' : (d.id === 'AP-MAIN' ? '#ff4444' : '#fff');
+            let textColor = '#fff';
+            if (d.id === 'AP-SURFACE') textColor = '#00c851';
+            else if (d.id === 'AP-MAIN') textColor = '#ff4444';
+            ctx.fillStyle = isSelected ? '#4dabf7' : textColor;
             ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'center';
             ctx.fillText(d.id, x, y - 12);

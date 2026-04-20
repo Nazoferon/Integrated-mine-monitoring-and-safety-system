@@ -145,12 +145,12 @@ class TelemetryAPITest(TestCase):
         self.assertEqual(self.emp.safety_status, "SOS")
 
     def test_low_battery_alert_ignored_at_base(self):
-        """Перевірка ігнорування тривоги низького заряду, якщо шахтар на базі (AP-MAIN)."""
-        ap_main = InfrastructureDevice.objects.create(uid="AP-MAIN", map_location=self.mine_map, x=0, y=0)
+        """Перевірка ігнорування тривоги низького заряду, якщо шахтар на базі (AP-SURFACE)."""
+        ap_main = InfrastructureDevice.objects.create(uid="AP-SURFACE", map_location=self.mine_map, x=0, y=0)
         
         payload = {
             "mac_address": self.device.mac_address,
-            "ap_uid": "AP-MAIN",
+            "ap_uid": "AP-SURFACE",
             "battery": 5,  # Критично низький заряд
             "gas_level": 0,
             "is_sos": False
@@ -163,6 +163,6 @@ class TelemetryAPITest(TestCase):
             HTTP_X_API_KEY=os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
         )
         
-        # Оскільки працівник біля AP-MAIN, система не повинна створювати тривогу
+        # Оскільки працівник біля AP-SURFACE, система не повинна створювати тривогу
         alert_exists = SecurityAlert.objects.filter(employee=self.emp, is_resolved=False).exists()
         self.assertFalse(alert_exists)
