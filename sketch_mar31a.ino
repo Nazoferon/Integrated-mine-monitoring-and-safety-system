@@ -25,40 +25,79 @@
 // ==========================================
 
 String utf8ukr(const char* source) {
-    int i = 0;
-    String target = "";
-    unsigned char n;
+  int i = 0;
+  String target = "";
+  unsigned char n;
 
-    while (source[i]) {
-        n = source[i]; i++;
-        if (n >= 0xC0) {
-            switch (n) {
-                case 0xD0: {
-                    n = source[i]; i++;
-                    if (n == 0x81) { n = 0xA8; break; } // Ё
-                    if (n == 0x84) { n = 0xAA; break; } // Є
-                    if (n == 0x86) { n = 0xB1; break; } // І
-                    if (n == 0x87) { n = 0xAF; break; } // Ї
-                    if (n >= 0x90 && n <= 0xBF) n = n + 0x2F; break;
-                }
-                case 0xD1: {
-                    n = source[i]; i++;
-                    if (n == 0x91) { n = 0xB7; break; } // ё
-                    if (n == 0x94) { n = 0xB9; break; } // є
-                    if (n == 0x96) { n = 0xB2; break; } // і
-                    if (n == 0x97) { n = 0xBE; break; } // ї
-                    if (n >= 0x80 && n <= 0x8F) n = n + 0x6F; break;
-                }
-                case 0xD2: {
-                    n = source[i]; i++;
-                    if (n == 0x90) { n = 0xA5; break; } // Ґ
-                    if (n == 0x91) { n = 0xB3; break; } // ґ
-                }
-            }
-        }
-        target += (char)n;
+  while (source[i]) {
+    n = source[i];
+    i++;
+    if (n >= 0xC0) {
+      switch (n) {
+        case 0xD0:
+          {
+            n = source[i];
+            i++;
+            if (n == 0x81) {
+              n = 0xA8;
+              break;
+            }  // Ё
+            if (n == 0x84) {
+              n = 0xAA;
+              break;
+            }  // Є
+            if (n == 0x86) {
+              n = 0xB1;
+              break;
+            }  // І
+            if (n == 0x87) {
+              n = 0xAF;
+              break;
+            }  // Ї
+            if (n >= 0x90 && n <= 0xBF) n = n + 0x2F;
+            break;
+          }
+        case 0xD1:
+          {
+            n = source[i];
+            i++;
+            if (n == 0x91) {
+              n = 0xB7;
+              break;
+            }  // ё
+            if (n == 0x94) {
+              n = 0xB9;
+              break;
+            }  // є
+            if (n == 0x96) {
+              n = 0xB2;
+              break;
+            }  // і
+            if (n == 0x97) {
+              n = 0xBE;
+              break;
+            }  // ї
+            if (n >= 0x80 && n <= 0x8F) n = n + 0x6F;
+            break;
+          }
+        case 0xD2:
+          {
+            n = source[i];
+            i++;
+            if (n == 0x90) {
+              n = 0xA5;
+              break;
+            }  // Ґ
+            if (n == 0x91) {
+              n = 0xB3;
+              break;
+            }  // ґ
+          }
+      }
     }
-    return target;
+    target += (char)n;
+  }
+  return target;
 }
 
 // --- НАЛАШТУВАННЯ СЕРВЕРА ---
@@ -67,9 +106,9 @@ const char* TELEMETRY_ENDPOINT = "/diploma/api/telemetry/";
 const char* WIFI_API_ENDPOINT = "/diploma/api/wifi-networks/";
 const char* OTA_CHECK_ENDPOINT = "/diploma/api/ota/check/";
 const char* OTA_LOG_ENDPOINT = "/diploma/api/ota/log/";
-const char* API_KEY = "SecretMineKey2026"; // Ключ доступу до API сервера
+const char* API_KEY = "SecretMineKey2026";  // Ключ доступу до API сервера
 
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.1"
 
 // --- ТАЙМЕРИ ТА ІНТЕРВАЛИ ---
 #define DATA_SEND_INTERVAL_MS 10000UL         // Інтервал відправки телеметрії (10 сек)
@@ -99,20 +138,20 @@ const char* API_KEY = "SecretMineKey2026"; // Ключ доступу до API �
 // --- ІКОНКИ ДЛЯ ДИСПЛЕЯ (16x16 пікселів) ---
 // Іконка "Газ" (Стилізована хмарка)
 const unsigned char icon_gas[] PROGMEM = {
-  0x00,0x00, 0x07,0xe0, 0x0f,0xf0, 0x1f,0xf8, 0x3f,0xfc, 0x3f,0xfc, 0x7f,0xfe, 0x7f,0xfe,
-  0x7f,0xfe, 0x7f,0xfe, 0x3f,0xfc, 0x3f,0xfc, 0x1f,0xf8, 0x0f,0xf0, 0x07,0xe0, 0x00,0x00
+  0x00, 0x00, 0x07, 0xe0, 0x0f, 0xf0, 0x1f, 0xf8, 0x3f, 0xfc, 0x3f, 0xfc, 0x7f, 0xfe, 0x7f, 0xfe,
+  0x7f, 0xfe, 0x7f, 0xfe, 0x3f, 0xfc, 0x3f, 0xfc, 0x1f, 0xf8, 0x0f, 0xf0, 0x07, 0xe0, 0x00, 0x00
 };
 
 // Іконка "Температура" (Термометр)
 const unsigned char icon_temp[] PROGMEM = {
-  0x01,0x80, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40, 0x02,0x40,
-  0x03,0xc0, 0x06,0x60, 0x06,0x60, 0x06,0x60, 0x07,0xe0, 0x03,0xc0, 0x00,0x00, 0x00,0x00
+  0x01, 0x80, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40,
+  0x03, 0xc0, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x07, 0xe0, 0x03, 0xc0, 0x00, 0x00, 0x00, 0x00
 };
 
 // Іконка "Рух" (Людина у русі)
 const unsigned char icon_motion[] PROGMEM = {
-  0x01,0x80, 0x01,0x80, 0x00,0x00, 0x03,0xc0, 0x07,0xe0, 0x03,0xc0, 0x01,0x80, 0x03,0xc0,
-  0x06,0x60, 0x04,0x20, 0x0c,0x30, 0x08,0x10, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00
+  0x01, 0x80, 0x01, 0x80, 0x00, 0x00, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x01, 0x80, 0x03, 0xc0,
+  0x06, 0x60, 0x04, 0x20, 0x0c, 0x30, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 // --- СТАНИ СИСТЕМИ ---
@@ -122,7 +161,8 @@ enum SystemState {
   WARMING_UP,
   CONNECT_CHECKPOINT,
   READY,
-  SOS_MODE
+  SOS_MODE,
+  CHARGING_SLEEP
 };
 SystemState currentState;
 
@@ -230,12 +270,12 @@ int getCleanGas() {
 // ==========================================
 int getBatteryPct() {
   int raw = analogRead(PIN_BATTERY_ADC);
-  
+
   // Якщо сире значення дуже низьке (АЦП висить у повітрі / живлення від USB)
   if (raw < 1000) {
-    return 100; // Повертаємо 100%, щоб телеметрія не показувала 0
+    return 100;  // Повертаємо 100%, щоб телеметрія не показувала 0
   }
-  
+
   return constrain(map(raw, 3100, 4095, 0, 100), 0, 100);
 }
 
@@ -293,6 +333,17 @@ void sendTelemetry(bool isSos, String reason = "Normal") {
 
   if (httpCode == 200 || httpCode == 201) {
     lastDataSendMs = millis();
+    String payload = http.getString();
+    StaticJsonDocument<128> respDoc;
+    if (!deserializeJson(respDoc, payload)) {
+      if (respDoc["command"] == "REBOOT") {
+        Serial.println("Reboot command received from server!");
+        esp_restart();
+      } else if (respDoc["command"] == "SIREN") {
+        Serial.println("Siren command received!");
+        triggerBeep(15, 100); // Сигнал для пошуку загубленої каски
+      }
+    }
   } else {
     Serial.printf("HTTP Post failed. Code: %d\n", httpCode);
     if (telemetryQueue.size() < MAX_QUEUE_SIZE) telemetryQueue.push(json);
@@ -319,6 +370,9 @@ void processTelemetryQueue() {
       if (respDoc["command"] == "REBOOT") {
         Serial.println("Reboot command received from server (queue)!");
         esp_restart();
+      } else if (respDoc["command"] == "SIREN") {
+        Serial.println("Siren command received (queue)!");
+        triggerBeep(15, 100);
       }
     }
     // Видаляємо успішно відправлене
@@ -410,16 +464,16 @@ void drawVLine(int x, int y1, int y2) {
 
 void drawStatusIconsBlack(int x, int y, int pct, int rssi, bool isOffline) {
   // 1. Малюємо батарею (праворуч)
-  display.drawRect(x, y, 14, 8, SSD1306_BLACK); // Корпус
-  display.fillRect(x + 14, y + 2, 2, 4, SSD1306_BLACK); // Пімпка
-  
+  display.drawRect(x, y, 14, 8, SSD1306_BLACK);          // Корпус
+  display.fillRect(x + 14, y + 2, 2, 4, SSD1306_BLACK);  // Пімпка
+
   int fillWidth = map(pct, 0, 100, 0, 10);
   if (fillWidth > 0) {
-    display.fillRect(x + 2, y + 2, fillWidth, 4, SSD1306_BLACK); // Рівень заряду
+    display.fillRect(x + 2, y + 2, fillWidth, 4, SSD1306_BLACK);  // Рівень заряду
   }
 
   // 2. Малюємо значок сигналу (лівіше від батареї)
-  int wifiX = x - 20; 
+  int wifiX = x - 20;
   if (isOffline) {
     // Якщо немає мережі, малюємо хрестик або пишемо "X"
     display.setTextSize(1);
@@ -434,7 +488,7 @@ void drawStatusIconsBlack(int x, int y, int pct, int rssi, bool isOffline) {
     else bars = 1;
 
     for (int i = 0; i < 4; i++) {
-      int barHeight = 2 + (i * 2); // Висота стовпчика: 2, 4, 6, 8
+      int barHeight = 2 + (i * 2);  // Висота стовпчика: 2, 4, 6, 8
       if (i < bars) {
         display.fillRect(wifiX + (i * 4), y + 8 - barHeight, 3, barHeight, SSD1306_BLACK);
       } else {
@@ -494,7 +548,7 @@ bool runSystemCheck() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(2);
   display.setCursor(allGood ? 14 : 8, 26);
-  display.println(utf8ukr(allGood ? " ВСЕ ОК!" : " АПАР. ЕРОР"));
+  display.println(utf8ukr(allGood ? " ВСЕ СПРАВНЕ!" : " АПАР. ЕРОР"));
   display.setTextSize(1);
   display.display();
 
@@ -606,39 +660,76 @@ void checkFirmwareUpdate() {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
   String url = String(SERVER_ADDRESS) + OTA_CHECK_ENDPOINT + "?mac=" + WiFi.macAddress() + "&version=" + String(FIRMWARE_VERSION);
-  http.addHeader("X-API-Key", API_KEY);
   http.begin(url);
+  http.addHeader("X-API-Key", API_KEY);
+  
+  Serial.println("OTA Request: " + url);
   int httpCode = http.GET();
+  Serial.printf("OTA Check HTTP Code: %d\n", httpCode);
+  
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
+    Serial.println("OTA Payload: " + payload);
+    
     DynamicJsonDocument doc(1024);
-    if (!deserializeJson(doc, payload) && doc.containsKey("url") && doc.containsKey("version")) {
+    DeserializationError error = deserializeJson(doc, payload);
+    
+    if (error) {
+      Serial.print("OTA JSON Parse failed: ");
+      Serial.println(error.c_str());
+    } else if (doc.containsKey("url") && doc.containsKey("version")) {
       String newVersion = doc["version"].as<String>();
       String binUrl = doc["url"].as<String>();
 
       if (newVersion != String(FIRMWARE_VERSION)) {
-        Serial.println("New firmware found: " + newVersion);
+        Serial.println("New firmware found! Version: " + newVersion + " URL: " + binUrl);
         display.setCursor(2, 35);
+        
+        // ПЕРЕВІРКА БЕЗПЕКИ: Чи вистачить заряду для перепрошивки пам'яті
+        if (getBatteryPct() < 30) {
+          display.print(utf8ukr("СКАСОВАНО: БАТАРЕЯ <30%"));
+          display.display();
+          delay(3000);
+          http.end();
+          return;
+        }
+        
         display.print(utf8ukr("Оновлення: ") + newVersion);
         display.display();
+        delay(1500);
+        
+        display.clearDisplay();
+        drawYellowHeader("УВАГА! ОНОВЛЕННЯ");
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(2, 20);
+        display.print(utf8ukr("НЕ ВИМИКАЙТЕ"));
+        display.setCursor(2, 30);
+        display.print(utf8ukr("ПРИСТРІЙ!"));
+        display.display();
+        delay(2000);
+
+        // Вимикаємо зумер перед тривалим блокуючим процесом
+        buzzerBeepsLeft = 0;
+        digitalWrite(PIN_BUZZER, LOW);
 
         // --- ПРОГРЕС БАР ЗАВАНТАЖЕННЯ ---
+        static int lastPct = -1;
         httpUpdate.onProgress([](int current, int total) {
-          float pct = (float)current / (float)total;
-          display.clearDisplay();
-          drawYellowHeader("ОНОВЛЕННЯ OTA", FIRMWARE_VERSION);
-
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(2, 20);
-          display.print(utf8ukr("Завантаження: ") + String((int)(pct * 100)) + "%");
-          drawProgressBar(2, 35, 124, 10, pct);
-          display.setCursor(2, 50);
-
-          display.print(current / 1024);
-          display.print("KB / ");
-          display.print(total / 1024);
-          display.print("KB");
-          display.display();
+          int pct = (current * 100) / total;
+          // Оновлюємо OLED лише якщо відсоток змінився на 1% або більше (Оптимізація шини I2C)
+          if (pct != lastPct) {
+            lastPct = pct;
+            float pctFloat = (float)current / (float)total;
+            display.clearDisplay();
+            drawYellowHeader("ОНОВЛЕННЯ OTA", FIRMWARE_VERSION);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(2, 20);
+            display.print(utf8ukr("Завантаження: ") + String(pct) + "%");
+            drawProgressBar(2, 35, 124, 10, pctFloat);
+            display.setCursor(2, 50);
+            display.print(utf8ukr("НЕ ВИМИКАТИ!"));
+            display.display();
+          }
         });
         WiFiClient client;
         t_httpUpdate_return ret = httpUpdate.update(client, binUrl);
@@ -672,8 +763,22 @@ void checkFirmwareUpdate() {
           display.display();
           delay(3000);
         }
+      } else {
+        Serial.println("Firmware is up to date (versions match).");
+      }
+    } else {
+      if (doc["status"] == "up_to_date") {
+        Serial.println("OTA: Firmware is already up to date.");
+        if (doc.containsKey("message")) {
+          Serial.println("Note: " + doc["message"].as<String>());
+        }
+      } else {
+        Serial.println("OTA response missing 'url'. Reason: " + doc["message"].as<String>());
       }
     }
+  } else {
+    Serial.println("OTA check failed. HTTP Error: " + http.errorToString(httpCode));
+    if (httpCode > 0) Serial.println("Server Response: " + http.getString());
   }
   http.end();
 }
@@ -898,235 +1003,84 @@ void handleSerialCommands() {
     }
   } else if (command == "OTA") {
     Serial.println("Manual OTA update check...");
-    checkFirmwareUpdate();
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi not connected!");
+    } else {
+      checkFirmwareUpdate();
+    }
   } else {
     Serial.println("Unknown command. Type HELP for available commands");
   }
-
   Serial.println("=== COMMAND FINISHED ===\n");
 }
 
-// ==========================================
-// 🔄 ГОЛОВНИЙ ЦИКЛ
-// ==========================================
-void loop() {
-  handleSerialCommands();
-  updateButton();
-  handleBuzzer();  // неблокуючий зумер
-  updateSensors();
+  // ==========================================
+  // 🔄 ГОЛОВНИЙ ЦИКЛ
+  // ==========================================
+  void loop() {
+    handleSerialCommands();
+    updateButton();
+    handleBuzzer();  // неблокуючий зумер
+    updateSensors();
 
-  int gasVal = getCleanGas();
-  // Обробка переривання від датчика руху
-  // Обробка переривання від датчика руху
-  if (motionDetected) {
-    motionDetected = false;
+    int gasVal = getCleanGas();
+    // Обробка переривання від датчика руху
+    // Обробка переривання від датчика руху
+    if (motionDetected) {
+      motionDetected = false;
 
-    // ЗАХИСТ ВІД ВІБРАЦІЇ ЗУМЕРА
-    // Якщо попередження щойно почалося (менше 1.5 сек тому), 
-    // ігноруємо цей сигнал, бо це вібрація від самого зумера.
-    if (immobilityWarning && (millis() - warningStartMs < 1500)) {
-      // Нічого не робимо, це хибне спрацювання
-    } else {
-      // Дійсний рух
-      lastVibrationMs = millis();
-      
-      if (immobilityWarning && currentState != SOS_MODE) {
-        immobilityWarning = false;
-        buzzerBeepsLeft = 0;
-        digitalWrite(PIN_BUZZER, LOW);
+      // ЗАХИСТ ВІД ВІБРАЦІЇ ЗУМЕРА
+      // Якщо попередження щойно почалося (менше 1.5 сек тому),
+      // ігноруємо цей сигнал, бо це вібрація від самого зумера.
+      if (immobilityWarning && (millis() - warningStartMs < 1500)) {
+        // Нічого не робимо, це хибне спрацювання
+      } else {
+        // Дійсний рух
+        lastVibrationMs = millis();
+
+        if (immobilityWarning && currentState != SOS_MODE) {
+          immobilityWarning = false;
+          buzzerBeepsLeft = 0;
+          digitalWrite(PIN_BUZZER, LOW);
+        }
       }
     }
-  }
 
-  // --- ОБРОБКА ЧЕРГИ ТЕЛЕМЕТРІЇ ---
-  // Відправляємо по 1 збереженому повідомленню кожні 2 секунди
-  if (WiFi.status() == WL_CONNECTED && !telemetryQueue.empty() && millis() - lastQueueProcessMs > QUEUE_PROCESS_INTERVAL_MS) {
-    processTelemetryQueue();
-    lastQueueProcessMs = millis();
-  }
-
-  // --- WI-FI ROAMING ТА РЕКОННЕКТ (ФОНОВИЙ РЕЖИМ БЕЗ БЛОКУВАННЯ UI) ---
-  if ((currentState == READY || currentState == SOS_MODE) && millis() - lastWifiScanMs > WIFI_SCAN_INTERVAL_MS) {
-    if (!wifiScanActive) {
-      WiFi.scanNetworks(true);
-      // асинхронне сканування
-      wifiScanActive = true;
+    // --- ОБРОБКА ЧЕРГИ ТЕЛЕМЕТРІЇ ---
+    // Відправляємо по 1 збереженому повідомленню кожні 2 секунди
+    if (WiFi.status() == WL_CONNECTED && !telemetryQueue.empty() && millis() - lastQueueProcessMs > QUEUE_PROCESS_INTERVAL_MS) {
+      processTelemetryQueue();
+      lastQueueProcessMs = millis();
     }
-  }
 
-  if (wifiScanActive) {
-    int n = WiFi.scanComplete();
-    if (n >= 0) {
-      int bestRssi = -1000;
-      String bestSsid = "";
-      String bestPass = "";
-      String bestBssid = "";
-      for (int i = 0; i < n; ++i) {
-        String ssid = WiFi.SSID(i);
-        int rssi = WiFi.RSSI(i);
-        String bssid = WiFi.BSSIDstr(i);
-
-        if (ssid == baseSsid && rssi > bestRssi) {
-          bestRssi = rssi;
-          bestSsid = baseSsid;
-          bestPass = basePass;
-          bestBssid = bssid;
-        }
-
-        for (const auto& kn : knownNetworks) {
-          if (kn.ssid == ssid && rssi > bestRssi) {
-            bestRssi = rssi;
-            bestSsid = kn.ssid;
-            bestPass = kn.password;
-            bestBssid = bssid;
-          }
-        }
+    // --- WI-FI ROAMING ТА РЕКОННЕКТ (ФОНОВИЙ РЕЖИМ БЕЗ БЛОКУВАННЯ UI) ---
+    bool wifiLost = (WiFi.status() != WL_CONNECTED);
+    unsigned long scanInterval = wifiLost ? 3000UL : WIFI_SCAN_INTERVAL_MS;
+    if ((currentState == READY || currentState == SOS_MODE) && millis() - lastWifiScanMs > scanInterval) {
+      if (!wifiScanActive) {
+        WiFi.scanNetworks(true);
+        // асинхронне сканування
+        wifiScanActive = true;
       }
-
-      String currentBssid = WiFi.BSSIDstr();
-      bool isDisconnected = (WiFi.status() != WL_CONNECTED);
-      
-      if (bestSsid != "") {
-        if (isDisconnected || (bestBssid != currentBssid && (bestRssi > WiFi.RSSI() + 10 || WiFi.RSSI() < -75))) {
-          Serial.println("Roaming/Reconnecting: " + currentBssid + " -> " + bestBssid + " (" + bestSsid + ")");
-          WiFi.disconnect();
-          WiFi.begin(bestSsid.c_str(), bestPass.c_str());
-          // ПРИБРАНО БЛОКУЮЧИЙ ЦИКЛ! Екран не закриватиметься.
-          // ESP32 підключиться у фоні, продовжуючи збирати телеметрію в чергу.
-        }
-      }
-
-      WiFi.scanDelete();
-      wifiScanActive = false;
-      lastWifiScanMs = millis();
-    } else if (n == WIFI_SCAN_FAILED) {
-      wifiScanActive = false;
-      lastWifiScanMs = millis();
     }
-  }
 
-  bool needUiUpdate = (millis() - lastUiUpdateMs > UI_UPDATE_INTERVAL_MS);
-  switch (currentState) {
-
-    // ——————————————————————————————————————
-    case PROVISIONING:
-      {
-        server.handleClient();
-        // Обов'язково обробляємо веб-запити
-        if (!needUiUpdate) break;
-        String mac = getSafeMacAddress();
-        String apName = "ESP-" + mac.substring(mac.length() - 5);
-        apName.replace(":", "");
-
-        display.clearDisplay();
-        drawYellowHeader("== НАЛАШТ. AP ==");
-        display.setTextColor(SSD1306_WHITE);
-        display.setTextSize(1);
-        display.setCursor(2, 19);
-        display.print("Wi-Fi: ");
-        display.print(apName);
-        display.setCursor(2, 30);
-        display.print(utf8ukr("Пароль: ") + apPass);
-        display.drawLine(0, 40, 127, 40, SSD1306_WHITE);
-        display.setCursor(2, 45);
-        display.print("IP: 192.168.4.1");
-        display.setCursor(2, 55);
-        display.print(utf8ukr("Чекаю налаштувань..."));
-        display.display();
-
-        btnClicks = 0;
-        // Скидаємо натискання кнопок, щоб уникнути помилкових спрацювань
-        break;
-      }
-
-    // ——————————————————————————————————————
-    case ASK_CALIBRATION:
-      {
-        if (!needUiUpdate) break;
-        float p = (btnPressStart > 0)
-                    ? (float)(millis() - btnPressStart) / LONG_PRESS_CALIB_MS
-                    : 0.0f;
-        display.clearDisplay();
-        drawYellowHeader("ЗАПУСК");
-        display.setTextColor(SSD1306_WHITE);
-        display.setTextSize(1);
-        display.setCursor(2, 19);
-        display.print(utf8ukr("Клік = ШВИДКИЙ СТАРТ"));
-        display.setCursor(2, 29);
-        display.print(utf8ukr("Утрим= КАЛІБРУВАННЯ"));
-        display.drawLine(0, 39, 127, 39, SSD1306_WHITE);
-        display.setCursor(2, 43);
-        display.print(utf8ukr("КАЛІБРУВАННЯ:"));
-        drawProgressBar(80, 42, 46, 9, p);
-        display.display();
-        if (btnClicks == 1) {
-          currentState = CONNECT_CHECKPOINT;
-          btnClicks = 0;
-        }
-        if (p >= 1.0f) {
-          currentState = WARMING_UP;
-          stateStartMs = millis();
-          btnPressStart = 0;
-        }
-        break;
-      }
-
-    // ——————————————————————————————————————
-    case WARMING_UP:
-      {
-        if (!needUiUpdate) break;
-        unsigned long elapsed = millis() - stateStartMs;
-        float pct = (float)elapsed / WARMUP_DURATION_MS;
-        if (pct >= 1.0f) currentState = CONNECT_CHECKPOINT;
-        unsigned long secLeft = (WARMUP_DURATION_MS - elapsed) / 1000UL;
-
-        display.clearDisplay();
-        drawYellowHeader("ПРОГРІВ MQ-7");
-        display.setTextColor(SSD1306_WHITE);
-        display.setTextSize(1);
-        display.setCursor(2, 19);
-        display.print(utf8ukr("НАГРІВ СЕНСОРА..."));
-        display.setCursor(2, 29);
-        display.print(utf8ukr("Будь ласка, зачекайте."));
-        display.drawLine(0, 39, 127, 39, SSD1306_WHITE);
-        display.setCursor(2, 43);
-        display.print(utf8ukr("ЗАЛИШИЛОСЬ:"));
-        drawProgressBar(2, 52, 124, 9, pct);
-        display.setTextSize(2);
-        display.setCursor(80, 41);
-        char buf[8];
-        sprintf(buf, "%3lus", secLeft);
-        display.print(buf);
-        display.setTextSize(1);
-        display.display();
-        break;
-      }
-
-    // ——————————————————————————————————————
-    case CONNECT_CHECKPOINT:
-      {
-        display.clearDisplay();
-        drawYellowHeader("БАЗА");
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(2, 19);
-        display.print(utf8ukr("Пошук WiFi..."));
-        drawProgressBar(2, 30, 124, 8, 0.0f);
-        display.display();
-
-        wifiScanActive = false;
-        lastWifiScanMs = millis();
-        int n = WiFi.scanNetworks();
+    if (wifiScanActive) {
+      int n = WiFi.scanComplete();
+      if (n >= 0) {
         int bestRssi = -1000;
         String bestSsid = "";
         String bestPass = "";
+        String bestBssid = "";
         for (int i = 0; i < n; ++i) {
           String ssid = WiFi.SSID(i);
           int rssi = WiFi.RSSI(i);
+          String bssid = WiFi.BSSIDstr(i);
 
           if (ssid == baseSsid && rssi > bestRssi) {
             bestRssi = rssi;
             bestSsid = baseSsid;
             bestPass = basePass;
+            bestBssid = bssid;
           }
 
           for (const auto& kn : knownNetworks) {
@@ -1134,276 +1088,503 @@ void loop() {
               bestRssi = rssi;
               bestSsid = kn.ssid;
               bestPass = kn.password;
+              bestBssid = bssid;
             }
           }
         }
-        WiFi.scanDelete();
-        if (bestSsid == "") {
-          bestSsid = baseSsid;
-          bestPass = basePass;
+
+        String currentBssid = WiFi.BSSIDstr();
+        bool isDisconnected = (WiFi.status() != WL_CONNECTED);
+
+        if (bestSsid != "") {
+          int currentRssi = WiFi.RSSI();
+          bool signalLost = (currentRssi >= 0);  // ESP32 дає 0 або +1 коли AP відвалився
+          bool shouldRoam = isDisconnected
+                            || signalLost
+                            || (bestBssid != currentBssid && (bestRssi > currentRssi + 10 || currentRssi < -75));
+
+          if (shouldRoam) {
+            Serial.println("Roaming/Reconnecting: " + currentBssid + " -> " + bestBssid + " (" + bestSsid + ")");
+            WiFi.disconnect();
+            WiFi.begin(bestSsid.c_str(), bestPass.c_str());
+            // ПРИБРАНО БЛОКУЮЧИЙ ЦИКЛ! Екран не закриватиметься.
+            // ESP32 підключиться у фоні, продовжуючи збирати телеметрію в чергу.
+          }
         }
 
-        display.clearDisplay();
-        drawYellowHeader("БАЗА");
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(2, 19);
-        display.print(utf8ukr("Підключення до:"));
-        display.setCursor(2, 30);
-        display.print(bestSsid);
-        display.display();
+        WiFi.scanDelete();
+        wifiScanActive = false;
+        lastWifiScanMs = millis();
+      } else if (n == WIFI_SCAN_FAILED) {
+        wifiScanActive = false;
+        lastWifiScanMs = millis();
+      }
+    }
 
-        WiFi.disconnect();
-        WiFi.begin(bestSsid.c_str(), bestPass.c_str());
-        int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-          unsigned long t = millis();
-          while (millis() - t < 500) {
-            handleBuzzer();
-            delay(10);
+    // --- ПЕРЕВІРКА ПОВЕРНЕННЯ В ЛАМПОВУ (ДЛЯ OTA ОНОВЛЕННЯ) ---
+    static String lastConnectedSsid = "";
+    if (WiFi.status() == WL_CONNECTED) {
+      String currentSsid = WiFi.SSID();
+      if (currentSsid != lastConnectedSsid) {
+        // Якщо пристрій був у штреку і повернувся на головну мережу (базу)
+        if (currentSsid == baseSsid && lastConnectedSsid != "") {
+          Serial.println("Повернення в Лампову! Перевірка OTA...");
+          checkFirmwareUpdate();
+        }
+        lastConnectedSsid = currentSsid;
+      }
+    } else {
+      lastConnectedSsid = "";
+    }
+
+    bool needUiUpdate = (millis() - lastUiUpdateMs > UI_UPDATE_INTERVAL_MS);
+    switch (currentState) {
+
+      // ——————————————————————————————————————
+      case PROVISIONING:
+        {
+          server.handleClient();
+          // Обов'язково обробляємо веб-запити
+          if (!needUiUpdate) break;
+          String mac = getSafeMacAddress();
+          String apName = "ESP-" + mac.substring(mac.length() - 5);
+          apName.replace(":", "");
+
+          display.clearDisplay();
+          drawYellowHeader("== НАЛАШТ. AP ==");
+          display.setTextColor(SSD1306_WHITE);
+          display.setTextSize(1);
+          display.setCursor(2, 19);
+          display.print("Wi-Fi: ");
+          display.print(apName);
+          display.setCursor(2, 30);
+          display.print(utf8ukr("Пароль: ") + apPass);
+          display.drawLine(0, 40, 127, 40, SSD1306_WHITE);
+          display.setCursor(2, 45);
+          display.print("IP: 192.168.4.1");
+          display.setCursor(2, 55);
+          display.print(utf8ukr("Чекаю налаштувань..."));
+          display.display();
+
+          btnClicks = 0;
+          // Скидаємо натискання кнопок, щоб уникнути помилкових спрацювань
+          break;
+        }
+
+      // ——————————————————————————————————————
+      case ASK_CALIBRATION:
+        {
+          if (!needUiUpdate) break;
+          float p = (btnPressStart > 0)
+                      ? (float)(millis() - btnPressStart) / LONG_PRESS_CALIB_MS
+                      : 0.0f;
+          display.clearDisplay();
+          drawYellowHeader("ЗАПУСК");
+          display.setTextColor(SSD1306_WHITE);
+          display.setTextSize(1);
+          display.setCursor(2, 19);
+          display.print(utf8ukr("Клік = ШВИДКИЙ СТАРТ"));
+          display.setCursor(2, 29);
+          display.print(utf8ukr("Утрим= КАЛІБРУВАННЯ"));
+          display.drawLine(0, 39, 127, 39, SSD1306_WHITE);
+          display.setCursor(2, 43);
+          display.print(utf8ukr("КАЛІБРУВАННЯ:"));
+          drawProgressBar(80, 42, 46, 9, p);
+          display.display();
+          if (btnClicks == 1) {
+            currentState = CONNECT_CHECKPOINT;
+            btnClicks = 0;
           }
-          attempts++;
+          if (p >= 1.0f) {
+            currentState = WARMING_UP;
+            stateStartMs = millis();
+            btnPressStart = 0;
+          }
+          break;
+        }
+
+      // ——————————————————————————————————————
+      case WARMING_UP:
+        {
+          if (!needUiUpdate) break;
+          unsigned long elapsed = millis() - stateStartMs;
+          float pct = (float)elapsed / WARMUP_DURATION_MS;
+          if (pct >= 1.0f) currentState = CONNECT_CHECKPOINT;
+          unsigned long secLeft = (WARMUP_DURATION_MS - elapsed) / 1000UL;
+
+          display.clearDisplay();
+          drawYellowHeader("ПРОГРІВ MQ-7");
+          display.setTextColor(SSD1306_WHITE);
+          display.setTextSize(1);
+          display.setCursor(2, 19);
+          display.print(utf8ukr("НАГРІВ СЕНСОРА..."));
+          display.setCursor(2, 29);
+          display.print(utf8ukr("Будь ласка, зачекайте."));
+          display.drawLine(0, 39, 127, 39, SSD1306_WHITE);
+          display.setCursor(2, 43);
+          display.print(utf8ukr("ЗАЛИШИЛОСЬ:"));
+          drawProgressBar(2, 52, 124, 9, pct);
+          display.setTextSize(2);
+          display.setCursor(80, 41);
+          char buf[8];
+          sprintf(buf, "%3lus", secLeft);
+          display.print(buf);
+          display.setTextSize(1);
+          display.display();
+          break;
+        }
+
+      // ——————————————————————————————————————
+      case CONNECT_CHECKPOINT:
+        {
           display.clearDisplay();
           drawYellowHeader("БАЗА");
           display.setTextColor(SSD1306_WHITE);
           display.setCursor(2, 19);
-          display.print(utf8ukr("Підключення..."));
-          char dots[5] = "....";
-          dots[attempts % 5] = '\0';
-          display.print(dots);
-          drawProgressBar(2, 30, 124, 8, (float)attempts / 20.0f);
+          display.print(utf8ukr("Пошук WiFi..."));
+          drawProgressBar(2, 30, 124, 8, 0.0f);
           display.display();
-        }
 
-        display.clearDisplay();
-        if (WiFi.status() == WL_CONNECTED) {
-          Serial.println("Connected to AP MAC (BSSID): " + WiFi.BSSIDstr());
-          // Для тестування (вивід MAC мережі)
-          fetchKnownNetworks();
-          sendTelemetry(false, "CHECKPOINT_ENTRY");
+          wifiScanActive = false;
+          lastWifiScanMs = millis();
+          int n = WiFi.scanNetworks();
+          int bestRssi = -1000;
+          String bestSsid = "";
+          String bestPass = "";
+          for (int i = 0; i < n; ++i) {
+            String ssid = WiFi.SSID(i);
+            int rssi = WiFi.RSSI(i);
 
-          // --- БЕЗПЕЧНЕ ОНОВЛЕННЯ ПРОШИВКИ ---
-          if (WiFi.SSID() == baseSsid) {
-            checkFirmwareUpdate();
-          } else {
-            Serial.println("Connected to internal repeater. Skipping OTA.");
-          }
+            if (ssid == baseSsid && rssi > bestRssi) {
+              bestRssi = rssi;
+              bestSsid = baseSsid;
+              bestPass = basePass;
+            }
 
-          syncBeep(2, 100);
-          display.clearDisplay();  // Фікс накладання тексту IP на повідомлення OTA
-          drawYellowHeader("БАЗА  ОК");
-          display.setTextColor(SSD1306_WHITE);
-          display.setTextSize(1);
-          display.setCursor(2, 20);
-          display.print(utf8ukr("Вхід записано."));
-          display.setCursor(2, 31);
-          display.print("IP: ");
-          display.print(WiFi.localIP());
-          display.setCursor(2, 42);
-          display.print("RSSI: ");
-          display.print(WiFi.RSSI());
-          display.print(" dBm");
-          display.drawLine(0, 53, 127, 53, SSD1306_WHITE);
-          display.setCursor(20, 57);
-          display.print(utf8ukr("Початок роботи..."));
-        } else {
-          drawYellowHeader("!! НЕМАЄ МЕРЕЖІ");
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(4, 22);
-          display.print(utf8ukr("WiFi не знайдено."));
-          display.setCursor(4, 33);
-          display.print(utf8ukr("Робота ОФЛАЙН."));
-          display.setCursor(4, 44);
-          display.print(utf8ukr("Дані у черзі."));
-        }
-        display.display();
-        delay(2500);
-        btnClicks = 0;
-        btnPressStart = 0;
-        lastVibrationMs = millis();
-        lastDataSendMs = millis();
-        currentState = READY;
-        break;
-      }
-
-    // ——————————————————————————————————————
-    case READY:
-      {
-        // Перевірка газу → SOS
-        if (gasVal > 150) {
-          isSosActive = true;
-          activeSosReason = "GAS_ALARM";
-          sendTelemetry(true, "Gas Critical!");
-          currentState = SOS_MODE;
-          break;
-        }
-
-        // Перевірка нерухомості
-        if (millis() - lastVibrationMs > NO_MOTION_TIMEOUT_MS && !immobilityWarning) {
-          immobilityWarning = true;
-          warningStartMs = millis();
-          triggerBeep(5);  // неблокуючий — не замерзає loop
-        }
-        if (immobilityWarning && (millis() - warningStartMs > SOS_GRACE_PERIOD_MS)) {
-          isSosActive = true;
-          activeSosReason = "NO_MOTION";
-          sendTelemetry(true, "NO_MOTION");
-          currentState = SOS_MODE;
-          break;
-        }
-
-        // --- ПЕРЕВІРКА БАТАРЕЇ ---
-        int bat = getBatteryPct();
-        if (bat <= 10 && !lowBatteryAlertSent) {
-          lowBatteryAlertSent = true;
-          sendTelemetry(false, "LOW_BATTERY_10");
-        } else if (bat > 15) {
-          lowBatteryAlertSent = false;
-        }
-
-        // --- ПЕРЕВІРКА ВТРАТИ ЗВ'ЯЗКУ (ОФЛАЙН) ---
-        if (WiFi.status() != WL_CONNECTED) {
-          if (offlineStartMs == 0) offlineStartMs = millis();
-          // Якщо офлайн більше 2 хвилин
-          if (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS) {
-            // Пікаємо кожні 5 секунд щоб шахтар звернув увагу на екран
-            if ((millis() - offlineStartMs) % OFFLINE_BEEP_INTERVAL_MS < 50) {
-              triggerBeep(2, 50); 
+            for (const auto& kn : knownNetworks) {
+              if (kn.ssid == ssid && rssi > bestRssi) {
+                bestRssi = rssi;
+                bestSsid = kn.ssid;
+                bestPass = kn.password;
+              }
             }
           }
-        } else {
-          offlineStartMs = 0;
-        }
+          WiFi.scanDelete();
+          if (bestSsid == "") {
+            bestSsid = baseSsid;
+            bestPass = basePass;
+          }
 
-        if (!needUiUpdate) break;
+          display.clearDisplay();
+          drawYellowHeader("БАЗА");
+          display.setTextColor(SSD1306_WHITE);
+          display.setCursor(2, 19);
+          display.print(utf8ukr("Підключення до:"));
+          display.setCursor(2, 30);
+          display.print(bestSsid);
+          display.display();
 
-        display.clearDisplay();
-        // Малюємо заголовок без тексту праворуч
-        drawYellowHeader("ГЛИБИНА 4.0", nullptr);
-        
-        // Малюємо значки (координати X=108, Y=4 ідеально впишуться в правий кут жовтої зони)
-        drawStatusIconsBlack(108, 4, getBatteryPct(), WiFi.RSSI(), WiFi.status() != WL_CONNECTED);
+          WiFi.disconnect();
+          WiFi.begin(bestSsid.c_str(), bestPass.c_str());
+          int attempts = 0;
+          while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+            unsigned long t = millis();
+            while (millis() - t < 500) {
+              handleBuzzer();
+              delay(10);
+            }
+            attempts++;
+            display.clearDisplay();
+            drawYellowHeader("БАЗА");
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(2, 19);
+            display.print(utf8ukr("Підключення..."));
+            char dots[5] = "....";
+            dots[attempts % 5] = '\0';
+            display.print(dots);
+            drawProgressBar(2, 30, 124, 8, (float)attempts / 20.0f);
+            display.display();
+          }
 
-        display.setTextColor(SSD1306_WHITE);
-        display.setTextSize(1);
+          display.clearDisplay();
+          if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("Connected to AP MAC (BSSID): " + WiFi.BSSIDstr());
+            // Для тестування (вивід MAC мережі)
+            fetchKnownNetworks();
+            sendTelemetry(false, "CHECKPOINT_ENTRY");
 
-        drawVLine(47, 17, 51); // Розділювач 1 [cite: 223]
-        drawVLine(92, 17, 51); // Розділювач 2 [cite: 223]
+            // --- БЕЗПЕЧНЕ ОНОВЛЕННЯ ПРОШИВКИ ---
+            if (WiFi.SSID() == baseSsid) {
+              checkFirmwareUpdate();
+            } else {
+              Serial.println("Connected to internal repeater. Skipping OTA.");
+            }
 
-        // --- Колонка 1: CO газ (Іконка + Цифри) ---
-        display.drawBitmap(16, 18, icon_gas, 16, 16, SSD1306_WHITE);
-        display.setTextSize(2);
-        display.setCursor(2, 36);
-        if (gasVal < 10) display.print("  "); // Центрування [cite: 225]
-        else if (gasVal < 100) display.print(" "); // Центрування [cite: 225]
-        display.print(gasVal); // [cite: 225]
-
-        // --- Колонка 2: Температура (Іконка + Цифри) ---
-        display.drawBitmap(63, 18, icon_temp, 16, 16, SSD1306_WHITE);
-        display.setTextSize(2);
-        display.setCursor(51, 36);
-        if (cachedTemp >= 0 && cachedTemp < 10) display.print(" "); // [cite: 227]
-        display.print((int)cachedTemp); // Округлюємо до цілого для економії місця
-
-        // --- Колонка 3: Рух (Іконка + Статус) ---
-        display.drawBitmap(104, 18, icon_motion, 16, 16, SSD1306_WHITE);
-        display.setTextSize(2);
-        display.setCursor(96, 36);
-        display.print((millis() - lastVibrationMs < 2000) ? "OK" : "--"); // [cite: 229]
-        display.setTextSize(1);
-
-        display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
-        
-        // Пріоритет виводу повідомлень унизу екрану
-        if (offlineStartMs > 0 && (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS)) {
-          if ((millis() / 500) % 2 == 0) {
-            display.setCursor(2, 55); display.print(utf8ukr("!! ВТРАТА ЗВ'ЯЗКУ !!"));
+            syncBeep(2, 100);
+            display.clearDisplay();  // Фікс накладання тексту IP на повідомлення OTA
+            drawYellowHeader("БАЗА  ОК");
+            display.setTextColor(SSD1306_WHITE);
+            display.setTextSize(1);
+            display.setCursor(2, 20);
+            display.print(utf8ukr("Вхід записано."));
+            display.setCursor(2, 31);
+            display.print("IP: ");
+            display.print(WiFi.localIP());
+            display.setCursor(2, 42);
+            display.print("RSSI: ");
+            display.print(WiFi.RSSI());
+            display.print(" dBm");
+            display.drawLine(0, 53, 127, 53, SSD1306_WHITE);
+            display.setCursor(20, 57);
+            display.print(utf8ukr("Початок роботи..."));
           } else {
-            display.setCursor(2, 55); display.print(utf8ukr("ПОВЕРНІТЬСЯ НА БАЗУ!"));
+            drawYellowHeader("!! НЕМАЄ МЕРЕЖІ");
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(4, 22);
+            display.print(utf8ukr("WiFi не знайдено."));
+            display.setCursor(4, 33);
+            display.print(utf8ukr("Робота ОФЛАЙН."));
+            display.setCursor(4, 44);
+            display.print(utf8ukr("Дані у черзі."));
           }
-        } else if (immobilityWarning) {
-          // Текст, який блимає [cite: 232]
-          if ((millis() / 400) % 2 == 0) {
-            display.setCursor(2, 55);
-            display.print(utf8ukr("!! РУХАЙТЕСЯ !!")); // [cite: 233]
-          }
-          
-          // --- ЕФЕКТ РАМКИ, ЩО ЗВУЖУЄТЬСЯ ---
-          // Рахуємо відсоток заповнення таймера (від 0.0 до 1.0)
-          float warningPct = (float)(millis() - warningStartMs) / SOS_GRACE_PERIOD_MS; // [cite: 233]
-          
-          // Максимальна товщина рамки (наприклад, 12 пікселів)
-          int maxBorderThickness = 12; 
-          int currentBorder = (int)(maxBorderThickness * warningPct);
-          
-          // Малюємо рамку, яка стає товщою з кожною мілісекундою
-          // Рамка малюється лише у "робочій" зоні (нижче жовтого хедера)
-          for (int i = 0; i < currentBorder; i++) {
-              display.drawRect(i, 16 + i, 128 - (i * 2), 48 - (i * 2), SSD1306_WHITE);
-          }
-          
-        } else if (btnPressStart > 0) {
-          display.setCursor(2, 55);
-          display.print("SOS:");
-          drawProgressBar(26, 54, 100, 8, (float)(millis() - btnPressStart) / LONG_PRESS_SOS_MS);
-        } else {
-          display.setCursor(2, 55);
-          display.print(utf8ukr("БЕЗДІЯЛЬН:"));
-          drawProgressBar(64, 54, 62, 8, (float)(millis() - lastVibrationMs) / NO_MOTION_TIMEOUT_MS);
+          display.display();
+          delay(2500);
+          btnClicks = 0;
+          btnPressStart = 0;
+          lastVibrationMs = millis();
+          lastDataSendMs = millis();
+          currentState = READY;
+          break;
         }
-        display.display();
 
-        if (millis() - lastDataSendMs > DATA_SEND_INTERVAL_MS) sendTelemetry(false);
-        break;
+      // ——————————————————————————————————————
+      case READY:
+        {
+          // Перевірка газу → SOS
+          if (gasVal > 150) {
+            offlineStartMs = 0;
+            isSosActive = true;
+            activeSosReason = "GAS_ALARM";
+            sendTelemetry(true, "Gas Critical!");
+            currentState = SOS_MODE;
+            break;
+          }
+
+          // Перевірка нерухомості
+          if (millis() - lastVibrationMs > NO_MOTION_TIMEOUT_MS && !immobilityWarning) {
+            immobilityWarning = true;
+            warningStartMs = millis();
+            triggerBeep(5);  // неблокуючий — не замерзає loop
+          }
+          if (immobilityWarning && (millis() - warningStartMs > SOS_GRACE_PERIOD_MS)) {
+            offlineStartMs = 0;
+            isSosActive = true;
+            activeSosReason = "NO_MOTION";
+            sendTelemetry(true, "NO_MOTION");
+            currentState = SOS_MODE;
+            break;
+          }
+
+          // --- ПЕРЕВІРКА БАТАРЕЇ ---
+          int bat = getBatteryPct();
+          if (bat <= 10 && !lowBatteryAlertSent) {
+            lowBatteryAlertSent = true;
+            sendTelemetry(false, "LOW_BATTERY_10");
+          } else if (bat > 15) {
+            lowBatteryAlertSent = false;
+          }
+
+      // --- АВТОМАТИЧНЕ ЗАВЕРШЕННЯ ЗМІНИ (Зарядка в Ламповій) ---
+      static int lowestBat = bat;
+      static unsigned long lastBatCheck = millis();
+
+      if (millis() - lastBatCheck > 10000) {
+        if (bat < lowestBat) lowestBat = bat; // Фіксуємо "дно" розряду
+        
+        // Якщо заряд виріс на 3% від мінімуму і ми на базі -> Це зарядка!
+        if (bat >= lowestBat + 3 && WiFi.SSID() == baseSsid) {
+          Serial.println("Charging detected! Ending shift...");
+          sendTelemetry(false, "END_SHIFT");
+          
+          display.clearDisplay();
+          drawYellowHeader("ЗМІНУ ЗАВЕРШЕНО");
+          display.setTextColor(SSD1306_WHITE);
+          display.setCursor(8, 30);
+          display.print(utf8ukr("Пристрій на зарядці"));
+          display.display();
+          
+          syncBeep(3, 100);
+          delay(3000);
+          
+          display.ssd1306_command(SSD1306_DISPLAYOFF); // Вимикаємо OLED для збереження матриці
+          WiFi.disconnect(true); // Вимикаємо радіомодуль
+          WiFi.mode(WIFI_OFF);
+          currentState = CHARGING_SLEEP;
+          break;
+        }
+        lastBatCheck = millis();
       }
+
+          // --- ПЕРЕВІРКА ВТРАТИ ЗВ'ЯЗКУ (ОФЛАЙН) ---
+          if (WiFi.status() != WL_CONNECTED) {
+            if (offlineStartMs == 0) offlineStartMs = millis();
+            // Якщо офлайн більше 2 хвилин
+            if (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS) {
+              // Пікаємо кожні 5 секунд щоб шахтар звернув увагу на екран
+              static unsigned long lastOfflineBeepMs = 0;
+              if (millis() - lastOfflineBeepMs > OFFLINE_BEEP_INTERVAL_MS) {
+                triggerBeep(2, 50);
+                lastOfflineBeepMs = millis();
+              }
+            }
+          } else {
+            offlineStartMs = 0;
+          }
+
+          if (!needUiUpdate) break;
+
+          display.clearDisplay();
+          // Малюємо заголовок без тексту праворуч
+          drawYellowHeader("ГЛИБИНА 4.0", nullptr);
+
+          // Малюємо значки (координати X=108, Y=4 ідеально впишуться в правий кут жовтої зони)
+          drawStatusIconsBlack(108, 4, getBatteryPct(), WiFi.RSSI(), WiFi.status() != WL_CONNECTED);
+
+          display.setTextColor(SSD1306_WHITE);
+          display.setTextSize(1);
+
+          drawVLine(47, 17, 51);  // Розділювач 1 [cite: 223]
+          drawVLine(92, 17, 51);  // Розділювач 2 [cite: 223]
+
+          // --- Колонка 1: CO газ (Іконка + Цифри) ---
+          display.drawBitmap(16, 18, icon_gas, 16, 16, SSD1306_WHITE);
+          display.setTextSize(2);
+          display.setCursor(2, 36);
+          if (gasVal < 10) display.print("  ");       // Центрування [cite: 225]
+          else if (gasVal < 100) display.print(" ");  // Центрування [cite: 225]
+          display.print(gasVal);                      // [cite: 225]
+
+          // --- Колонка 2: Температура (Іконка + Цифри) ---
+          display.drawBitmap(63, 18, icon_temp, 16, 16, SSD1306_WHITE);
+          display.setTextSize(2);
+          display.setCursor(51, 36);
+          if (cachedTemp >= 0 && cachedTemp < 10) display.print(" ");  // [cite: 227]
+          display.print((int)cachedTemp);                              // Округлюємо до цілого для економії місця
+
+          // --- Колонка 3: Рух (Іконка + Статус) ---
+          display.drawBitmap(104, 18, icon_motion, 16, 16, SSD1306_WHITE);
+          display.setTextSize(2);
+          display.setCursor(96, 36);
+          display.print((millis() - lastVibrationMs < 2000) ? "OK" : "--");  // [cite: 229]
+          display.setTextSize(1);
+
+          display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
+
+          // Пріоритет виводу повідомлень унизу екрану
+          if (offlineStartMs > 0 && (millis() - offlineStartMs > OFFLINE_CRITICAL_TIMEOUT_MS)) {
+            if ((millis() / 500) % 2 == 0) {
+              display.setCursor(2, 55);
+              display.print(utf8ukr("!! ВТРАТА ЗВ'ЯЗКУ !!"));
+            } else {
+              display.setCursor(2, 55);
+              display.print(utf8ukr("ПОВЕРНІТЬСЯ НА БАЗУ!"));
+            }
+          } else if (immobilityWarning) {
+            // Текст, який блимає [cite: 232]
+            if ((millis() / 400) % 2 == 0) {
+              display.setCursor(2, 55);
+              display.print(utf8ukr("!! РУХАЙТЕСЯ !!"));  // [cite: 233]
+            }
+
+            // --- ЕФЕКТ РАМКИ, ЩО ЗВУЖУЄТЬСЯ ---
+            // Рахуємо відсоток заповнення таймера (від 0.0 до 1.0)
+            float warningPct = (float)(millis() - warningStartMs) / SOS_GRACE_PERIOD_MS;  // [cite: 233]
+
+            // Максимальна товщина рамки (наприклад, 12 пікселів)
+            int maxBorderThickness = 12;
+            int currentBorder = (int)(maxBorderThickness * warningPct);
+
+            // Малюємо рамку, яка стає товщою з кожною мілісекундою
+            // Рамка малюється лише у "робочій" зоні (нижче жовтого хедера)
+            for (int i = 0; i < currentBorder; i++) {
+              display.drawRect(i, 16 + i, 128 - (i * 2), 48 - (i * 2), SSD1306_WHITE);
+            }
+
+          } else if (btnPressStart > 0) {
+            display.setCursor(2, 55);
+            display.print("SOS:");
+            drawProgressBar(26, 54, 100, 8, (float)(millis() - btnPressStart) / LONG_PRESS_SOS_MS);
+          } else {
+            display.setCursor(2, 55);
+            display.print(utf8ukr("БЕЗДІЯЛЬН:"));
+            drawProgressBar(64, 54, 62, 8, (float)(millis() - lastVibrationMs) / NO_MOTION_TIMEOUT_MS);
+          }
+          display.display();
+
+          if (millis() - lastDataSendMs > DATA_SEND_INTERVAL_MS) sendTelemetry(false);
+          break;
+        }
+
+      // ——————————————————————————————————————
+      case SOS_MODE:
+        {
+          // Зумер SOS (без handleBuzzer — прямий контроль)
+          if (currentState == SOS_MODE) {
+            digitalWrite(PIN_BUZZER, (millis() % 400 < 200) ? HIGH : LOW);
+          }
+          if (!needUiUpdate) break;
+
+          static bool sosFlip = false;
+          sosFlip = !sosFlip;
+
+          display.clearDisplay();
+          if (sosFlip) {
+            display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
+            display.setTextColor(SSD1306_BLACK);
+          } else {
+            display.setTextColor(SSD1306_WHITE);
+          }
+          display.setTextSize(1);
+          display.setCursor(14, 4);
+          display.print(utf8ukr("!! SOS ТРИВОГА !!"));
+
+          display.setTextColor(SSD1306_WHITE);
+          display.drawLine(0, 16, 127, 16, SSD1306_WHITE);
+          display.setCursor(2, 19);
+          display.print(utf8ukr("ПРИЧИНА:"));
+          display.setCursor(2, 28);
+          display.print(activeSosReason);
+          if (activeSosReason == "GAS_ALARM") {
+            drawVLine(76, 17, 51);
+            display.setTextSize(2);
+            display.setCursor(80, 20);
+            display.print(getCleanGas());
+            display.setTextSize(1);
+            display.setCursor(80, 39);
+            display.print("% LEL");
+          }
+
+          display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
+          display.setCursor(4, 55);
+          display.print(utf8ukr("3x КЛІК = СКАСУВАТИ"));
+          display.display();
+
+          // Телеметрія SOS кожні 15 секунд
+          if (millis() - lastDataSendMs > SOS_TELEMETRY_INTERVAL_MS) sendTelemetry(true, activeSosReason);
+          break;
+        }
 
     // ——————————————————————————————————————
-    case SOS_MODE:
-      {
-        // Зумер SOS (без handleBuzzer — прямий контроль)
-        digitalWrite(PIN_BUZZER, (millis() % 400 < 200) ? HIGH : LOW);
-        if (!needUiUpdate) break;
+    case CHARGING_SLEEP:
+    {
+      // Пристрій спить на зарядці (споживання мінімальне). 
+      // Клік по кнопці SOS будить пристрій для наступної зміни.
+      if (digitalRead(PIN_BUTTON_SOS) == LOW) esp_restart();
+      delay(100);
+      break;
+    }
 
-        static bool sosFlip = false;
-        sosFlip = !sosFlip;
+    }  // end switch
 
-        display.clearDisplay();
-        if (sosFlip) {
-          display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
-          display.setTextColor(SSD1306_BLACK);
-        } else {
-          display.setTextColor(SSD1306_WHITE);
-        }
-        display.setTextSize(1);
-        display.setCursor(14, 4);
-        display.print(utf8ukr("!! SOS ТРИВОГА !!"));
-
-        display.setTextColor(SSD1306_WHITE);
-        display.drawLine(0, 16, 127, 16, SSD1306_WHITE);
-        display.setCursor(2, 19);
-        display.print(utf8ukr("ПРИЧИНА:"));
-        display.setCursor(2, 28);
-        display.print(activeSosReason);
-        if (activeSosReason == "GAS_ALARM") {
-          drawVLine(76, 17, 51);
-          display.setTextSize(2);
-          display.setCursor(80, 20);
-          display.print(getCleanGas());
-          display.setTextSize(1);
-          display.setCursor(80, 39);
-          display.print("% LEL");
-        }
-
-        display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
-        display.setCursor(4, 55);
-        display.print(utf8ukr("3x КЛІК = СКАСУВАТИ"));
-        display.display();
-
-        // Телеметрія SOS кожні 15 секунд
-        if (millis() - lastDataSendMs > SOS_TELEMETRY_INTERVAL_MS) sendTelemetry(true, activeSosReason);
-        break;
-      }
-
-  }  // end switch
-
-  if (needUiUpdate) lastUiUpdateMs = millis();
-}
+    if (needUiUpdate) lastUiUpdateMs = millis();
+  }

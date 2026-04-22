@@ -108,7 +108,31 @@
                 <button type="button" id="btnCancelSos" class="sim-btn btn-cancel-sos"><i class="fas fa-check-circle"></i> Скасувати тривогу</button>
                 <button type="button" id="btnAutoPing" class="sim-btn btn-auto-ping"><i class="fas fa-robot"></i> Авто-симуляція (5с)</button>
             </div>
+            
+            <!-- Швидкі сценарії (Демонстрація) -->
+            <div class="mt-4 border-top border-secondary pt-3">
+                <h5 class="text-warning mb-3"><i class="fas fa-bolt"></i> Швидкі сценарії (Демонстрація):</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-secondary" onclick="simScenarioNoMotion()"><i class="fas fa-bed"></i> Втрата свідомості (Бездіяльність)</button>
+                    <button type="button" class="btn btn-outline-info" onclick="simScenarioLowBattery()"><i class="fas fa-battery-quarter"></i> Імітація розряду батареї</button>
+                    <button type="button" class="btn btn-outline-danger" onclick="simScenarioGas()"><i class="fas fa-biohazard"></i> Викид метану (>50%)</button>
+                </div>
+            </div>
+
             <div id="simStatus" class="sim-status-text text-center mt-3"></div>
+            
+            <!-- Консоль (Лог пристрою) -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="text-light m-0"><i class="fas fa-terminal text-success"></i> Консоль пристрою (Лог)</h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('simConsole').innerHTML=''">Очистити</button>
+                    </div>
+                    <div class="bg-dark p-3 rounded" style="height: 250px; overflow-y: auto; border: 1px solid #444;">
+                        <pre id="simConsole" class="mb-0" style="font-family: monospace; font-size: 13px; color: #00ff00;"></pre>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </div>
@@ -116,4 +140,75 @@
 
 {% block extra_js %}
 <script src="{% static 'diploma/js/simulator.js' %}?v=2"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const consoleEl = document.getElementById('simConsole');
+    function logToConsole(msg, color='#00ff00') {
+        if(!consoleEl) return;
+        const time = new Date().toLocaleTimeString('uk-UA');
+        consoleEl.innerHTML += `<span style="color:${color}">[${time}] ${msg}</span><br>`;
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // Перехоплюємо Fetch API для виведення логів сервера у консоль симулятора
+    const originalFetch = window.fetch;
+    window.fetch = async function() {
+        let reqUrl = arguments[0];
+        let reqOptions = arguments[1];
+        
+        if (typeof reqUrl === 'string' && reqUrl.includes('/api/telemetry/')) {
+            try {
+                let body = JSON.parse(reqOptions.body);
+                let reason = body.reason || 'Normal';
+                let isSos = body.is_sos;
+                let color = isSos ? '#ff4444' : '#00c851';
+                logToConsole(`> POST ${reqUrl} | Bat: ${body.battery}% | Gas: ${body.gas_level}% | Reason: ${reason}`, color);
+            } catch(e) {}
+        }
+
+        try {
+            const response = await originalFetch.apply(this, arguments);
+            const clonedResponse = response.clone();
+            
+            if (typeof reqUrl === 'string' && reqUrl.includes('/api/telemetry/')) {
+                clonedResponse.json().then(data => {
+                    logToConsole(`< SERVER: ${JSON.stringify(data)}`, '#aaaaaa');
+                    if (data.command === 'REBOOT') {
+                        logToConsole('🔄 КОМАНДА ВІД СЕРВЕРА: ПЕРЕЗАВАНТАЖЕННЯ (REBOOT)', '#ffbb33');
+                    } else if (data.command === 'SIREN') {
+                        logToConsole('📢 КОМАНДА ВІД СЕРВЕРА: УВІМКНУТИ СИРЕНУ (SIREN)', '#ffbb33');
+                    }
+                }).catch(e => {});
+            }
+            return response;
+        } catch (error) {
+            logToConsole(`! ERROR: ${error.message}`, '#ff4444');
+            throw error;
+        }
+    };
+
+    // Швидкі сценарії
+    window.simScenarioNoMotion = function() {
+        document.getElementById('simIsMoving').checked = false;
+        logToConsole('ℹ️ Імітація: Працівник знепритомнів (is_moving = false)', '#33b5e5');
+        document.getElementById('btnSendNormal').click();
+    };
+
+    window.simScenarioLowBattery = function() {
+        const batInput = document.getElementById('simBattery');
+        batInput.value = 10;
+        batInput.dispatchEvent(new Event('input')); // Оновлюємо UI повзунка
+        logToConsole('ℹ️ Імітація: Падіння заряду акумулятора до 10%', '#33b5e5');
+        document.getElementById('btnSendNormal').click();
+    };
+
+    window.simScenarioGas = function() {
+        const gasInput = document.getElementById('simGas');
+        gasInput.value = 55.0;
+        gasInput.dispatchEvent(new Event('input'));
+        logToConsole('ℹ️ Імітація: Раптовий викид метану (55% LEL)', '#33b5e5');
+        document.getElementById('btnSendNormal').click();
+    };
+});
+</script>
 {% endblock %}
