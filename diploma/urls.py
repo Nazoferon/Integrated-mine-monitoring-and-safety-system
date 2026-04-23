@@ -3,6 +3,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from . import views
+from diploma.auth_forms import TurnstilePasswordResetForm
+import os
+
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    form_class = TurnstilePasswordResetForm
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request # Прокидаємо request у форму для Turnstile
+        return kwargs
 
 urlpatterns = [
     # Головні сторінки
@@ -42,11 +51,12 @@ urlpatterns = [
     path('api/ota/log/', views.api_ota_log, name='api_ota_log'),
 
     # Скидання пароля (стандартні Django views)
-    path('password_reset/', auth_views.PasswordResetView.as_view(
+    path('password_reset/', CustomPasswordResetView.as_view(
         template_name='diploma/auth/password_reset_form.html',
         html_email_template_name='diploma/auth/password_reset_email.html',
         email_template_name='diploma/auth/password_reset_email.txt',
-        subject_template_name='diploma/auth/password_reset_subject.txt'
+        subject_template_name='diploma/auth/password_reset_subject.txt',
+        extra_context={'turnstile_site_key': os.getenv('TURNSTILE_SITE_KEY', '1x00000000000000000000AA')}
     ), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='diploma/auth/password_reset_done.html'), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='diploma/auth/password_reset_confirm.html'), name='password_reset_confirm'),

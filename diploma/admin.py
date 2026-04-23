@@ -1,9 +1,28 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.html import format_html
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from unfold.decorators import display, action
 from .models import *
+
+# --- 1. Створюємо "вбудовану" форму для профілю ---
+# Вона буде відображатись прямо на сторінці редагування користувача
+class UserProfileInline(StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Профіль диспетчера'
+    fk_name = 'user'
+    fields = ('phone_number', 'bio', 'profile_photo')
+
+# --- 2. Створюємо кастомний клас адмінки для моделі User ---
+class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
+    inlines = (UserProfileInline, )
+
+# --- 3. Перереєстровуємо адмінку для моделі User ---
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
 
 class MinerDeviceInline(TabularInline):
     model = MinerDevice
@@ -11,10 +30,6 @@ class MinerDeviceInline(TabularInline):
     fields = ('inventory_number', 'mac_address', 'is_active', 'firmware_version')
     readonly_fields = ('inventory_number', 'mac_address', 'firmware_version')
     extra = 0
-
-@admin.register(UserProfile)
-class UserProfileAdmin(ModelAdmin):
-    list_display = ('user', 'phone_number')
 
 @admin.register(MineMap)
 class MineMapAdmin(ModelAdmin):
@@ -56,6 +71,7 @@ class EmployeeAdmin(ModelAdmin):
 @admin.register(MinerDevice)
 class MinerDeviceAdmin(ModelAdmin):
     list_display = ('inventory_number', 'show_type', 'assigned_to', 'mac_address', 'show_active', 'pending_reboot')
+    list_select_related = ('assigned_to',) # Оптимізація: усунення N+1 запитів
     list_filter = ('is_static', 'is_active', 'pending_reboot')
     search_fields = ('inventory_number', 'mac_address')
     readonly_fields = ('inventory_number',)
@@ -91,6 +107,7 @@ class MinerDeviceAdmin(ModelAdmin):
 @admin.register(TelemetryLog)
 class TelemetryLogAdmin(ModelAdmin):
     list_display = ('timestamp', 'device', 'gas_level', 'show_sos')
+    list_select_related = ('device',) # Оптимізація: усунення N+1 запитів
     list_filter = ('is_sos', 'timestamp')
     date_hierarchy = 'timestamp'
     # Логи не можна змінювати, тільки дивитись
@@ -104,6 +121,7 @@ class TelemetryLogAdmin(ModelAdmin):
 @admin.register(SecurityAlert)
 class SecurityAlertAdmin(ModelAdmin):
     list_display = ('created_at', 'employee', 'reason', 'show_status')
+    list_select_related = ('employee', 'device', 'connected_repeater', 'resolved_by') # Оптимізація: усунення N+1 запитів
     list_filter = ('is_resolved', 'status', 'reason')
     date_hierarchy = 'created_at'
     # Завжди показувати найновіші тривоги зверху
@@ -117,12 +135,27 @@ class SecurityAlertAdmin(ModelAdmin):
 
     @action(description="✅ Позначити вибрані як ВИРІШЕНІ")
     def mark_as_resolved(self, request, queryset):
+        # Зберігаємо список тривог ДО оновлення, щоб знати, чиї статуси перевіряти
+        alerts = list(queryset.select_related('employee'))
+        
         updated_count = queryset.update(
             status='RESOLVED', 
             is_resolved=True, 
             resolved_at=timezone.now(),
             resolved_by=request.user
         )
+        
+        # Оновлюємо статуси працівників (знімаємо "червоний" колір на карті, якщо більше немає тривог)
+        emp_ids = {a.employee_id for a in alerts if a.employee_id}
+        if emp_ids:
+            emps_with_active_alerts = set(SecurityAlert.objects.filter(
+                employee_id__in=emp_ids, is_resolved=False
+            ).values_list('employee_id', flat=True))
+            
+            cleared_emp_ids = emp_ids - emps_with_active_alerts
+            if cleared_emp_ids:
+                Employee.objects.filter(id__in=cleared_emp_ids).exclude(safety_status='OFF_SHIFT').update(safety_status='OK')
+                
         self.message_user(request, f"Успішно закрито {updated_count} інцидентів.", level="SUCCESS")
 
 @admin.register(FirmwareUpdate)
@@ -147,6 +180,7 @@ class FirmwareUpdateAdmin(ModelAdmin):
 @admin.register(OTALog)
 class OTALogAdmin(ModelAdmin):
     list_display = ('timestamp', 'device', 'version', 'show_status')
+    list_select_related = ('device',) # Оптимізація: усунення N+1 запитів
     list_filter = ('status', 'timestamp')
     date_hierarchy = 'timestamp'
     search_fields = ('device__mac_address', 'device__inventory_number')

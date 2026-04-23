@@ -14,6 +14,7 @@ import os, json
 from django.utils import timezone
 from django.core.cache import cache
 from functools import wraps
+from django.contrib.auth import logout
 
 import warnings
 from .forms import UserForm, ProfileForm
@@ -48,26 +49,27 @@ def get_active_map():
 
 def get_zone_microclimate():
     """Обчислює актуальний мікроклімат, згрупований по локаціях (штреках) за останні 5 хв."""
+    cache_key = 'zone_microclimate_data'
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     recent_time = timezone.now() - timezone.timedelta(minutes=5)
-    # Отримуємо тільки НАЙСВІЖІШИЙ запис від КОЖНОГО пристрою за останні 5 хв
+    # Отримуємо тільки НАЙСВІЖІШИЙ запис від КОЖНОГО стаціонарного пристрою за останні 5 хв
     latest_logs = TelemetryLog.objects.filter(
-        timestamp__gte=recent_time
+        timestamp__gte=recent_time, device__is_static=True
     ).order_by('device_id', '-timestamp').distinct('device_id').select_related('device', 'connected_repeater', 'connected_repeater__map_location')
     
     zones = {}
     for log in latest_logs:
         loc_name = log.connected_repeater.location_in_mine if log.connected_repeater else "Невідомо"
         if loc_name not in zones:
-            zones[loc_name] = {'temp': [], 'hum': [], 'gas': [], 'people_count': 0, 'power_loss': False}
+            zones[loc_name] = {'temp': [], 'hum': [], 'gas': [], 'power_loss': False}
         if log.temperature is not None: zones[loc_name]['temp'].append(log.temperature)
         if log.humidity is not None: zones[loc_name]['hum'].append(log.humidity)
         zones[loc_name]['gas'].append(log.gas_level)
         
-        # 1. Рахуємо людей (коногонки, прив'язані до працівника)
-        if not log.device.is_static and log.device.assigned_to_id:
-            zones[loc_name]['people_count'] += 1
-            
-        # 2. Перевіряємо живлення 220V стаціонарних датчиків (якщо заряд впав нижче 99%)
+        # Перевіряємо живлення 220V стаціонарних датчиків (якщо заряд впав нижче 99%)
         if log.device.is_static and log.battery_level < 99:
             zones[loc_name]['power_loss'] = True
             
@@ -78,11 +80,26 @@ def get_zone_microclimate():
             'avg_temp': round(sum(data['temp'])/len(data['temp']), 1) if data['temp'] else 0.0,
             'avg_hum': round(sum(data['hum'])/len(data['hum']), 1) if data['hum'] else 0.0,
             'max_gas': round(max(data['gas']), 1) if data['gas'] else 0.0,
-            'people_count': data['people_count'],
             'power_loss': data['power_loss']
         })
+
+    # Окремо рахуємо людей по локаціях, щоб не змішувати логіку
+    people_logs = TelemetryLog.objects.filter(
+        timestamp__gte=recent_time, device__is_static=False, device__assigned_to__isnull=False
+    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('connected_repeater', 'connected_repeater__map_location')
+    
+    people_map = {}
+    for log in people_logs:
+        loc_name = log.connected_repeater.location_in_mine if log.connected_repeater else "Невідомо"
+        people_map[loc_name] = people_map.get(loc_name, 0) + 1
+
+    for zone in result:
+        zone['people_count'] = people_map.get(zone['location'], 0)
+
     # Сортуємо: спочатку найбільш загазовані та проблемні штреки
-    return sorted(result, key=lambda x: x['max_gas'], reverse=True)
+    sorted_result = sorted(result, key=lambda x: x['max_gas'], reverse=True)
+    cache.set(cache_key, sorted_result, 5) # Кешуємо на 5 секунд
+    return sorted_result
 
 # --- ОСНОВНІ СТОРІНКИ ---
 
@@ -228,7 +245,7 @@ def mine_map(request):
 @login_required
 def alert_detail(request, alert_id):
     """Детальна сторінка інциденту з панеллю управління."""
-    alert = get_object_or_404(SecurityAlert, id=alert_id)
+    alert = get_object_or_404(SecurityAlert.objects.select_related('employee', 'device', 'connected_repeater', 'resolved_by'), id=alert_id)
 
     if request.method == 'POST':
         new_status = request.POST.get('status')
@@ -264,6 +281,11 @@ def alert_detail(request, alert_id):
 
 def dashboard_stats_api(request):
     """API для автоматичного оновлення показників мікроклімату на головній сторінці."""
+    cache_key = 'dashboard_stats_api_response'
+    response_data = cache.get(cache_key)
+    if response_data:
+        return JsonResponse(response_data)
+
     # --- ОПТИМІЗОВАНА ПЕРЕВІРКА НА ВТРАТУ ЗВ'ЯЗКУ (ОФЛАЙН) ---
     three_mins_ago = timezone.now() - timezone.timedelta(minutes=3)
 
@@ -454,7 +476,7 @@ def dashboard_stats_api(request):
     
     infra_restored_zones = list(set([a.connected_repeater.uid for a in infra_restored_alerts if a.connected_repeater]))
 
-    return JsonResponse({
+    response_data = {
         'avg_temp': stats['avg_temp'] if stats['avg_temp'] is not None else 0.0,
         'avg_hum': stats['avg_hum'] if stats['avg_hum'] is not None else 0.0,
         'gas_level': stats['max_gas'] if stats['max_gas'] is not None else 0,
@@ -468,7 +490,10 @@ def dashboard_stats_api(request):
         'reconnected_names': reconnected_names,
         'power_restored_zones': power_restored_zones,
         'infra_restored_zones': infra_restored_zones,
-    })
+    }
+    
+    cache.set(cache_key, response_data, 5) # Кешуємо на 5 секунд
+    return JsonResponse(response_data)
 
 @login_required
 def equipment_list_api(request):
@@ -715,7 +740,8 @@ def reports_data_api(request):
         doughnut_values = [sos_count, gas_count, other_count]
         doughnut_colors = ['#ff4444', '#ff9800', '#ffd700']
         
-        alerts_qs = alerts.order_by('-created_at')
+        # Оптимізація: select_related для запобігання N+1 запитів у циклі
+        alerts_qs = alerts.select_related('employee', 'device', 'connected_repeater', 'resolved_by').order_by('-created_at')
         total_records = alerts_qs.count()
         total_pages = (total_records + per_page - 1) // per_page
 
@@ -780,7 +806,8 @@ def reports_data_api(request):
         doughnut_values = [safe_count, warning_count, danger_count]
         doughnut_colors = ['#00c851', '#ff9800', '#ff4444']
         
-        logs_qs = logs.order_by('-gas_level', '-timestamp')
+        # Оптимізація: select_related
+        logs_qs = logs.select_related('device__assigned_to', 'connected_repeater').order_by('-gas_level', '-timestamp')
         total_records = logs_qs.count()
         total_pages = (total_records + per_page - 1) // per_page
 
@@ -831,7 +858,8 @@ def reports_data_api(request):
         ]
         doughnut_colors = ['#4dabf7', '#00c851', '#ffd700']
         
-        logs_qs = logs.order_by('battery_level', '-timestamp')
+        # Оптимізація: select_related
+        logs_qs = logs.select_related('device', 'connected_repeater').order_by('battery_level', '-timestamp')
         total_records = logs_qs.count()
         total_pages = (total_records + per_page - 1) // per_page
 
@@ -1014,12 +1042,17 @@ def download_map(request):
     response['Content-Disposition'] = 'attachment; filename="mine_map.json"'
     return response
 
+def custom_logout_view(request):
+    """Обробляє класичні GET-запити для виходу з системи (обхід вимоги POST у Django 5)."""
+    logout(request)
+    return redirect('login')
+
 # --- СИМУЛЯТОР ТА API (ДЛЯ ДИПЛОМНОГО ЗАХИСТУ) ---
 
 @login_required
 def simulator_view(request):
     """Прихована сторінка пульта керування для генерації даних."""
-    employees = Employee.objects.filter(device__isnull=False)
+    employees = Employee.objects.filter(device__isnull=False).select_related('device')
     static_sensors = MinerDevice.objects.filter(is_static=True)
     aps = InfrastructureDevice.objects.filter(is_active=True).order_by('uid')
     return render(request, 'diploma/simulator.html', {'employees': employees, 'static_sensors': static_sensors, 'aps': aps})
@@ -1332,6 +1365,11 @@ def api_receive_telemetry(request):
 
 def api_active_miners(request):
     """API для віддачі координат активних шахтарів на Карту (mine_map.js)."""
+    cache_key = 'api_active_miners_response'
+    response_data = cache.get(cache_key)
+    if response_data:
+        return JsonResponse(response_data)
+
     latest_log_id = TelemetryLog.objects.filter(
         device__assigned_to=OuterRef('pk')
     ).order_by('-timestamp').values('id')[:1]
@@ -1370,7 +1408,10 @@ def api_active_miners(request):
         if loc and "Штрек" in loc:
             danger_tunnels.add(loc)
             
-    return JsonResponse({'miners': data, 'danger_tunnels': list(danger_tunnels)})
+    response_data = {'miners': data, 'danger_tunnels': list(danger_tunnels)}
+    cache.set(cache_key, response_data, 3) # Кешуємо на 3 секунди
+
+    return JsonResponse(response_data)
 
 from django.db.models import Q
 

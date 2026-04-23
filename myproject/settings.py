@@ -53,11 +53,11 @@ INSTALLED_APPS = [
     'diploma',
     'django_cleanup.apps.CleanupConfig',
     'csp',
-    'axes',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware', # Оптимізація: стиснення відповідей (зменшення трафіку у 5-10 разів)
     'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -65,11 +65,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'axes.middleware.AxesMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesBackend',                    # Axes має бути першим для перевірки блокувань
     'diploma.backends.EmailOrUsernameModelBackend', # Новий бекенд
     'django.contrib.auth.backends.ModelBackend',    # Стандартний бекенд як резервний
 ]
@@ -120,12 +118,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8}
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'diploma.validators.ComplexityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'diploma.validators.PwnedPasswordValidator',
     },
 ]
 
@@ -157,7 +156,7 @@ STATIC_ROOT = '/var/www/django_project/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = '/diploma/'  # Після логіну — на дипломну сторінку
-LOGOUT_REDIRECT_URL = '/login'  # Після виходу — на головну
+LOGOUT_REDIRECT_URL = '/login/'  # Після виходу — на головну
 
 MEDIA_URL = '/media/' # URL для завантажених файлів
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Каталог для збереження завантажених файлів
@@ -206,7 +205,8 @@ CONTENT_SECURITY_POLICY = {
             "'unsafe-inline'",
             'https://cdnjs.cloudflare.com',
             'https://cdn.jsdelivr.net',
-            'https://static.cloudflareinsights.com'
+            'https://static.cloudflareinsights.com',
+            'https://challenges.cloudflare.com'
         ),
         'style-src': (
             "'self'",
@@ -219,7 +219,11 @@ CONTENT_SECURITY_POLICY = {
             "'self'",
             'https://cloudflareinsights.com',
             'https://cdn.jsdelivr.net',
-        )
+        ),
+        'frame-src': (
+            "'self'",
+            'https://challenges.cloudflare.com',
+        ),
     }
 }
 
@@ -273,6 +277,9 @@ UNFOLD = {
     "SITE_TITLE": "Глибина 4.0 - Адміністрування",
     "SITE_HEADER": "Глибина 4.0",
     "DASHBOARD_CALLBACK": "diploma.dashboard.dashboard_callback",
+    "STYLES": [
+        lambda request: "/static/diploma/css/admin_custom.css",
+    ],
     "SITE_ICON": {
         "light": lambda request: "/static/diploma/image/logo.ico",
         "dark": lambda request: "/static/diploma/image/logo.ico",
@@ -299,17 +306,40 @@ UNFOLD = {
             "900": "20 85 143",
         },
     },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "Управління Шахтою",
+                "separator": True,
+                "items": [
+                    {"title": "Карти шахти", "icon": "map", "link": reverse_lazy("admin:diploma_minemap_changelist")},
+                    {"title": "Персонал", "icon": "engineering", "link": reverse_lazy("admin:diploma_employee_changelist")},
+                    {"title": "Пристрої (Шахтарі)", "icon": "router", "link": reverse_lazy("admin:diploma_minerdevice_changelist")},
+                    {"title": "Інфраструктура (Репітери)", "icon": "wifi", "link": reverse_lazy("admin:diploma_infrastructuredevice_changelist")},
+                    {"title": "Інциденти (SOS)", "icon": "warning", "link": reverse_lazy("admin:diploma_securityalert_changelist")},
+                    {"title": "Телеметрія", "icon": "sensors", "link": reverse_lazy("admin:diploma_telemetrylog_changelist")},
+                    {"title": "Оновлення прошивок", "icon": "system_update", "link": reverse_lazy("admin:diploma_firmwareupdate_changelist")},
+                    {"title": "Логи оновлень (ОТА)", "icon": "history", "link": reverse_lazy("admin:diploma_otalog_changelist")},
+                ],
+            },
+            {
+                "title": "Безпека та Користувачі",
+                "separator": True,
+                "items": [
+                    {"title": "Користувачі", "icon": "people", "link": reverse_lazy("admin:auth_user_changelist")},
+                    {"title": "Групи", "icon": "groups", "link": reverse_lazy("admin:auth_group_changelist")},
+                ],
+            },
+            {
+                "title": "Портфоліо",
+                "separator": True,
+                "items": [
+                    {"title": "Категорії", "icon": "category", "link": reverse_lazy("admin:portfolio_category_changelist")},
+                    {"title": "Проєкти", "icon": "work", "link": reverse_lazy("admin:portfolio_project_changelist")},
+                ],
+            }
+        ],
+    },
 }
-
-# --- НАЛАШТУВАННЯ AXES (Захист від брутфорсу) ---
-AXES_FAILURE_LIMIT = 5            # Блокувати після 5 невдалих спроб
-AXES_COOLOFF_TIME = 1             # Час блокування (в годинах)
-AXES_RESET_ON_SUCCESS = True      # Скидати лічильник невдалих спроб після успішного входу
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True # Блокувати комбінацію IP + Логін
-
-# Правильне визначення IP клієнта за проксі Cloudflare / Nginx
-AXES_META_PRECEDENCE_ORDER = [
-    'HTTP_CF_CONNECTING_IP',
-    'HTTP_X_FORWARDED_FOR',
-    'REMOTE_ADDR',
-]

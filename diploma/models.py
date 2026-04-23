@@ -5,14 +5,21 @@
 старші за 30 днів, залишаючи лише записи про інциденти
 '''
 
+from datetime import timezone
+import os, math
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-import os
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, FileExtensionValidator
 from django.contrib.postgres.indexes import BrinIndex
 from uuid import uuid4
-import math
+from django.contrib.auth.signals import user_logged_in
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 # --- ДОПОМІЖНІ ФУНКЦІЇ ---
 def user_profile_photo_path(instance, filename):
@@ -305,7 +312,11 @@ class FirmwareUpdate(models.Model):
             RegexValidator(regex=r'^\d+\.\d+\.\d+$', message='Версія має бути у форматі X.Y.Z (тільки цифри та крапки, наприклад: 1.0.0 або 2.1.15)')
         ]
     )
-    binary_file = models.FileField(upload_to='firmwares_esp/', verbose_name="Файл прошивки (.bin)")
+    binary_file = models.FileField(
+        upload_to='firmwares_esp/', 
+        verbose_name="Файл прошивки (.bin)",
+        validators=[FileExtensionValidator(allowed_extensions=['bin'])]
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата завантаження")
     is_active = models.BooleanField(default=True, verbose_name="Активна (роздавати пристроям)")
     description = models.TextField(blank=True, verbose_name="Опис / Причина оновлення")
@@ -351,3 +362,60 @@ def clear_device_cache_miner(sender, **kwargs):
 @receiver([post_save, post_delete], sender=InfrastructureDevice)
 def clear_device_cache_infra(sender, **kwargs):
     cache.delete('total_devices')
+
+# --- ЗАХИСТ ОБЛІКОВИХ ЗАПИСІВ (НОВІ ПРИСТРОЇ) ---
+class UserDevice(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='devices')
+    ip_address = models.GenericIPAddressField(verbose_name="IP Адреса")
+    user_agent = models.CharField(max_length=255, verbose_name="Браузер / Пристрій")
+    last_login = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'ip_address', 'user_agent')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.ip_address}"
+
+@receiver(user_logged_in)
+def check_new_device_login(sender, user, request, **kwargs):
+    """Сигнал: Перевіряє чи IP та Браузер нові для цього юзера. Якщо так - надсилає лист."""
+    ip_address = request.META.get('HTTP_CF_CONNECTING_IP') or request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR')
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    
+    user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')[:255]
+
+    device, created = UserDevice.objects.get_or_create(user=user, ip_address=ip_address, user_agent=user_agent)
+
+    if created and user.email:
+        subject = '⚠️ Новий вхід у ваш обліковий запис - Глибина 4.0'
+        html_message = render_to_string('diploma/auth/new_device_email.html', {
+            'user': user,
+            'ip_address': ip_address,
+            'user_agent': user_agent,
+            'time': timezone.now()
+        })
+        plain_message = strip_tags(html_message)
+        try:
+            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message, fail_silently=True)
+        except Exception: pass
+
+@receiver(post_save, sender=User)
+def post_save_user_receiver(sender, instance, created, **kwargs):
+    """
+    Сигнал: Створює профіль та надсилає вітальне повідомлення,
+    якщо користувач щойно створений.
+    """
+    if created:
+        UserProfile.objects.create(user=instance)
+        if instance.email:
+            subject = 'Вітаємо в команді Глибина 4.0!'
+            html_message = render_to_string('diploma/auth/welcome_email.html', {
+                'user': instance,
+                'protocol': 'https',
+                'domain': 'bunb.pp.ua'
+            })
+            plain_message = strip_tags(html_message)
+            try:
+                send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [instance.email], html_message=html_message, fail_silently=True)
+            except Exception: pass

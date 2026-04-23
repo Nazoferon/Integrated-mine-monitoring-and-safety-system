@@ -44,6 +44,11 @@
             <div class="form-options">
                 <a href="{% url 'password_reset' %}" class="forgot-password">Забули пароль?</a>
             </div>
+            
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark"></div>
+            </div>
+
 
             <button type="submit" class="btn-login-submit">
                 <i class="fas fa-sign-in-alt"></i>

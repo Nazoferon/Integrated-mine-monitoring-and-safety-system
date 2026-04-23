@@ -1,0 +1,25 @@
+/* /var/www/django_project/static/diploma/css/admin_custom.css */
+
+/* Виправлення видимості кнопки "Виконати" (Go) в панелі масових дій (Actions) */
+.actions button,
+.actions button[type="submit"],
+.actions input[type="submit"] {
+    background-color: #228be6 !important; /* Фірмовий синій акцент (primary-500) */
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 8px 24px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    border: none !important;
+    margin-left: 15px !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    transition: all 0.2s ease !important;
+}
+
+.actions button:hover,
+.actions button[type="submit"]:hover,
+.actions input[type="submit"]:hover {
+    background-color: #1c7ed6 !important; /* Трохи темніший при наведенні (primary-600) */
+    transform: translateY(-1px) !important;
+}
