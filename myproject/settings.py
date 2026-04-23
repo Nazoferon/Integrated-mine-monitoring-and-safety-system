@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'diploma',
     'django_cleanup.apps.CleanupConfig',
     'csp',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -64,9 +65,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',                    # Axes має бути першим для перевірки блокувань
     'diploma.backends.EmailOrUsernameModelBackend', # Новий бекенд
     'django.contrib.auth.backends.ModelBackend',    # Стандартний бекенд як резервний
 ]
@@ -297,3 +300,16 @@ UNFOLD = {
         },
     },
 }
+
+# --- НАЛАШТУВАННЯ AXES (Захист від брутфорсу) ---
+AXES_FAILURE_LIMIT = 5            # Блокувати після 5 невдалих спроб
+AXES_COOLOFF_TIME = 1             # Час блокування (в годинах)
+AXES_RESET_ON_SUCCESS = True      # Скидати лічильник невдалих спроб після успішного входу
+AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True # Блокувати комбінацію IP + Логін
+
+# Правильне визначення IP клієнта за проксі Cloudflare / Nginx
+AXES_META_PRECEDENCE_ORDER = [
+    'HTTP_CF_CONNECTING_IP',
+    'HTTP_X_FORWARDED_FOR',
+    'REMOTE_ADDR',
+]

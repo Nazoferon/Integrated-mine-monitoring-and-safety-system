@@ -264,106 +264,105 @@ def alert_detail(request, alert_id):
 
 def dashboard_stats_api(request):
     """API для автоматичного оновлення показників мікроклімату на головній сторінці."""
-    # --- ПЕРЕВІРКА НА ВТРАТУ ЗВ'ЯЗКУ (ОФЛАЙН) ---
+    # --- ОПТИМІЗОВАНА ПЕРЕВІРКА НА ВТРАТУ ЗВ'ЯЗКУ (ОФЛАЙН) ---
     three_mins_ago = timezone.now() - timezone.timedelta(minutes=3)
-    latest_log_subquery = TelemetryLog.objects.filter(
+
+    # 1. Отримуємо ID всіх працівників онлайн з прив'язаним пристроєм
+    online_emp_ids = Employee.objects.exclude(safety_status='OFF_SHIFT').filter(device__isnull=False).values_list('id', flat=True)
+
+    # 2. Знаходимо ID ОСТАННЬОГО логу для КОЖНОГО пристрою цих працівників
+    latest_log_ids_subquery = TelemetryLog.objects.filter(
         device__assigned_to=OuterRef('pk')
-    ).order_by('-timestamp')
-    
-    latest_time_subquery = latest_log_subquery.values('timestamp')[:1]
-    latest_id_subquery = latest_log_subquery.values('id')[:1]
-    
-    offline_emps = list(Employee.objects.exclude(safety_status='OFF_SHIFT').filter(
-        device__isnull=False
-    ).select_related('device').annotate(
-        last_seen=Subquery(latest_time_subquery),
-        latest_log_id=Subquery(latest_id_subquery)
-    ).filter(last_seen__lt=three_mins_ago))
-    
-    if offline_emps:
-        offline_log_ids = [emp.latest_log_id for emp in offline_emps if emp.latest_log_id]
-        offline_logs_dict = {log.device_id: log for log in TelemetryLog.objects.filter(id__in=offline_log_ids).select_related('connected_repeater')}
+    ).order_by('-timestamp').values('id')[:1]
+
+    employees_with_latest_log = Employee.objects.filter(id__in=online_emp_ids).annotate(
+        latest_log_id=Subquery(latest_log_ids_subquery)
+    ).values('id', 'device_id', 'latest_log_id')
+
+    # 3. Витягуємо ці останні логи одним запитом
+    latest_log_ids = [e['latest_log_id'] for e in employees_with_latest_log if e['latest_log_id']]
+    latest_logs_dict = {log.id: log for log in TelemetryLog.objects.filter(id__in=latest_log_ids).select_related('connected_repeater')}
+
+    # 4. Визначаємо, хто реально офлайн, і збираємо їхні дані
+    stale_employees_data = []
+    for emp_data in employees_with_latest_log:
+        log = latest_logs_dict.get(emp_data['latest_log_id'])
+        if log and log.timestamp < three_mins_ago:
+            stale_employees_data.append({'emp_id': emp_data['id'], 'log': log})
+
+    if stale_employees_data:
+        # 5. Отримуємо всі активні тривоги по зв'язку/інфраструктурі ОДНИМ ЗАПИТОМ
+        active_offline_alert_emp_ids = set(SecurityAlert.objects.filter(
+            is_resolved=False, reason__icontains="Втрата зв'язку"
+        ).values_list('employee_id', flat=True))
         
-        from collections import defaultdict
-        newly_offline = []
-        
-        for emp in offline_emps:
-            last_seen_time = emp.last_seen or (timezone.now() - timezone.timedelta(days=1))
-            last_log = offline_logs_dict.get(emp.device.id)
-            rep = last_log.connected_repeater if last_log else None
-            
-            has_offline_alert = SecurityAlert.objects.filter(employee=emp, reason__icontains="Втрата зв'язку", created_at__gte=last_seen_time).exists()
-            has_infra_alert = SecurityAlert.objects.filter(connected_repeater=rep, reason__icontains="Аварія інфраструктури", is_resolved=False).exists() if rep else False
-            
-            if not has_offline_alert and not has_infra_alert:
-                newly_offline.append((emp, last_log, rep))
-                
-        repeater_groups = defaultdict(list)
-        for emp, last_log, rep in newly_offline:
-            repeater_groups[rep].append((emp, last_log))
-            
-        for rep, emps_data in repeater_groups.items():
-            if rep and rep.uid == 'AP-SURFACE':
-                for emp, _ in emps_data:
-                    has_critical = SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(status='WARNING').exists()
-                    if not has_critical:
-                        emp.safety_status = 'OFF_SHIFT'
-                        emp.save()
-                        if getattr(emp, 'device', None):
-                            emp.device.is_active = False
-                            emp.device.save()
+        active_infra_alert_repeater_ids = set(SecurityAlert.objects.filter(
+            is_resolved=False, reason__icontains="Аварія інфраструктури"
+        ).values_list('connected_repeater_id', flat=True))
+
+        # 6. Фільтруємо працівників, для яких ВЖЕ Є тривога
+        employees_to_alert = []
+        for data in stale_employees_data:
+            if data['emp_id'] in active_offline_alert_emp_ids:
                 continue
-
-            # Рахуємо ВСІХ офлайн-працівників на цьому репітері, а не тільки щойно відключених
-            all_offline_at_this_repeater = [
-                e for e in offline_emps 
-                if offline_logs_dict.get(e.device.id) and offline_logs_dict.get(e.device.id).connected_repeater == rep
-            ]
-            num_total_offline = len(all_offline_at_this_repeater)
             
-            infra_alert_created = False
-            # Умова спрацьовує, якщо ЗАГАЛЬНА кількість офлайн-працівників на репітері >= 3
-            if rep and num_total_offline >= 3:
-                # Перевіряємо, чи немає вже активної групової тривоги для цього репітера
-                has_infra_alert = SecurityAlert.objects.filter(connected_repeater=rep, reason__icontains="Аварія інфраструктури", is_resolved=False).exists()
-                if not has_infra_alert:
-                    first_emp, _ = emps_data[0]
-                    reason = f"🚨 Аварія інфраструктури! Знеструмлено репітер {rep.uid}. Втрачено зв'язок з {num_total_offline} працівниками."
-                    SecurityAlert.objects.create(
-                        employee=None, device=first_emp.device, connected_repeater=rep,
-                        reason=reason, status='NEW'
-                    )
-                    
-                    # Очищення: знаходимо та закриваємо індивідуальні тривоги, що могли бути створені хвилину тому
-                    one_minute_ago = timezone.now() - timezone.timedelta(minutes=1)
-                    employee_ids_in_group = [e.id for e in all_offline_at_this_repeater]
-                    SecurityAlert.objects.filter(
-                        employee_id__in=employee_ids_in_group,
-                        reason__icontains="Втрата зв'язку",
-                        created_at__gte=one_minute_ago,
-                        is_resolved=False
-                    ).update(
-                        status='RESOLVED', is_resolved=True, resolved_at=timezone.now(),
-                        rescue_notes=f"Перевизначено груповою тривогою по репітеру {rep.uid}."
-                    )
+            log = data['log']
+            if log.connected_repeater_id and log.connected_repeater_id in active_infra_alert_repeater_ids:
+                continue
                 
-                infra_alert_created = True
+            employees_to_alert.append(data)
 
-            # Створюємо індивідуальні тривоги тільки якщо групова не була створена
-            for emp, last_log in emps_data:
-                if not infra_alert_created:
-                    bat_info = ""
-                    if last_log and last_log.battery_level <= 15:
-                        bat_info = f" (Останній заряд: {last_log.battery_level}%, можливо розрядився)"
-                        
-                    SecurityAlert.objects.create(
-                        employee=emp, device=emp.device, connected_repeater=rep,
-                        reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}{bat_info}", status='WARNING'
-                    )
+        # 7. Групуємо по репітеру тільки тих, кому реально треба створити тривогу
+        if employees_to_alert:
+            from collections import defaultdict
+            
+            newly_offline_emp_ids = [d['emp_id'] for d in employees_to_alert]
+            newly_offline_employees = {emp.id: emp for emp in Employee.objects.filter(id__in=newly_offline_emp_ids).select_related('device')}
+
+            repeater_groups = defaultdict(list)
+            for data in employees_to_alert:
+                emp = newly_offline_employees.get(data['emp_id'])
+                if not emp: continue
                 
-                if emp.safety_status == 'OK':
-                    emp.safety_status = 'WARNING'
-                    emp.save()
+                log = data['log']
+                repeater_groups[log.connected_repeater].append((emp, log))
+
+            # 8. Запускаємо логіку створення тривог (майже без змін, але тепер вона швидка)
+            for rep, emps_data in repeater_groups.items():
+                if rep and rep.uid == 'AP-SURFACE':
+                    for emp, _ in emps_data:
+                        if not SecurityAlert.objects.filter(employee=emp, is_resolved=False).exclude(status='WARNING').exists():
+                            emp.safety_status = 'OFF_SHIFT'
+                            emp.save()
+                            if getattr(emp, 'device', None):
+                                emp.device.is_active = False
+                                emp.device.save()
+                    continue
+
+                num_total_offline = sum(1 for d in stale_employees_data if d['log'].connected_repeater == rep)
+                
+                infra_alert_created = False
+                if rep and num_total_offline >= 3:
+                    if not rep.id in active_infra_alert_repeater_ids:
+                        first_emp, _ = emps_data[0]
+                        reason = f"🚨 Аварія інфраструктури! Знеструмлено репітер {rep.uid}. Втрачено зв'язок з {num_total_offline} працівниками."
+                        SecurityAlert.objects.create(
+                            employee=None, device=first_emp.device, connected_repeater=rep,
+                            reason=reason, status='NEW'
+                        )
+                        infra_alert_created = True
+
+                for emp, last_log in emps_data:
+                    if not infra_alert_created:
+                        bat_info = f" (Останній заряд: {last_log.battery_level}%)" if last_log and last_log.battery_level <= 15 else ""
+                        SecurityAlert.objects.create(
+                            employee=emp, device=emp.device, connected_repeater=rep,
+                            reason=f"Втрата зв'язку (>3 хв). Останній репітер: {rep.uid if rep else 'Невідомо'}{bat_info}", status='WARNING'
+                        )
+                    
+                    if emp.safety_status == 'OK':
+                        emp.safety_status = 'WARNING'
+                        emp.save()
 
     recent_log_ids = TelemetryLog.objects.order_by('-timestamp').values_list('id', flat=True)[:50]
     stats = TelemetryLog.objects.filter(id__in=recent_log_ids).aggregate(
@@ -383,6 +382,11 @@ def dashboard_stats_api(request):
         'active_alerts': active_alerts,
         'request': request  # Передаємо request для роботи `url` тега
     })
+    
+    # --- Оптимізовано: Використовуємо вже отриманий `online_emp_ids` ---
+    latest_id_subquery = TelemetryLog.objects.filter(
+        device__assigned_to=OuterRef('pk')
+    ).order_by('-timestamp').values('id')[:1]
 
     # Збираємо останніх активних працівників для віджета "Персонал у шахті"
     all_recent_staff = list(Employee.objects.exclude(safety_status='OFF_SHIFT').annotate(
