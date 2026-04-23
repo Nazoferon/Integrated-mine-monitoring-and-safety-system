@@ -563,6 +563,18 @@ class DashboardApp {
                 const alertsContainer = document.getElementById('active-alerts-container');
                 if (alertsContainer) alertsContainer.innerHTML = data.alerts_html;
             }
+            
+            // --- НОВЕ: Оновлення бейджа критичних сповіщень ---
+            if (data.critical_alerts_count !== undefined) {
+                const badgeContainer = document.getElementById('critical-alerts-badge');
+                if (badgeContainer) {
+                    if (data.critical_alerts_count > 0) {
+                        badgeContainer.innerHTML = `<span class="badge badge-critical">${data.critical_alerts_count} критичних</span>`;
+                    } else {
+                        badgeContainer.innerHTML = `<span class="badge badge-safe">Все спокійно</span>`;
+                    }
+                }
+            }
 
             // --- НОВЕ: Оновлення зон мікроклімату ---
             if (data.zones_data) {

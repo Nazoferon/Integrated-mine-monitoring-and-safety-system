@@ -45,11 +45,13 @@
     <div class="card dashboard-card alert-card">
       <div class="card-header">
         <h2 class="card-title"><i class="fas fa-bell"></i> Активні Сповіщення</h2>
-        {% if critical_alerts_count > 0 %}
-        <span class="badge badge-critical">{{ critical_alerts_count }} критичних</span>
-        {% else %}
-        <span class="badge badge-safe">Все спокійно</span>
-        {% endif %}
+        <span id="critical-alerts-badge">
+          {% if critical_alerts_count > 0 %}
+          <span class="badge badge-critical">{{ critical_alerts_count }} критичних</span>
+          {% else %}
+          <span class="badge badge-safe">Все спокійно</span>
+          {% endif %}
+        </span>
       </div>
       <div class="card-body" id="active-alerts-container">
         {% include 'diploma/_alert_list.html' %}

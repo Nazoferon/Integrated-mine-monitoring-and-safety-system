@@ -375,6 +375,7 @@ def dashboard_stats_api(request):
     online_count = Employee.objects.exclude(safety_status='OFF_SHIFT').count()
     warning_count = SecurityAlert.objects.filter(is_resolved=False).count()
     new_alerts_count = SecurityAlert.objects.filter(status='NEW').count()
+    critical_alerts_count = SecurityAlert.objects.filter(is_resolved=False).exclude(status='WARNING').count()
     
     # --- НОВЕ: Рендеримо HTML для списку сповіщень ---
     active_alerts = SecurityAlert.objects.filter(is_resolved=False).select_related('employee', 'device', 'connected_repeater').order_by('-created_at')[:5]
@@ -456,6 +457,7 @@ def dashboard_stats_api(request):
         'online_count': online_count,
         'warning_count': warning_count,
         'new_alerts_count': new_alerts_count,
+        'critical_alerts_count': critical_alerts_count,
         'zones_data': get_zone_microclimate(),
         'alerts_html': alerts_html, # Додаємо HTML до відповіді
         'recent_staff': recent_staff_data,
@@ -1181,6 +1183,17 @@ def api_receive_telemetry(request):
                     has_critical = SecurityAlert.objects.filter(employee=employee, is_resolved=False).exclude(status='WARNING').exists()
                     if has_critical:
                         return JsonResponse({'status': 'error', 'message': 'Помилка: Є відкрита КРИТИЧНА тривога! Диспетчер повинен закрити інцидент.'}, status=400)
+                    
+                    # ЗАКРИВАЄМО всі попередження (WARNING), наприклад, про низький заряд
+                    warnings = SecurityAlert.objects.filter(employee=employee, is_resolved=False, status='WARNING')
+                    if warnings.exists():
+                        warnings.update(
+                            status='RESOLVED',
+                            is_resolved=True,
+                            resolved_at=timezone.now(),
+                            rescue_notes="Автоматично: Зміну завершено, пристрій здано."
+                        )
+
                     if employee.safety_status != 'OFF_SHIFT':
                         employee.safety_status = 'OFF_SHIFT'
                         employee.save()
@@ -1210,22 +1223,43 @@ def api_receive_telemetry(request):
                 return JsonResponse({'status': 'success', 'message': 'Alert cancelled by device', 'command': command})
 
             # 5. ПЕРЕВІРКА КРИТИЧНО НИЗЬКОГО ЗАРЯДУ
+            active_bat_alert = SecurityAlert.objects.filter(
+                employee=employee,
+                is_resolved=False,
+                reason__icontains="Низький заряд"
+            ).first()
+
             if battery <= 10:
                 # Ігноруємо низький заряд, якщо працівник знаходиться в Ламповій (AP-SURFACE)
                 if not (ap and ap.uid == 'AP-SURFACE'):
-                    # Шукаємо активну тривогу АБО закриту за останні 8 годин (щоб не спамити до кінця зміни)
-                    recent_bat_time = timezone.now() - timezone.timedelta(hours=8)
-                    has_bat_alert = SecurityAlert.objects.filter(employee=employee, reason__icontains="Низький заряд").filter(
-                        Q(is_resolved=False) | Q(created_at__gte=recent_bat_time)
-                    ).exists()
-                    if not has_bat_alert:
-                        SecurityAlert.objects.create(
-                            employee=employee, device=device, connected_repeater=ap,
-                            reason=f"Низький заряд батареї: {battery}%", status='WARNING'
-                        )
-                        # Змінюємо статус працівника для жовтого світіння на карті
-                        if employee.safety_status == 'OK':
-                            employee.safety_status = 'WARNING'
+                    if active_bat_alert:
+                        # Оновлюємо відсоток у тексті, якщо він знизився
+                        new_reason = f"Низький заряд батареї: {battery}%"
+                        if active_bat_alert.reason != new_reason:
+                            active_bat_alert.reason = new_reason
+                            active_bat_alert.save()
+                    else:
+                        # Шукаємо закриту за останні 8 годин (щоб не спамити до кінця зміни)
+                        recent_bat_time = timezone.now() - timezone.timedelta(hours=8)
+                        has_bat_alert = SecurityAlert.objects.filter(employee=employee, reason__icontains="Низький заряд").filter(
+                            is_resolved=True, created_at__gte=recent_bat_time
+                        ).exists()
+                        if not has_bat_alert:
+                            SecurityAlert.objects.create(
+                                employee=employee, device=device, connected_repeater=ap,
+                                reason=f"Низький заряд батареї: {battery}%", status='WARNING'
+                            )
+                            # Змінюємо статус працівника для жовтого світіння на карті
+                            if employee.safety_status == 'OK':
+                                employee.safety_status = 'WARNING'
+                                employee.save()
+            elif battery > 10:
+                if active_bat_alert:
+                    active_bat_alert.status = 'RESOLVED'
+                    active_bat_alert.is_resolved = True
+                    active_bat_alert.resolved_at = timezone.now()
+                    active_bat_alert.rescue_notes = "Автоматично: Заряд відновлено (>10%)."
+                    active_bat_alert.save()
 
             # 4. ЛОГІКА СТВОРЕННЯ ТРИВОГ (SecurityAlert)
             alert_reason = None

@@ -40,6 +40,11 @@ class LoginApp {
                 this.showNotification('Невірний логін або пароль', 'error');
             }
 
+            // Фікс: додаємо відступ справа, щоб довгий пароль не ховався за іконку ока
+            if (this.elements.passwordInput && this.elements.passwordToggle) {
+                this.elements.passwordInput.style.paddingRight = '45px';
+            }
+
             console.log('✅ Скрипт логіну ініціалізовано');
         } catch (error) {
             console.error('❌ Помилка ініціалізації:', error);
