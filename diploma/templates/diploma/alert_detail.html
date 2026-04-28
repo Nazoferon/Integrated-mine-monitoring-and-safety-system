@@ -128,8 +128,8 @@
       </div>
 
       <div class="data-row">
-        <span class="data-label">Рівень CO (Газ):</span>
-        <span class="data-value {% if telemetry.gas_level > 250 %}text-danger{% else %}text-success{% endif %}"
+        <span class="data-label">Рівень CH4/CO (Газ):</span>
+        <span class="data-value {% if telemetry.gas_level >= 50 %}text-danger{% elif telemetry.gas_level > 17 %}text-warning{% else %}text-success{% endif %}"
           data-type="gas">
           {% if telemetry %}{{ telemetry.gas_level }} LEL{% else %}0 LEL{% endif %}
         </span>

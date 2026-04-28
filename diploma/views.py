@@ -299,7 +299,7 @@ def dashboard_stats_api(request):
 
     employees_with_latest_log = Employee.objects.filter(id__in=online_emp_ids).annotate(
         latest_log_id=Subquery(latest_log_ids_subquery)
-    ).values('id', 'device_id', 'latest_log_id')
+    ).values('id', 'latest_log_id')
 
     # 3. Витягуємо ці останні логи одним запитом
     latest_log_ids = [e['latest_log_id'] for e in employees_with_latest_log if e['latest_log_id']]

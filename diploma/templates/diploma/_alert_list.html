@@ -2,15 +2,25 @@
 <a href="{% url 'alert_detail' alert.id %}" class="alert-link-wrapper">
   <div class="alert-item {% if alert.status == 'NEW' %}critical{% elif alert.status == 'IN_PROGRESS' %}in-progress{% endif %}">
     <div class="alert-icon">
-      {% if alert.reason == 'SOS' %}<i class="fas fa-skull-crossbones"></i>
-      {% elif alert.reason == 'MAN_DOWN' %}<i class="fas fa-user-injured"></i>
-      {% elif 'CO' in alert.reason %}<i class="fas fa-wind"></i>
+      {% if 'SOS' in alert.reason %}<i class="fas fa-exclamation-triangle"></i>
+      {% elif 'Бездіяльність' in alert.reason %}<i class="fas fa-user-injured"></i>
+      {% elif 'CH4' in alert.reason or 'CO' in alert.reason %}<i class="fas fa-wind"></i>
+      {% elif 'живлення' in alert.reason|lower or 'заряд' in alert.reason|lower %}<i class="fas fa-battery-quarter"></i>
+      {% elif 'інфраструктури' in alert.reason|lower or "зв'язку" in alert.reason|lower %}<i class="fas fa-wifi"></i>
       {% else %}<i class="fas fa-exclamation-circle"></i>{% endif %}
     </div>
     <div class="alert-content">
-      <h4>{{ alert.get_reason_display|default:alert.reason }}</h4>
+      <h4>{{ alert.reason }}</h4>
       <div class="alert-details">
-        <span><i class="fas fa-user"></i> {{ alert.employee.last_name }} {{ alert.employee.first_name.0 }}.</span>
+        <span><i class="fas fa-user"></i> 
+          {% if alert.employee %}
+            {{ alert.employee.last_name }} {{ alert.employee.first_name.0 }}.
+          {% elif 'інфраструктури' in alert.reason|lower %}
+            Системна аварія
+          {% else %}
+            Датчик ({{ alert.device.inventory_number }})
+          {% endif %}
+        </span>
         <span><i class="fas fa-map-marker-alt"></i> {% if alert.connected_repeater %}{{ alert.connected_repeater.uid }} ({{ alert.connected_repeater.location_in_mine }}){% else %}{{ alert.location_label|default:"Невідомо" }}{% endif %}</span>
       </div>
       <span class="alert-time">{{ alert.created_at|timesince }} тому</span>
