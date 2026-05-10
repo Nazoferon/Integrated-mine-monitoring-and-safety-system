@@ -17,7 +17,6 @@
 }
 
 .card-title-lg { font-size: 16px; }
-.export-options-title { font-size: 11px; text-transform: uppercase; font-weight: bold; }
 .print-header-border { border-color: #000 !important; }
 .print-header-logo { color: #2563eb; }
 
@@ -31,6 +30,19 @@
 .custom-input:focus { 
     border-color: #4dabf7 !important; 
     box-shadow: 0 0 10px rgba(77, 171, 247, 0.2) !important; 
+}
+
+/* Підсумкові картки (Summary Cards) */
+.summary-icon-wrapper {
+    width: 38px;
+    height: 38px;
+}
+.summary-card-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+}
+.summary-card-value {
+    line-height: 1.1;
 }
 
 .chart-container { 
@@ -47,29 +59,6 @@
 
 .btn-generate { background-color: #4dabf7; color: #111; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; transition: 0.2s; width: 100%; height: 100%;}
 .btn-generate:hover { background-color: #3bc9db; }
-
-/* Стилі для чекбоксів вибору колонок */
-.custom-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 4px 10px;
-    border-radius: 15px;
-    border: 1px solid #444;
-    transition: 0.2s;
-    font-size: 12px;
-    color: #bbb;
-}
-.custom-checkbox:hover { background: rgba(255, 255, 255, 0.1); }
-.custom-checkbox input {
-    accent-color: #4dabf7;
-}
-.custom-checkbox input:checked + span {
-    color: #fff;
-    font-weight: 600;
-}
 
 /* Стилі для коментарів диспетчера (Times New Roman 14) */
 .dispatcher-notes {
@@ -129,13 +118,6 @@
     .report-card .row > div {
         margin-bottom: 15px;
     }
-    .export-options {
-        width: 100%;
-    }
-    #columnSelector {
-        flex-direction: column;
-        align-items: stretch;
-    }
 }
 
 /* --- СТИЛІ ДЛЯ ДРУКУ ТА PDF --- */
@@ -152,7 +134,7 @@
     .dashboard-main, .dashboard-main * { visibility: visible; }
     
     /* Приховуємо кнопки та панелі керування */
-    header, #sidebar, .eq-header, .export-options, .btn-generate, .custom-input, .filter-label {
+    header, #sidebar, .eq-header, .btn-generate, .custom-input, .filter-label {
         display: none !important;
     }
     

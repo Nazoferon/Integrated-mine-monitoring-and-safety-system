@@ -193,11 +193,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 doughnutChart.update();
             }
             
+            // --- РЕНДЕРИМО КАРТКИ З ПІДСУМКАМИ (SUMMARY CARDS) ---
+            const summaryContainer = document.getElementById('summaryCardsContainer');
+            if (summaryContainer) {
+                if (data.summary_cards && data.summary_cards.length > 0) {
+                    summaryContainer.innerHTML = data.summary_cards.map(card => `
+                        <div class="col-12 col-md-4 mb-3 mb-md-0">
+                            <div class="report-card h-100 d-flex align-items-center p-2 px-3 border-start border-3 border-${card.color}">
+                                <div class="rounded-circle bg-${card.color} bg-opacity-10 me-2 d-flex justify-content-center align-items-center summary-icon-wrapper">
+                                    <i class="fas ${card.icon} text-${card.color}"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-uppercase fw-bold summary-card-title">${card.title}</div>
+                                    <div class="text-white fw-bold fs-5 summary-card-value">${card.value}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    summaryContainer.innerHTML = '';
+                }
+            }
+
             const tbody = document.getElementById('reportTableBody');
             if (tbody) {
                 tbody.innerHTML = '';
                 if (!data.table_rows || data.table_rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">За обраний період даних не знайдено</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5">
+                    <i class="fas fa-folder-open fa-2x mb-3 opacity-50"></i><br>
+                    За обраний період даних не знайдено
+                </td></tr>`;
                 } else {
                     data.table_rows.forEach(row => {
                         const tr = document.createElement('tr');
@@ -320,78 +345,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Допоміжна функція для отримання вибраних колонок таблиці ---
-    function getExportData() {
-        const colCheckboxes = document.querySelectorAll('.col-toggle');
-        const selectedIndices = Array.from(colCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => parseInt(cb.value));
-            
-        if (selectedIndices.length === 0) {
-            alert('Будь ласка, оберіть хоча б одну колонку для експорту.');
-            return null;
-        }
-
-        const headers = Array.from(document.querySelectorAll('.tech-table thead th'))
-            .filter((_, index) => selectedIndices.includes(index))
-            .map(th => th.innerText.trim());
-
-        const rows = [];
-        document.querySelectorAll('.tech-table tbody tr').forEach(row => {
-            const cells = Array.from(row.querySelectorAll('td'));
-            // Пропускаємо рядок "Даних не знайдено" (який має colspan)
-            if (cells.length === 1 && cells[0].hasAttribute('colspan')) return; 
-            
-            const rowData = selectedIndices.map(index => {
-                const cell = cells[index];
-                // The fix is here: check if `cell` exists before accessing `innerText`.
-                // If it doesn't exist, return an empty string.
-                return cell ? cell.innerText.trim().replace(/\n/g, ' ') : '';
-            });
-            rows.push(rowData);
-        });
-
-        return { headers, rows };
-    }
-
     // --- 4. Експорт у CSV (Дані для Excel) ---
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     if (exportCsvBtn) {
         exportCsvBtn.addEventListener('click', function() {
-            const data = getExportData();
-            if (!data) return;
-
-            let csvContent = "\uFEFF"; // BOM для підтримки кирилиці в Excel
-            
             const reportSelect = document.getElementById('reportType');
-            const reportType = reportSelect.options[reportSelect.selectedIndex].text;
+            const reportValue = reportSelect.value;
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             
-            csvContent += `Звіт: ${reportType}\n`;
-            csvContent += `Період: ${startDate} — ${endDate}\n`;
-            csvContent += `Створено: ${new Date().toLocaleString('uk-UA')}\n\n`;
-
-            // Заголовки таблиці
-            csvContent += data.headers.map(h => `"${h}"`).join(";") + "\n";
-
-            // Рядки таблиці
-            data.rows.forEach(row => {
-                csvContent += row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(";") + "\n";
-            });
-
-            // Завантаження файлу
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            const exportUrl = `/diploma/api/reports-data/?type=${reportValue}&start_date=${startDate}&end_date=${endDate}&export=csv`;
+            
             const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Glybina4.0_Data_${new Date().toISOString().slice(0,10)}.csv`);
+            link.href = exportUrl;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
             if (window.dashboardApp && typeof window.dashboardApp.showNotification === 'function') {
-                window.dashboardApp.showNotification('CSV файл з даними завантажено!', 'success');
+                window.dashboardApp.showNotification('Формування повного файлу CSV розпочато...', 'info');
             }
         });
     }
@@ -401,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Заповнюємо дані для шапки друку
         const reportSelect = document.getElementById('reportType');
         const reportType = reportSelect ? reportSelect.options[reportSelect.selectedIndex].text : 'Звіт';
+        const reportValue = reportSelect ? reportSelect.value : 'report';
         const startDate = document.getElementById('startDate') ? document.getElementById('startDate').value : '';
         const endDate = document.getElementById('endDate') ? document.getElementById('endDate').value : '';
         
@@ -409,8 +382,15 @@ document.addEventListener('DOMContentLoaded', function() {
             printTitle.innerHTML = `<strong>${reportType}</strong><br><small class="text-muted">Період аналізу: з ${startDate} по ${endDate}</small>`;
         }
 
+        // Тимчасово змінюємо назву документа, щоб браузер зберіг PDF з гарним ім'ям
+        const originalTitle = document.title;
+        document.title = `Glybina4.0_Summary_${reportValue}_${startDate}_to_${endDate}`;
+
         // Викликаємо нативний діалог друку/збереження PDF браузера
         window.print();
+        
+        // Повертаємо оригінальну назву сайту
+        setTimeout(() => { document.title = originalTitle; }, 1000);
     };
 
     const exportPdfBtn = document.getElementById('exportPdfBtn');

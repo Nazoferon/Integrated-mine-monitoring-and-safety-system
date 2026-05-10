@@ -30,12 +30,12 @@
         <h2><i class="fas fa-chart-line text-info"></i> Аналітика та Звіти</h2>
         <span>Генерація вибірок, статистика інцидентів та телеметрії</span>
     </div>
-    <div class="d-flex gap-2">
-        <button class="btn-export" id="exportCsvBtn" title="Завантажити таблицю з даними">
-            <i class="fas fa-file-csv"></i> Дані (CSV)
-        </button>
+    <div class="d-flex gap-2 flex-wrap">
         <button class="btn-export-pdf" id="exportPdfBtn" title="Сформувати офіційний документ">
-            <i class="fas fa-file-pdf"></i> PDF
+            <i class="fas fa-file-pdf"></i> Зведення (PDF)
+        </button>
+        <button class="btn-export" id="exportCsvBtn" title="Завантажити всі сирі дані">
+            <i class="fas fa-file-csv"></i> Повні дані (CSV)
         </button>
     </div>
 </div>
@@ -45,10 +45,10 @@
         <div class="col-12 col-md-3 mb-3 mb-md-0">
             <label class="filter-label">Тип звіту</label>
             <select class="form-select custom-input" id="reportType">
-                <option value="incidents">Журнал інцидентів (SOS)</option>
-                <option value="telemetry">Телеметрія газу (CO, CH4)</option>
-                <option value="equipment">Стан обладнання (Батарея/Мережа)</option>
-                <option value="personnel">Робочий час персоналу</option>
+                <option value="incidents">Журнал інцидентів та аварій</option>
+                <option value="telemetry">Аерогазовий контроль (АГК) та клімат</option>
+                <option value="equipment">Діагностика обладнання та зв'язку</option>
+                <option value="personnel">Облік перебування персоналу</option>
             </select>
         </div>
         <div class="col-12 col-md-3 mb-3 mb-md-0">
@@ -66,6 +66,9 @@
         </div>
     </div>
 </div>
+
+<!-- Контейнер для карток підсумкової аналітики -->
+<div class="row mb-4" id="summaryCardsContainer"></div>
 
 <div class="row" id="chartsRow">
     <div class="col-12 col-md-8 mb-4 mb-md-0">
@@ -89,22 +92,6 @@
 <div class="report-card">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h5 class="text-white m-0 card-title-lg">Детальні дані</h5>
-
-        <div class="export-options">
-            <span class="text-muted d-block mb-1 export-options-title">Колонки для експорту:</span>
-            <div class="d-flex flex-wrap gap-2" id="columnSelector">
-                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="0"
-                        checked><span>Час</span></label>
-                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="1"
-                        checked><span>Подія</span></label>
-                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="2"
-                        checked><span>Локація</span></label>
-                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="3"
-                        checked><span>Працівник</span></label>
-                <label class="custom-checkbox"><input type="checkbox" class="col-toggle" value="4"
-                        checked><span>Статус</span></label>
-            </div>
-        </div>
     </div>
 
     <div class="table-responsive">
@@ -145,6 +132,10 @@
                 <p class="mb-1"><strong>Дата формування:</strong> <span id="printDateGenerated"></span></p>
             </div>
         </div>
+            <div class="mt-4 pt-3 border-top" style="font-size: 12px; color: #555;">
+                <strong>* Офіційна примітка:</strong> Даний документ містить коротке аналітичне зведення та ключові події (Топ-15) за обраний період.<br>
+                Для проведення детального аудиту чи аналізу повного масиву даних, будь ласка, використовуйте цифровий файл експорту (CSV).
+            </div>
     </div>
 </div>
 
@@ -152,30 +143,36 @@
 <!-- Секція Архівів Даних -->
 <div class="report-card mt-4 archive-section d-print-none">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="text-white m-0 card-title-lg"><i class="fas fa-archive text-warning me-2"></i> Архіви телеметрії (Холодне сховище)</h5>
+        <h5 class="text-white m-0 card-title-lg"><i class="fas fa-server text-warning me-2"></i> Комплексні Архіви Системи (DLM)</h5>
     </div>
     
-        {% if archives %}
+        {% if combined_archives %}
         <div class="table-responsive">
             <table class="tech-table">
                 <thead>
                     <tr>
-                        <th>Назва файлу</th>
-                        <th>Створено</th>
-                        <th>Розмір</th>
-                        <th class="text-end">Дія</th>
+                        <th>Дата архівації</th>
+                        <th>Офіційний звіт (PDF)</th>
+                        <th>База даних (CSV.gz)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for arc in archives %}
+                    {% for arc in combined_archives %}
                     <tr>
-                        <td><i class="fas fa-file-archive text-muted me-2"></i>{{ arc.name }}</td>
-                        <td>{{ arc.date }}</td>
-                        <td><span class="badge bg-secondary">{{ arc.size_mb }} MB</span></td>
-                        <td class="text-end">
-                            <a href="{% url 'download_archive' arc.name %}" class="btn-download-archive">
-                                <i class="fas fa-download"></i> Завантажити
+                        <td><strong>{{ arc.date_formatted }}</strong><br><small class="text-muted text-monospace">{{ arc.timestamp }}</small></td>
+                        <td>
+                            {% if arc.pdf %}
+                            <a href="{% url 'download_report' arc.pdf.name %}" class="btn-download-archive" style="color: #dc3545; border-color: rgba(220,53,69,0.3); background: rgba(220,53,69,0.1);">
+                                <i class="fas fa-file-pdf"></i> Завантажити ({{ arc.pdf.size_mb }} MB)
                             </a>
+                            {% else %}<span class="text-muted">Немає</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if arc.csv %}
+                            <a href="{% url 'download_archive' arc.csv.name %}" class="btn-download-archive" style="color: #198754; border-color: rgba(25,135,84,0.3); background: rgba(25,135,84,0.1);">
+                                <i class="fas fa-file-csv"></i> Завантажити ({{ arc.csv.size_mb }} MB)
+                            </a>
+                            {% else %}<span class="text-muted">Немає</span>{% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -185,49 +182,8 @@
         <p class="text-muted small mt-3"><i class="fas fa-info-circle"></i> Старі архіви видаляються автоматично через 6 місяців для економії місця.</p>
         {% else %}
         <div class="text-center py-5">
-            <i class="fas fa-box-open text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
-            <p class="text-muted mt-3">Архіви поки що відсутні. Вони з'являться автоматично через 30 днів після накопичення перших даних.</p>
-        </div>
-        {% endif %}
-</div>
-
-<div class="report-card mt-4 archive-section d-print-none">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="text-white m-0 card-title-lg"><i class="fas fa-file-pdf text-danger me-2"></i> Офіційні PDF-звіти архівації</h5>
-    </div>
-
-        {% if generated_reports %}
-        <div class="table-responsive">
-            <table class="tech-table">
-                <thead>
-                    <tr>
-                        <th>Назва файлу</th>
-                        <th>Створено</th>
-                        <th>Розмір</th>
-                        <th class="text-end">Дія</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rep in generated_reports %}
-                    <tr>
-                        <td><i class="fas fa-file-pdf text-danger me-2"></i>{{ rep.name }}</td>
-                        <td>{{ rep.date }}</td>
-                        <td><span class="badge bg-secondary">{{ rep.size_mb }} MB</span></td>
-                        <td class="text-end">
-                            <a href="{% url 'download_report' rep.name %}" class="btn-download-archive">
-                                <i class="fas fa-download"></i> Завантажити
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <p class="text-muted small mt-3"><i class="fas fa-info-circle"></i> Тут відображаються автоматично згенеровані офіційні PDF-звіти архівації.</p>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-file-circle-xmark text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
-            <p class="text-muted mt-3">PDF-звіти поки що відсутні. Вони з'являться після першого циклу архівації.</p>
+            <i class="fas fa-box-archive text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+            <p class="text-muted mt-3">Архіви відсутні. Вони генеруються автоматично вночі.</p>
         </div>
         {% endif %}
 </div>

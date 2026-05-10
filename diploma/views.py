@@ -10,7 +10,8 @@ from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.conf import settings
-import os, json
+from django.utils.html import escape
+import os, json, re, csv
 from django.utils import timezone
 from django.core.cache import cache
 from functools import wraps
@@ -190,46 +191,50 @@ def equipment_list(request):
 @login_required
 def reports_view(request):
     """Сторінка звітів та список доступних архівів/офіційних PDF-звітів."""
-    archives = []
-    generated_reports = []
+    combined_archives = {}
     
     # Лише суперкористувачі можуть бачити список архівів
     if request.user.is_superuser:
         archive_dir = os.path.join(settings.BASE_DIR, 'archives', 'telemetry')
         reports_dir = os.path.join(settings.BASE_DIR, 'archives', 'reports')
         
+        def extract_ts(filename):
+            match = re.search(r'(\d{8}_\d{6})', filename)
+            return match.group(1) if match else None
+
         if os.path.exists(archive_dir):
             for file in os.listdir(archive_dir):
                 if file.endswith('.csv.gz'):
+                    ts = extract_ts(file)
+                    if not ts:
+                        continue
+                    if ts not in combined_archives:
+                        combined_archives[ts] = {'timestamp': ts, 'csv': None, 'pdf': None, 'date_formatted': ''}
                     file_path = os.path.join(archive_dir, file)
                     size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path))
-                    archives.append({
-                        'name': file,
-                        'size_mb': round(size_mb, 2),
-                        'date': mtime.strftime('%Y-%m-%d %H:%M')
-                    })
-                    
-        # Сортуємо від найновіших до найстаріших
-        archives.sort(key=lambda x: x['name'], reverse=True)
+                    combined_archives[ts]['csv'] = {'name': file, 'size_mb': round(size_mb, 2)}
+                    combined_archives[ts]['date_formatted'] = mtime.strftime('%Y-%m-%d %H:%M')
 
         if os.path.exists(reports_dir):
             for file in os.listdir(reports_dir):
                 if file.endswith('.pdf'):
+                    ts = extract_ts(file)
+                    if not ts:
+                        continue
+                    if ts not in combined_archives:
+                        combined_archives[ts] = {'timestamp': ts, 'csv': None, 'pdf': None, 'date_formatted': ''}
                     file_path = os.path.join(reports_dir, file)
                     size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                    mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path))
-                    generated_reports.append({
-                        'name': file,
-                        'size_mb': round(size_mb, 2),
-                        'date': mtime.strftime('%Y-%m-%d %H:%M')
-                    })
+                    if not combined_archives[ts]['date_formatted']:
+                        mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path))
+                        combined_archives[ts]['date_formatted'] = mtime.strftime('%Y-%m-%d %H:%M')
+                    combined_archives[ts]['pdf'] = {'name': file, 'size_mb': round(size_mb, 2)}
 
-        generated_reports.sort(key=lambda x: x['name'], reverse=True)
+    archives_list = sorted(list(combined_archives.values()), key=lambda x: x['timestamp'], reverse=True)
 
     return render(request, 'diploma/reports.html', {
-        'archives': archives,
-        'generated_reports': generated_reports
+        'combined_archives': archives_list
     })
 
 @login_required
@@ -743,15 +748,102 @@ def reports_data_api(request):
     report_type = request.GET.get('type', 'incidents')
     start_date = parse_date(request.GET.get('start_date', ''))
     end_date = parse_date(request.GET.get('end_date', ''))
+    export_csv = request.GET.get('export') == 'csv'
     
     if not start_date or not end_date:
         return JsonResponse({'error': 'Не вказані дати'}, status=400)
+
+    if export_csv:
+        response = HttpResponse(content_type='text/csv')
+        response.write('\ufeff'.encode('utf8')) # BOM для підтримки кирилиці в Excel
+        safe_filename = f"Glybina4.0_FullData_{report_type}_{start_date}_to_{end_date}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
+        
+        writer = csv.writer(response, delimiter=';')
+        
+        # Допоміжні функції для чистого експорту в аналітичні системи
+        def clean_text(text):
+            if not text: return ""
+            # Видаляємо емодзі та залишаємо лише букви, цифри і базову пунктуацію
+            return re.sub(r'[^\w\s\.,!?\-\(\)\[\]:;/%]', '', str(text)).strip()
+            
+        def format_num(val):
+            # Перетворюємо крапку на кому для правильного читання дробів в Excel
+            return str(val).replace('.', ',') if val is not None else ""
+
+        if report_type == 'incidents':
+            writer.writerow(['ID', 'Дата та Час', 'Причина', 'Локація', 'Працівник', 'Пристрій', 'Статус', 'Нотатки диспетчера'])
+            alerts_qs = SecurityAlert.objects.filter(created_at__date__gte=start_date, created_at__date__lte=end_date).select_related('employee', 'device', 'connected_repeater', 'resolved_by').order_by('-created_at')
+            for alert in alerts_qs.iterator(chunk_size=1000):
+                loc = alert.connected_repeater.uid if alert.connected_repeater else (alert.location_label or 'Невідомо')
+                emp = f"{alert.employee.last_name} {alert.employee.first_name[0]}." if alert.employee else '---'
+                dev = alert.device.inventory_number if alert.device else '---'
+                writer.writerow([
+                    alert.id,
+                    alert.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    clean_text(alert.reason),
+                    clean_text(loc),
+                    clean_text(emp),
+                    clean_text(dev),
+                    alert.get_status_display(),
+                    clean_text(alert.rescue_notes)
+                ])
+                
+        elif report_type == 'telemetry':
+            writer.writerow(['ID', 'Дата та Час', 'CH4 (%)', 'Температура (°C)', 'Вологість (%)', 'Локація', 'Працівник', 'Пристрій', 'Сигнал (dBm)'])
+            logs_qs = TelemetryLog.objects.filter(timestamp__date__gte=start_date, timestamp__date__lte=end_date).select_related('device__assigned_to', 'connected_repeater').order_by('-timestamp')
+            for log in logs_qs.iterator(chunk_size=2000):
+                loc = log.connected_repeater.uid if log.connected_repeater else 'Невідомо'
+                emp = f"{log.device.assigned_to.last_name} {log.device.assigned_to.first_name[0]}." if log.device.assigned_to else "---"
+                dev = log.device.inventory_number
+                writer.writerow([
+                    log.id,
+                    log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    format_num(log.gas_level),
+                    format_num(log.temperature),
+                    format_num(log.humidity),
+                    clean_text(loc),
+                    clean_text(emp),
+                    clean_text(dev),
+                    log.wifi_signal_strength
+                ])
+                
+        elif report_type == 'equipment':
+            writer.writerow(['ID', 'Дата та Час', 'Батарея (%)', 'Сигнал (dBm)', 'Локація', 'Пристрій', 'MAC-адреса', 'Тип'])
+            logs_qs = TelemetryLog.objects.filter(timestamp__date__gte=start_date, timestamp__date__lte=end_date).select_related('device', 'connected_repeater').order_by('-timestamp')
+            for log in logs_qs.iterator(chunk_size=2000):
+                loc = log.connected_repeater.uid if log.connected_repeater else "Зв'язок втрачено"
+                d_type = 'Стаціонарний' if log.device.is_static else 'Мобільний'
+                writer.writerow([
+                    log.id,
+                    log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    log.battery_level,
+                    log.wifi_signal_strength,
+                    clean_text(loc),
+                    clean_text(log.device.inventory_number),
+                    clean_text(log.device.mac_address),
+                    d_type
+                ])
+                
+        elif report_type == 'personnel':
+            writer.writerow(['Дата оновлення', 'Працівник', 'Жетон', 'Посада', 'Поточний статус'])
+            emp_qs = Employee.objects.all().order_by('-last_update')
+            for emp in emp_qs.iterator(chunk_size=500):
+                writer.writerow([
+                    emp.last_update.strftime('%Y-%m-%d %H:%M:%S'),
+                    f"{emp.last_name} {emp.first_name} {emp.patronymic}".strip(),
+                    emp.badge_number,
+                    emp.get_position_display(),
+                    emp.get_safety_status_display()
+                ])
+                
+        return response
 
     try:
         page = int(request.GET.get('page', 1))
     except ValueError:
         page = 1
-    per_page = 50
+    per_page = 15  # Зменшено з 50 до 15, щоб експорт у PDF/CSV був лаконічним і вміщався на 1 аркуш
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
 
@@ -799,7 +891,7 @@ def reports_data_api(request):
             notes_html = ""
             if alert.rescue_notes or alert.resolved_by:
                 dispatcher_name = alert.resolved_by.get_full_name() or alert.resolved_by.username if alert.resolved_by else ""
-                notes_text = f"Заходи: {alert.rescue_notes}" if alert.rescue_notes else ""
+                notes_text = f"Заходи: {escape(alert.rescue_notes)}" if alert.rescue_notes else ""
                 resolver_text = f"Диспетчер: {dispatcher_name}" if dispatcher_name else ""
                 combined_notes = " | ".join(filter(None, [resolver_text, notes_text]))
                 if combined_notes:
@@ -814,7 +906,14 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
             })
             
+        summary_cards = [
+            {'title': 'Всього тривог', 'value': total_records, 'icon': 'fa-exclamation-triangle', 'color': 'warning'},
+            {'title': 'Критичні (SOS)', 'value': sos_count, 'icon': 'fa-ambulance', 'color': 'danger'},
+            {'title': 'Успішно вирішено', 'value': alerts.filter(status='RESOLVED').count(), 'icon': 'fa-check-circle', 'color': 'success'},
+        ]
+
         return JsonResponse({
+            'summary_cards': summary_cards,
             'chart_main': {'labels': main_labels, 'values': main_values},
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
             'table_rows': table_rows,
@@ -870,7 +969,15 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{s_text}</span>'
             })
             
+        stats = logs.aggregate(max_gas=Max('gas_level'), avg_temp=Avg('temperature'))
+        summary_cards = [
+            {'title': 'Всього вимірювань', 'value': total_records, 'icon': 'fa-database', 'color': 'info'},
+            {'title': 'Піковий CH4', 'value': f"{stats['max_gas'] or 0}%", 'icon': 'fa-fire', 'color': 'danger' if (stats['max_gas'] or 0) > 17 else 'success'},
+            {'title': 'Сер. Температура', 'value': f"{round(stats['avg_temp'] or 0, 1)}°C", 'icon': 'fa-thermometer-half', 'color': 'warning'},
+        ]
+
         return JsonResponse({
+            'summary_cards': summary_cards,
             'chart_main': {'labels': main_labels, 'values': main_values},
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors},
             'table_rows': table_rows,
@@ -914,7 +1021,15 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{log.battery_level}%</span>'
             })
             
+        low_bat_devices_count = logs.filter(battery_level__lt=20).values('device').distinct().count()
+        summary_cards = [
+            {'title': 'Пристроїв у шахті', 'value': MinerDevice.objects.filter(is_active=True).count(), 'icon': 'fa-headset', 'color': 'success'},
+            {'title': 'Критичний АКБ', 'value': low_bat_devices_count, 'icon': 'fa-battery-empty', 'color': 'danger'},
+            {'title': 'Репітери онлайн', 'value': InfrastructureDevice.objects.filter(is_active=True).count(), 'icon': 'fa-wifi', 'color': 'info'},
+        ]
+
         return JsonResponse({
+            'summary_cards': summary_cards,
             'chart_main': {'labels': main_labels, 'values': main_values}, 
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 
             'table_rows': table_rows,
@@ -956,7 +1071,14 @@ def reports_data_api(request):
                 'status_html': f'<span class="badge {s_badge}">{emp.get_safety_status_display()}</span>'
             })
             
+        summary_cards = [
+            {'title': 'Зареєстровано осіб', 'value': Employee.objects.count(), 'icon': 'fa-users', 'color': 'info'},
+            {'title': 'Зараз на зміні', 'value': Employee.objects.exclude(safety_status='OFF_SHIFT').count(), 'icon': 'fa-hard-hat', 'color': 'success'},
+            {'title': 'У небезпеці', 'value': Employee.objects.filter(safety_status__in=['SOS', 'WARNING']).count(), 'icon': 'fa-user-injured', 'color': 'danger'},
+        ]
+
         return JsonResponse({
+            'summary_cards': summary_cards,
             'chart_main': {'labels': main_labels, 'values': main_values}, 
             'chart_doughnut': {'labels': doughnut_labels, 'values': doughnut_values, 'colors': doughnut_colors}, 
             'table_rows': table_rows,

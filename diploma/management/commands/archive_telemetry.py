@@ -59,7 +59,19 @@ class Command(BaseCommand):
             avg_temp=Avg('temperature'),
             avg_hum=Avg('humidity')
         )
-        alerts_count = SecurityAlert.objects.filter(created_at__lt=cutoff_date).count()
+        
+        # АГРЕГАЦІЯ 1: Знаходимо Топ-3 пристрої з найвищими показниками газу
+        top_gas_devices = logs_to_archive.values('device__inventory_number') \
+            .annotate(max_gas=Max('gas_level')) \
+            .filter(max_gas__gt=0) \
+            .order_by('-max_gas')[:3]
+
+        # АГРЕГАЦІЯ 2: Аналіз причин тривог
+        alerts_to_archive = SecurityAlert.objects.filter(created_at__lt=cutoff_date)
+        alerts_count = alerts_to_archive.count()
+        alerts_breakdown = alerts_to_archive.values('reason') \
+            .annotate(count=Count('id')) \
+            .order_by('-count')[:5]
 
         # 3. Експорт у стиснутий CSV.gz (оптимізація пам'яті через chunks)
         with gzip.open(csv_filepath, 'wt', encoding='utf-8', newline='') as gz_file:
@@ -82,7 +94,7 @@ class Command(BaseCommand):
 
         # 4. Генерація офіційного PDF-звіту
         if REPORTLAB_INSTALLED:
-            self.generate_pdf(pdf_filepath, stats, count, alerts_count, cutoff_date, timestamp_str)
+            self.generate_pdf(pdf_filepath, stats, count, alerts_count, alerts_breakdown, top_gas_devices, cutoff_date)
         else:
             self.stdout.write(self.style.ERROR("Бібліотека reportlab не встановлена. PDF не згенеровано."))
 
@@ -98,7 +110,7 @@ class Command(BaseCommand):
         self.cleanup_old_files(archive_dir, keep_files_days)
         self.cleanup_old_files(reports_dir, keep_files_days)
 
-    def generate_pdf(self, filepath, stats, logs_count, alerts_count, cutoff_date, timestamp_str):
+    def generate_pdf(self, filepath, stats, logs_count, alerts_count, alerts_breakdown, top_gas_devices, cutoff_date):
         # Завантажуємо кириличний шрифт (DejaVu), бо стандартні PDF-шрифти не розуміють українську
         font_path = os.path.join(settings.BASE_DIR, "DejaVuSans.ttf")
         if not os.path.exists(font_path):
@@ -130,14 +142,40 @@ class Command(BaseCommand):
         c.drawString(70, height - 240, f"• Середня температура у штреках: {round(stats['avg_temp'] or 0, 1)} °C")
         c.drawString(70, height - 260, f"• Середня вологість повітря: {round(stats['avg_hum'] or 0, 1)} %")
         
+        y_pos = height - 290
+        c.drawString(50, y_pos, "Топ-3 пристрої з найбільшими викидами метану (CH4):")
+        y_pos -= 25
+        if top_gas_devices:
+            for dev in top_gas_devices:
+                c.drawString(70, y_pos, f"• Датчик [{dev['device__inventory_number']}]: {dev['max_gas']}% LEL")
+                y_pos -= 20
+        else:
+            c.drawString(70, y_pos, "• Викидів метану не зафіксовано.")
+            y_pos -= 20
+
         # Блок інцидентів
+        y_pos -= 20
         c.setFont("DejaVu", 14)
-        c.drawString(50, height - 300, "2. Інциденти та безпека:")
+        c.drawString(50, y_pos, "2. Інциденти та безпека:")
+        y_pos -= 30
         c.setFont("DejaVu", 12)
-        c.drawString(70, height - 330, f"• Всього зафіксовано критичних інцидентів (тривог): {alerts_count}")
+        c.drawString(70, y_pos, f"• Всього зафіксовано інцидентів (тривог): {alerts_count}")
+        y_pos -= 25
+        if alerts_breakdown:
+            c.drawString(70, y_pos, "Розподіл за причинами:")
+            y_pos -= 20
+            for alert in alerts_breakdown:
+                c.drawString(90, y_pos, f"- {alert['reason'][:60]}: {alert['count']} випадків")
+                y_pos -= 20
         
+        # Офіційна примітка про наявність CSV
+        c.setFillColorRGB(0.4, 0.4, 0.4)
         c.setFont("DejaVu", 10)
-        c.drawString(50, 50, "Згенеровано автоматичною системою архівування (DLM).")
+        c.drawString(50, 80, "* Примітка: Цей документ є стислим аналітичним зведенням (Executive Summary).")
+        c.drawString(50, 65, f"Повний масив сирих даних ({logs_count} записів) надійно збережено в супровідному")
+        c.drawString(50, 50, "архіві формату .csv.gz для подальшого машинного аналізу.")
+        c.setFillColorRGB(0, 0, 0)
+        c.drawString(50, 30, "Згенеровано автоматичною системою (Data Lifecycle Management) Глибина 4.0.")
         c.save()
 
     def cleanup_old_files(self, directory, max_days):
