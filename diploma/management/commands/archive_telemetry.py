@@ -137,7 +137,7 @@ class Command(BaseCommand):
         c.drawString(70, height - 330, f"• Всього зафіксовано критичних інцидентів (тривог): {alerts_count}")
         
         c.setFont("DejaVu", 10)
-        c.drawString(50, 50, "Згенеровано автоматичною системою архівування (DLM). Документ сформовано без участі людини.")
+        c.drawString(50, 50, "Згенеровано автоматичною системою архівування (DLM).")
         c.save()
 
     def cleanup_old_files(self, directory, max_days):

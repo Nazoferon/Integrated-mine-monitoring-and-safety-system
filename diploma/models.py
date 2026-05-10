@@ -382,6 +382,10 @@ def check_new_device_login(sender, user, request, **kwargs):
     ip_address = request.META.get('HTTP_CF_CONNECTING_IP') or request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR')
     if ip_address and ',' in ip_address:
         ip_address = ip_address.split(',')[0].strip()
+
+    # Django test client / деякі проксі можуть не давати IP. Для цілісності БД підставляємо валідний fallback.
+    if not ip_address:
+        ip_address = '0.0.0.0'
     
     user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')[:255]
 

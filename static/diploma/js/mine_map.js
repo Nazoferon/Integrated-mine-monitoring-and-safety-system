@@ -8,6 +8,18 @@
     const popup = document.getElementById('map-popup');
     const mapArea = document.getElementById('map-area');
 
+    // При CSS zoom/масштабуванні (body.zoom-*) DOM координати можуть не співпасти з canvas.width/height.
+    // Тому мапимо clientX/clientY у координати canvas через співвідношення rect -> canvas.
+    function getCanvasPointFromClient(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width ? (canvas.width / rect.width) : 1;
+        const scaleY = rect.height ? (canvas.height / rect.height) : 1;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY,
+        };
+    }
+
     // Дані з Django-шаблону (передаються через json_script фільтр)
     const rawData = document.getElementById('mine-map-data');
     let mapData;
@@ -161,21 +173,22 @@
             } else {
                 selectObject(null, null);
                 isDragging = true;
-                startX = e.clientX - offsetX;
-                startY = e.clientY - offsetY;
+                const p = getCanvasPointFromClient(e.clientX, e.clientY);
+                startX = p.x - offsetX;
+                startY = p.y - offsetY;
                 canvas.style.cursor = 'grabbing';
             }
             draw();
         });
 
         canvas.addEventListener('mousemove', e => {
-            const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
+            const p = getCanvasPointFromClient(e.clientX, e.clientY);
+            const mx = p.x;
+            const my = p.y;
 
             if (isDragging) {
-                offsetX = e.clientX - startX;
-                offsetY = e.clientY - startY;
+                offsetX = mx - startX;
+                offsetY = my - startY;
                 updatePopupPosition();
                 draw();
             } else {
@@ -195,12 +208,12 @@
 
         canvas.addEventListener('touchstart', e => {
             e.preventDefault(); // Запобігаємо скролу сторінки
-            const rect = canvas.getBoundingClientRect();
             
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                const mx = touch.clientX - rect.left;
-                const my = touch.clientY - rect.top;
+                const p = getCanvasPointFromClient(touch.clientX, touch.clientY);
+                const mx = p.x;
+                const my = p.y;
 
                 checkHover(mx, my); // Перевіряємо, чи не тапнули на об'єкт
 
@@ -230,12 +243,12 @@
 
         canvas.addEventListener('touchmove', e => {
             e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
             
             if (e.touches.length === 1 && isDragging) {
                 const touch = e.touches[0];
-                const mx = touch.clientX - rect.left;
-                const my = touch.clientY - rect.top;
+                const p = getCanvasPointFromClient(touch.clientX, touch.clientY);
+                const mx = p.x;
+                const my = p.y;
                 offsetX = mx - startX;
                 offsetY = my - startY;
                 updatePopupPosition();
@@ -245,9 +258,12 @@
                 const t2 = e.touches[1];
                 const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
                 const zoomFactor = currentDistance / initialPinchDistance;
-                
-                const cx = (t1.clientX + t2.clientX) / 2 - rect.left;
-                const cy = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+                const centerClientX = (t1.clientX + t2.clientX) / 2;
+                const centerClientY = (t1.clientY + t2.clientY) / 2;
+                const center = getCanvasPointFromClient(centerClientX, centerClientY);
+                const cx = center.x;
+                const cy = center.y;
                 
                 const newScale = Math.max(0.1, Math.min(10.0, initialScale * zoomFactor));
                 const wx = (cx - offsetX) / scale;
@@ -272,9 +288,9 @@
             e.preventDefault();
             const zoomSpeed = 0.1;
             const delta = e.deltaY < 0 ? 1 : -1;
-            const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
+            const p = getCanvasPointFromClient(e.clientX, e.clientY);
+            const mx = p.x;
+            const my = p.y;
             zoomAtPoint(mx, my, delta * zoomSpeed);
         }, { passive: false });
 
@@ -362,8 +378,9 @@
     }
 
     function resizeCanvas() {
-        canvas.width = mapArea.clientWidth;
-        canvas.height = mapArea.clientHeight;
+        const rect = mapArea.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.round(rect.width));
+        canvas.height = Math.max(1, Math.round(rect.height));
         draw();
     }
 
@@ -867,8 +884,12 @@
         }
 
         // Базові координати (центр об'єкта)
-        let px = wx * scale + offsetX;
-        let py = wy * scale + offsetY;
+        const canvasRect = canvas.getBoundingClientRect();
+        const cssScaleX = canvas.width ? (canvasRect.width / canvas.width) : 1;
+        const cssScaleY = canvas.height ? (canvasRect.height / canvas.height) : 1;
+
+        let px = (wx * scale + offsetX) * cssScaleX;
+        let py = (wy * scale + offsetY) * cssScaleY;
 
         // Даємо браузеру координати, щоб він прорахував ширину/висоту віконця
         popup.style.left = px + 'px';
@@ -876,8 +897,9 @@
 
         // Вимірюємо розміри екрану та віконця
         const mapAreaEl = document.getElementById('map-area');
-        const mapWidth = mapAreaEl.clientWidth;
-        const mapHeight = mapAreaEl.clientHeight;
+        const mapRect = mapAreaEl.getBoundingClientRect();
+        const mapWidth = mapRect.width;
+        const mapHeight = mapRect.height;
         const pWidth = popup.offsetWidth;
         const pHeight = popup.offsetHeight;
         
