@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand
-from diploma.models import Employee, MinerDevice, InfrastructureDevice
 
 class Command(BaseCommand):
     help = 'Видаляє тестових працівників та пристрої після навантажувального тестування.'
 
     def handle(self, *args, **options):
+        from diploma.models import Employee, MinerDevice, InfrastructureDevice
+
         self.stdout.write("Починаємо видалення тестових даних...")
         
         # Видаляємо тестові репітери
