@@ -6,6 +6,7 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from unfold.decorators import display, action
 from .models import *
+from .models import SystemSettings
 
 # --- 1. Створюємо "вбудовану" форму для профілю ---
 # Вона буде відображатись прямо на сторінці редагування користувача
@@ -192,3 +193,24 @@ class OTALogAdmin(ModelAdmin):
     @display(description="Статус", label=True)
     def show_status(self, obj):
         return (obj.status, "success") if obj.status == "SUCCESS" else (obj.status, "danger")
+
+@admin.register(SystemSettings)
+class SystemSettingsAdmin(ModelAdmin):
+    list_display = ('__str__', 'archive_time', 'archive_older_than_days', 'keep_archives_count', 'last_archive_run')
+    readonly_fields = ('last_archive_run',)
+    
+    fieldsets = (
+        ('Налаштування планувальника', {'fields': ('archive_time',)}),
+        ('Параметри архівації', {'fields': ('archive_older_than_days', 'keep_archives_count')}),
+        ('Системна інформація', {'fields': ('last_archive_run',)}),
+    )
+
+    def has_add_permission(self, request):
+        # Забороняємо додавати нові налаштування, якщо запис вже існує (Singleton)
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        # Забороняємо видаляти конфігурацію
+        return False

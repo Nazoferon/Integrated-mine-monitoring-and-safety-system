@@ -7,7 +7,7 @@
 
 from datetime import timezone
 import os, math
-
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -48,6 +48,28 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
     bio = models.TextField(blank=True, max_length=500)
     def __str__(self): return f"Профіль: {self.user.username}"
+
+class SystemSettings(models.Model):
+    archive_time = models.TimeField(default=datetime.time(3, 20), verbose_name="Час щоденної архівації")
+    archive_older_than_days = models.IntegerField(default=30, verbose_name="Архівувати дані старші за (днів)")
+    keep_archives_count = models.IntegerField(default=180, verbose_name="Кількість архівів для зберігання")
+    last_archive_run = models.DateField(null=True, blank=True, verbose_name="Остання успішна архівація")
+
+    class Meta:
+        verbose_name = "Системні налаштування"
+        verbose_name_plural = "Системні налаштування"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # Забезпечує, що в БД буде лише 1 запис
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Налаштування архівації"
 
 # --- 1. КАРТОГРАФІЯ ---
 class MineMap(models.Model):

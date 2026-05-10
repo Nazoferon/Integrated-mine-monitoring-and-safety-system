@@ -16,6 +16,6 @@ mkdir -p "$LOG_DIR"
   }
 
   cd "$PROJECT_DIR"
-  "$PROJECT_DIR/venv/bin/python" manage.py archive_telemetry --days 30 --keep-files 180
+  "$PROJECT_DIR/venv/bin/python" manage.py smart_archive
   echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] archive job finished successfully"
 } 9>"$LOCK_FILE" >> "$LOG_FILE" 2>&1
