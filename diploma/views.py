@@ -189,12 +189,14 @@ def equipment_list(request):
 
 @login_required
 def reports_view(request):
-    """Сторінка звітів та список доступних архівів телеметрії."""
+    """Сторінка звітів та список доступних архівів/офіційних PDF-звітів."""
     archives = []
+    generated_reports = []
     
     # Лише суперкористувачі можуть бачити список архівів
     if request.user.is_superuser:
         archive_dir = os.path.join(settings.BASE_DIR, 'archives', 'telemetry')
+        reports_dir = os.path.join(settings.BASE_DIR, 'archives', 'reports')
         
         if os.path.exists(archive_dir):
             for file in os.listdir(archive_dir):
@@ -210,8 +212,25 @@ def reports_view(request):
                     
         # Сортуємо від найновіших до найстаріших
         archives.sort(key=lambda x: x['name'], reverse=True)
-    
-    return render(request, 'diploma/reports.html', {'archives': archives})
+
+        if os.path.exists(reports_dir):
+            for file in os.listdir(reports_dir):
+                if file.endswith('.pdf'):
+                    file_path = os.path.join(reports_dir, file)
+                    size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                    mtime = timezone.datetime.fromtimestamp(os.path.getmtime(file_path))
+                    generated_reports.append({
+                        'name': file,
+                        'size_mb': round(size_mb, 2),
+                        'date': mtime.strftime('%Y-%m-%d %H:%M')
+                    })
+
+        generated_reports.sort(key=lambda x: x['name'], reverse=True)
+
+    return render(request, 'diploma/reports.html', {
+        'archives': archives,
+        'generated_reports': generated_reports
+    })
 
 @login_required
 def download_archive(request, filename):
@@ -227,6 +246,24 @@ def download_archive(request, filename):
     if os.path.exists(file_path):
         with open(file_path, 'rb') as f:
             response = HttpResponse(f.read(), content_type='application/gzip')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+    raise Http404("Файл не знайдено")
+
+
+@login_required
+def download_report(request, filename):
+    """Функція для безпечного завантаження PDF-звіту архівації."""
+    if not request.user.is_superuser:
+        return HttpResponse("Доступ заборонено. Тільки для адміністраторів.", status=403)
+
+    if not filename.endswith('.pdf') or '/' in filename or '\\' in filename:
+        return HttpResponse("Недійсний файл", status=400)
+
+    file_path = os.path.join(settings.BASE_DIR, 'archives', 'reports', filename)
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
     raise Http404("Файл не знайдено")

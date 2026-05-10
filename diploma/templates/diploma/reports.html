@@ -190,6 +190,47 @@
         </div>
         {% endif %}
 </div>
+
+<div class="report-card mt-4 archive-section d-print-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-white m-0 card-title-lg"><i class="fas fa-file-pdf text-danger me-2"></i> Офіційні PDF-звіти архівації</h5>
+    </div>
+
+        {% if generated_reports %}
+        <div class="table-responsive">
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Назва файлу</th>
+                        <th>Створено</th>
+                        <th>Розмір</th>
+                        <th class="text-end">Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rep in generated_reports %}
+                    <tr>
+                        <td><i class="fas fa-file-pdf text-danger me-2"></i>{{ rep.name }}</td>
+                        <td>{{ rep.date }}</td>
+                        <td><span class="badge bg-secondary">{{ rep.size_mb }} MB</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'download_report' rep.name %}" class="btn-download-archive">
+                                <i class="fas fa-download"></i> Завантажити
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mt-3"><i class="fas fa-info-circle"></i> Тут відображаються автоматично згенеровані офіційні PDF-звіти архівації.</p>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file-circle-xmark text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+            <p class="text-muted mt-3">PDF-звіти поки що відсутні. Вони з'являться після першого циклу архівації.</p>
+        </div>
+        {% endif %}
+</div>
 {% endif %}
 
 {% endblock %}

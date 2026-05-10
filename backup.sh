@@ -8,11 +8,18 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 # Переходимо в директорію проєкту і активуємо віртуальне середовище
 cd "$PROJECT_DIR" || exit
 source "$PROJECT_DIR/venv/bin/activate"
+mkdir -p "$BACKUP_DIR"
+
+# Підтягуємо конфіг БД з .env, щоб не дублювати параметри у скрипті
+DB_NAME=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_NAME', 'django_project'))")
+DB_USER=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_USER', 'bunb'))")
+DB_HOST=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_HOST', 'localhost'))")
+DB_PASSWORD=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_PASSWORD', ''))")
 
 # 1. Дамп бази даних PostgreSQL (нативно)
 # Автоматично дістаємо пароль з файлу .env, щоб не вводити його вручну
-export PGPASSWORD=$(python -c "import os; from dotenv import load_dotenv; load_dotenv('.env'); print(os.getenv('DB_PASSWORD', ''))")
-pg_dump -U bunb -h localhost -w -F c django_project > "$BACKUP_DIR/db_backup_$TIMESTAMP.dump"
+export PGPASSWORD="$DB_PASSWORD"
+pg_dump -U "$DB_USER" -h "$DB_HOST" -w -F c "$DB_NAME" > "$BACKUP_DIR/db_backup_$TIMESTAMP.dump"
 
 # 2. Експорт даних Django у JSON
 python manage.py dumpdata > "$BACKUP_DIR/data_export_$TIMESTAMP.json"

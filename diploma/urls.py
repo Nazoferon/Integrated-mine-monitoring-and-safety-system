@@ -24,6 +24,7 @@ urlpatterns = [
     path('simulator/', views.simulator_view, name='simulator'),
     # Завантаження архівів звітів
     path('reports/download/<str:filename>/', views.download_archive, name='download_archive'),
+    path('reports/download-report/<str:filename>/', views.download_report, name='download_report'),
 
     
     # Карта та інструменти
