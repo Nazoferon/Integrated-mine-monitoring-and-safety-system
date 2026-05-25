@@ -233,3 +233,163 @@ footer { background: rgba(0, 0, 0, 0.5); padding: 2rem 0; text-align: center; bo
 .error-subtitle { font-size: 2rem; color: #e0e0e0; }
 .error-text { color: #9ca3af; margin-bottom: 1.5rem; font-size: 1.1rem; }
 .error-buttons { margin-top: 4rem; }
+
+/* Project Modal */
+.project-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.project-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 35, 0.8);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+}
+
+.modal-content-wrapper {
+    position: relative;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    z-index: 2001;
+    overflow-y: auto;
+    transform: translateY(30px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.project-modal.active .modal-content-wrapper {
+    transform: translateY(0) scale(1);
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.modal-close-btn:hover {
+    background: #ef4444;
+    color: white;
+    transform: rotate(90deg);
+}
+
+.modal-project-details {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Зміщуємо бейдж статусу вліво всередині модалки, щоб не перекривався з кнопкою закриття */
+.project-modal .status-badge {
+    left: 15px;
+    right: auto;
+}
+
+.modal-image-container {
+    width: 100%;
+    height: 350px;
+    position: relative;
+    background-color: #000;
+}
+
+.modal-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.modal-image-container .project-placeholder {
+    font-size: 6rem;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(138, 99, 210, 0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.modal-info {
+    padding: 2.5rem;
+}
+
+.modal-info h3 {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.modal-info .project-tech {
+    margin-bottom: 1.5rem;
+}
+
+.modal-info .project-description {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+.modal-info .project-links {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: flex-start;
+}
+
+.modal-info .project-links .project-link {
+    flex: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .modal-image-container {
+        height: 250px;
+    }
+    .modal-info {
+        padding: 1.5rem;
+    }
+    .modal-info h3 {
+        font-size: 1.5rem;
+    }
+    .modal-info .project-links {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}

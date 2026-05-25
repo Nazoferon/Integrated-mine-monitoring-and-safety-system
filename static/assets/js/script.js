@@ -275,4 +275,74 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // --- 10. Project Modal Functionality ---
+    const projectCardsModal = document.querySelectorAll('.project-card');
+    const modal = document.getElementById('projectModal');
+    
+    if (modal && projectCardsModal.length > 0) {
+        const modalBackdrop = modal.querySelector('.modal-backdrop');
+        const modalCloseBtn = modal.querySelector('.modal-close-btn');
+        const modalDetails = modal.querySelector('.modal-project-details');
+
+        const openModal = (card) => {
+            const title = card.querySelector('.project-header h4').textContent;
+            const techHtml = card.querySelector('.project-tech').innerHTML;
+            const fullDescElement = card.querySelector('.full-description');
+            const description = fullDescElement ? fullDescElement.innerHTML : card.querySelector('.project-description').innerHTML;
+            const linksHtml = card.querySelector('.project-links').innerHTML;
+            const imageContainerHtml = card.querySelector('.project-image-container').innerHTML;
+            
+            modalDetails.innerHTML = `
+                <div class="modal-image-container">
+                    ${imageContainerHtml}
+                </div>
+                <div class="modal-info">
+                    <h3>${title}</h3>
+                    <div class="project-tech">
+                        ${techHtml}
+                    </div>
+                    <div class="project-description">
+                        ${description}
+                    </div>
+                    <div class="project-links">
+                        ${linksHtml}
+                    </div>
+                </div>
+            `;
+            
+            // Визначаємо ширину скроллбара, щоб уникнути стрибка контенту при overflow: hidden
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.paddingRight = `${scrollbarWidth}px`;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeModal = () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+            document.body.style.paddingRight = '0px';
+        };
+
+        projectCardsModal.forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Ігноруємо кліки по прямих посиланнях (наприклад, кнопка GitHub)
+                if (e.target.closest('.project-link')) {
+                    return;
+                }
+                openModal(card);
+            });
+            // Вказуємо, що картка клікабельна
+            card.style.cursor = 'pointer';
+        });
+
+        modalBackdrop.addEventListener('click', closeModal);
+        modalCloseBtn.addEventListener('click', closeModal);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+    }
 });
