@@ -36,6 +36,11 @@ class TurnstileAuthenticationForm(AuthenticationForm):
         return super().clean()
 
 class TurnstilePasswordResetForm(PasswordResetForm):
+    def __init__(self, *args, **kwargs):
+        # Витягуємо request з аргументів, щоб він не потрапив у батьківський клас
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         # Для PasswordResetForm request доведеться прокинути через view
         if hasattr(self, 'request') and self.request and self.request.method == 'POST':

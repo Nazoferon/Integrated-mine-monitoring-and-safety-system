@@ -20,6 +20,9 @@ from django.conf import settings
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+import logging
+
+logger = logging.getLogger(__name__)
 
 # --- ДОПОМІЖНІ ФУНКЦІЇ ---
 def user_profile_photo_path(instance, filename):
@@ -423,8 +426,9 @@ def check_new_device_login(sender, user, request, **kwargs):
         })
         plain_message = strip_tags(html_message)
         try:
-            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message, fail_silently=True)
-        except Exception: pass
+            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message, fail_silently=False)
+        except Exception as e:
+            logger.error(f"Помилка відправки листа (новий пристрій) користувачу {user.email}: {e}")
 
 @receiver(post_save, sender=User)
 def post_save_user_receiver(sender, instance, created, **kwargs):
@@ -443,5 +447,6 @@ def post_save_user_receiver(sender, instance, created, **kwargs):
             })
             plain_message = strip_tags(html_message)
             try:
-                send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [instance.email], html_message=html_message, fail_silently=True)
-            except Exception: pass
+                send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [instance.email], html_message=html_message, fail_silently=False)
+            except Exception as e:
+                logger.error(f"Помилка відправки вітального листа користувачу {instance.email}: {e}")
