@@ -35,7 +35,10 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv(
     'ALLOWED_HOSTS',
     'localhost,127.0.0.1'
 ).split(',') if h.strip()]
-CSRF_TRUSTED_ORIGINS = ['https://bunb.pp.ua', 'https://www.bunb.pp.ua']
+CSRF_TRUSTED_ORIGINS = [h.strip() for h in os.getenv(
+    'CSRF_TRUSTED_ORIGINS', 
+    'http://localhost,http://127.0.0.1'
+).split(',') if h.strip()]
 
 
 # Application definition
@@ -146,7 +149,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 # Каталог, куди збирається статика командою collectstatic:
-STATIC_ROOT = '/var/www/django_project/static/'
+STATIC_ROOT = os.getenv('STATIC_ROOT', str(BASE_DIR / 'staticfiles'))
 # Опціонально: папка з вашими вихідними статичними файлами
 # STATICFILES_DIRS = [BASE_DIR / 'static_source'] 
 
@@ -171,9 +174,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'nazar.haniuk.dev@gmail.com'  # Ваш Gmail
+EMAIL_HOST_USER = os.getenv('EMAIL_USER', 'default@example.com')  # Ваш Gmail
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')  # Пароль додатка
-DEFAULT_FROM_EMAIL = 'Глибина 4.0 <nazar.haniuk.dev@gmail.com>' # Від кого надсилати листи за замовчуванням
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Глибина 4.0 <default@example.com>') # Від кого надсилати листи за замовчуванням
 
 
 # Вказуємо Django, що ми за Cloudflare/Nginx, який вже обробляє HTTPS
