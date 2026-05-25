@@ -1,9 +1,10 @@
 from django.contrib import admin
 from .models import Category, Project
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'order', 'icon_preview')
     list_editable = ('order',)  # Можна змінювати порядок прямо в списку
     prepopulated_fields = {'slug': ('name',)}
@@ -13,7 +14,7 @@ class CategoryAdmin(admin.ModelAdmin):
     icon_preview.short_description = "Іконка"
 
 @admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(ModelAdmin):
     list_display = ('title', 'category', 'is_completed', 'image_preview')
     list_filter = ('category', 'is_completed')
     search_fields = ('title', 'description', 'tech_stack')
