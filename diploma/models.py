@@ -21,6 +21,10 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import logging
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +48,22 @@ def dist_to_segment(px, py, x1, y1, x2, y2):
     t = max(0, min(1, t))
     return math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)))
 
+def compress_image(image_field, max_size=(800, 800), quality=82):
+    """Універсальна функція для стиснення зображень перед збереженням у БД"""
+    img = Image.open(image_field)
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+    
+    output = BytesIO()
+    img.save(output, format='JPEG', quality=quality)
+    output.seek(0)
+    
+    return InMemoryUploadedFile(
+        output, 'ImageField', f"{image_field.name.split('.')[0]}.jpg",
+        'image/jpeg', sys.getsizeof(output), None
+    )
+
 # --- АДМІН ---
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -51,6 +71,18 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
     bio = models.TextField(blank=True, max_length=500)
     def __str__(self): return f"Профіль: {self.user.username}"
+
+    def save(self, *args, **kwargs):
+        try:
+            this = UserProfile.objects.get(id=self.id)
+            image_changed = this.profile_photo != self.profile_photo
+        except UserProfile.DoesNotExist:
+            image_changed = True
+            
+        if self.profile_photo and image_changed:
+            self.profile_photo = compress_image(self.profile_photo)
+            
+        super().save(*args, **kwargs)
 
 class SystemSettings(models.Model):
     archive_time = models.TimeField(default=datetime.time(3, 20), verbose_name="Час щоденної архівації")
@@ -131,7 +163,7 @@ class InfrastructureDevice(models.Model):
 # Валідатор для перевірки розміру файлу ДО завантаження (щоб не вантажили 100МБ)
 def validate_image_size(image):
     file_size = image.size
-    limit_mb = 5
+    limit_mb = 50
     if file_size > limit_mb * 1024 * 1024:
         raise ValidationError(f"Максимальний розмір файлу {limit_mb} MB")
 
@@ -177,8 +209,8 @@ class Employee(models.Model):
         null=True, 
         blank=True, 
         verbose_name="Фото",
-        validators=[validate_image_size], # Перевірка на 5 МБ
-        help_text="Макс. розмір 5 МБ. Фото буде автоматично стиснуто."
+            validators=[validate_image_size], # Перевірка на 50 МБ
+            help_text="Макс. розмір 50 МБ. Фото буде автоматично стиснуто."
     )
 
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, default='GOV', verbose_name="Посада")
@@ -209,6 +241,16 @@ class Employee(models.Model):
             
             # Формуємо жетон: EXPLODER-GN-001
             self.badge_number = f"{self.position}-{lat_last}{lat_first}-{next_id:03d}"
+
+        # Стиснення фотографії працівника має відбуватися завжди (і при створенні, і при оновленні)
+        try:
+            this = Employee.objects.get(id=self.id)
+            image_changed = this.photo != self.photo
+        except Employee.DoesNotExist:
+            image_changed = True
+            
+        if self.photo and image_changed:
+            self.photo = compress_image(self.photo)
             
         super().save(*args, **kwargs)
 
@@ -387,6 +429,22 @@ def clear_device_cache_miner(sender, **kwargs):
 @receiver([post_save, post_delete], sender=InfrastructureDevice)
 def clear_device_cache_infra(sender, **kwargs):
     cache.delete('total_devices')
+
+# --- СИГНАЛИ ДЛЯ ВИДАЛЕННЯ ФАЙЛІВ ПРИ ВИДАЛЕННІ ЗАПИСУ ---
+@receiver(post_delete, sender=Employee)
+def auto_delete_employee_photo_on_delete(sender, instance, **kwargs):
+    if instance.photo and os.path.isfile(instance.photo.path):
+        os.remove(instance.photo.path)
+
+@receiver(post_delete, sender=UserProfile)
+def auto_delete_userprofile_photo_on_delete(sender, instance, **kwargs):
+    if instance.profile_photo and os.path.isfile(instance.profile_photo.path):
+        os.remove(instance.profile_photo.path)
+
+@receiver(post_delete, sender=FirmwareUpdate)
+def auto_delete_firmware_on_delete(sender, instance, **kwargs):
+    if instance.binary_file and os.path.isfile(instance.binary_file.path):
+        os.remove(instance.binary_file.path)
 
 # --- ЗАХИСТ ОБЛІКОВИХ ЗАПИСІВ (НОВІ ПРИСТРОЇ) ---
 class UserDevice(models.Model):
