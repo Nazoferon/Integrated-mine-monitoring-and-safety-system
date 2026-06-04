@@ -11,3 +11,6 @@ def home(request):
         'categories': categories,
         'projects': projects
     })
+
+def privacy_policy(request):
+    return render(request, 'portfolio/privacy.html')

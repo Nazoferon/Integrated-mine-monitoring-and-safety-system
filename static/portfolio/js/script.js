@@ -104,13 +104,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- 4. Smooth Scrolling & Header ---
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    document.querySelectorAll('a[href*="#"]').forEach(anchor => {
         anchor.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = anchor.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
+            const url = new URL(anchor.href, window.location.origin);
+            if (url.pathname !== window.location.pathname || !url.hash) return;
+            
+            const targetElement = document.querySelector(url.hash);
 
             if (targetElement) {
+                e.preventDefault();
                 const headerHeight = document.querySelector('header').offsetHeight;
                 const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - headerHeight;
 
@@ -344,5 +346,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal();
             }
         });
+    }
+
+    // --- 11. Typing Animation for Hero ---
+    const typingTextElement = document.querySelector('.typing-text');
+    if (typingTextElement) {
+        const roles = ['веб-додатки', 'мобільні апки', 'API сервіси', '3D моделі'];
+        let roleIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        
+        function typeEffect() {
+            const currentRole = roles[roleIndex];
+            
+            if (isDeleting) {
+                typingTextElement.textContent = currentRole.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                typingTextElement.textContent = currentRole.substring(0, charIndex + 1);
+                charIndex++;
+            }
+            
+            let typingSpeed = isDeleting ? 40 : 100;
+            
+            if (!isDeleting && charIndex === currentRole.length) {
+                typingSpeed = 2000; // Пауза коли слово надруковане
+                isDeleting = true;
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                roleIndex = (roleIndex + 1) % roles.length;
+                typingSpeed = 500; // Пауза перед друком нового слова
+            }
+            
+            setTimeout(typeEffect, typingSpeed);
+        }
+        
+        // Початок анімації з невеликою затримкою
+        setTimeout(typeEffect, 1000);
     }
 });

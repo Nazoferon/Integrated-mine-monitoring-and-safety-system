@@ -7,15 +7,26 @@
 
     <!-- Hero Section -->
     <section class="hero">
+        <div class="hero-bg-elements">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
         <div class="container">
             <div class="hero-content">
+                <span class="welcome-badge">👋 Привіт, я</span>
                 <h1>BunB</h1>
-                <p class="subtitle">• Розробник •</p>
+                <p class="subtitle">Створюю <span class="typing-text"></span><span class="cursor">&nbsp;</span></p>
                 
-                <div class="hero-stats">
+                <div class="hero-stats glass-panel">
                     <div class="stat">
-                      <span class="stat-number">{{ categories.count }}</span>
+                      <span class="stat-number" data-target="{{ categories.count }}">{{ categories.count }}</span>
                       <span class="stat-label">Категорій</span>
+                    </div>
+                    <div class="stat divider"></div>
+                    <div class="stat">
+                      <span class="stat-number" data-target="{{ projects|length }}">{{ projects|length }}</span>
+                      <span class="stat-label">Проєктів</span>
                     </div>
                 </div>
                 
@@ -119,29 +130,37 @@
         <div class="container">
             <div class="section-title">
                 <h2>Зв'язатися</h2>
-                <p>Готовий до нових проектів та цікавих викликів</p>
+                <p>Готовий до нових проєктів та цікавих викликів</p>
             </div>
                 <div class="contact-grid">
-                    <div class="contact-card">
-                        <i class="fas fa-envelope"></i>
-                        <h3>Email</h3>
-                        <a href="mailto:nazar.haniuk.dev@gmail.com">nazar.haniuk.dev@gmail.com</a>
-                    </div>
-                    <div class="contact-card">
-                        <i class="fab fa-github"></i>
-                        <h3>GitHub</h3>
-                        <a href="https://github.com/Nazoferon" target="_blank" rel="noopener noreferrer">github.com/Nazoferon</a>
-                    </div>
-                    <div class="contact-card">
-                        <i class="fa-brands fa-telegram"></i>
-                        <h3>Telegram</h3>
-                        <a href="https://t.me/oiitimict_akk" target="_blank" rel="noopener noreferrer">Telegram: @oiitimict_akk</a>
-                    </div>
-                    <div class="contact-card">
-                        <i class="fa-brands fa-linkedin"></i>
-                        <h3>Linkedin</h3>
-                        <a href="https://www.linkedin.com/in/nazar-haniuk-959383410/" target="_blank" rel="noopener noreferrer">Linkedin: nazar-haniuk</a>
-                    </div>
+                    <a href="mailto:nazar.haniuk.dev@gmail.com" class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                        <div class="contact-info">
+                            <h3>Email</h3>
+                            <span>nazar.haniuk.dev@gmail.com</span>
+                        </div>
+                    </a>
+                    <a href="https://github.com/Nazoferon" target="_blank" rel="noopener noreferrer" class="contact-card">
+                        <div class="contact-icon"><i class="fab fa-github"></i></div>
+                        <div class="contact-info">
+                            <h3>GitHub</h3>
+                            <span>Nazoferon</span>
+                        </div>
+                    </a>
+                    <a href="https://t.me/oiitimict_akk" target="_blank" rel="noopener noreferrer" class="contact-card">
+                        <div class="contact-icon"><i class="fa-brands fa-telegram"></i></div>
+                        <div class="contact-info">
+                            <h3>Telegram</h3>
+                            <span>@oiitimict_akk</span>
+                        </div>
+                    </a>
+                    <a href="https://www.linkedin.com/in/nazar-haniuk-959383410/" target="_blank" rel="noopener noreferrer" class="contact-card">
+                        <div class="contact-icon"><i class="fa-brands fa-linkedin"></i></div>
+                        <div class="contact-info">
+                            <h3>LinkedIn</h3>
+                            <span>nazar-haniuk</span>
+                        </div>
+                    </a>
                 </div>
         </div>
     </section>
