@@ -16,15 +16,23 @@ from django.utils import timezone
 from django.core.cache import cache
 from functools import wraps
 from django.contrib.auth import logout
+import logging
 
 import warnings
 from .forms import UserForm, ProfileForm
 from .models import MineMap, UserProfile, InfrastructureDevice, Employee, MinerDevice, SecurityAlert, TelemetryLog, FirmwareUpdate, OTALog
 
+logger = logging.getLogger(__name__)
+
 # --- ДОПОМІЖНА ФУНКЦІЯ ---
 
-# Секретний ключ для API (завантажується з .env, інакше використовується дефолтний)
-ESP32_API_KEY = os.environ.get("ESP32_API_KEY", "SecretMineKey2026")
+# Секретний ключ для API (завантажується з .env, обов'язковий!)
+ESP32_API_KEY = os.environ.get("ESP32_API_KEY")
+if not ESP32_API_KEY:
+    raise ValueError(
+        "ESP32_API_KEY must be set in environment variables (.env file). "
+        "This key is required for ESP32 device communication."
+    )
 
 def api_key_required(view_func):
     """Декоратор для перевірки API-ключа у запитах від ESP32 та інших зовнішніх систем."""
@@ -59,7 +67,9 @@ def get_zone_microclimate():
     # Отримуємо тільки НАЙСВІЖІШИЙ запис від КОЖНОГО стаціонарного пристрою за останні 5 хв
     latest_logs = TelemetryLog.objects.filter(
         timestamp__gte=recent_time, device__is_static=True
-    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('device', 'connected_repeater', 'connected_repeater__map_location')
+    ).order_by('device_id', '-timestamp').distinct('device_id').select_related(
+        'device', 'connected_repeater'
+    ).prefetch_related('connected_repeater__map_location')
     
     zones = {}
     for log in latest_logs:
@@ -87,7 +97,9 @@ def get_zone_microclimate():
     # Окремо рахуємо людей по локаціях, щоб не змішувати логіку
     people_logs = TelemetryLog.objects.filter(
         timestamp__gte=recent_time, device__is_static=False, device__assigned_to__isnull=False
-    ).order_by('device_id', '-timestamp').distinct('device_id').select_related('connected_repeater', 'connected_repeater__map_location')
+    ).order_by('device_id', '-timestamp').distinct('device_id').select_related(
+        'device', 'connected_repeater'
+    ).prefetch_related('connected_repeater__map_location')
     
     people_map = {}
     for log in people_logs:
@@ -1136,6 +1148,10 @@ def equipment_telemetry_api(request):
     return JsonResponse({'error': 'GET method required'}, status=405)
 
 
+# NOTE: @csrf_exempt is used on API endpoints that accept requests from external IoT devices (ESP32).
+# These endpoints are protected by @api_key_required decorator which validates the API key,
+# making them secure despite the CSRF exemption. This pattern is standard for device-to-server APIs.
+
 @csrf_exempt
 @api_key_required
 def upload_map_api(request):
@@ -1218,23 +1234,33 @@ def simulator_view(request):
 
 @csrf_exempt
 @api_key_required
-@transaction.atomic
+@transaction.atomic()
 def api_receive_telemetry(request):
     """API для прийому POST-запитів від ESP32 з дедуплікацією тривог."""
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in telemetry request: {e}")
+                return JsonResponse({'status': 'error', 'message': f'Invalid JSON: {str(e)}'}, status=400)
+            
             mac_address = data.get('mac_address')
             ap_uid = data.get('ap_uid', '')
-            battery = int(data.get('battery', 100))
-            gas_level = float(data.get('gas_level', data.get('gas_co', 0)))
+            try:
+                battery = int(data.get('battery', 100))
+                gas_level = float(data.get('gas_level', data.get('gas_co', 0)))
+                rssi = int(data.get('rssi', 0))
+                temperature = float(data.get('temperature', 0.0))
+                humidity = float(data.get('humidity', 0.0))
+            except (ValueError, TypeError) as e:
+                logger.error(f"Invalid data types in telemetry: {e}")
+                return JsonResponse({'status': 'error', 'message': f'Invalid data types: {str(e)}'}, status=400)
+            
             is_sos = data.get('is_sos', False)
             reason_text = data.get('reason', 'Normal')
-            rssi = int(data.get('rssi', 0))  # Зчитуємо RSSI з JSON
-            temperature = float(data.get('temperature', 0.0))
-            humidity = float(data.get('humidity', 0.0))
-            fw_version = data.get('fw_version') # Зчитуємо версію прошивки
-            is_moving = data.get('is_moving', True) # Зчитуємо стан руху
+            fw_version = data.get('fw_version')
+            is_moving = data.get('is_moving', True)
 
             # 1. Знаходимо пристрій по MAC-адресі, а потім працівника
             if not mac_address:

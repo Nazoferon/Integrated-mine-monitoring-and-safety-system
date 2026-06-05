@@ -24,7 +24,6 @@ import logging
 from PIL import Image
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
-import sys
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +58,12 @@ def compress_image(image_field, max_size=(800, 800), quality=82):
     img.save(output, format='JPEG', quality=quality)
     output.seek(0)
     
+    # Отримуємо правильний розмір файлу
+    file_size = len(output.getvalue())
+    
     return InMemoryUploadedFile(
         output, 'ImageField', f"{image_field.name.split('.')[0]}.jpg",
-        'image/jpeg', sys.getsizeof(output), None
+        'image/jpeg', file_size, None
     )
 
 # --- АДМІН ---
